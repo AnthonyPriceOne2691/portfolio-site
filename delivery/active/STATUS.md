@@ -21,13 +21,15 @@
        прогона, а не по факту наличия файла. Пункт backlog: развернуть CI (CQG §8). -->
 - **worktree:** none (bootstrap трогает дерево контура целиком, §7.2 шаг 6)
 - **hooks:** not-deployed
-- **blockers:** реестр npm недоступен (три попытки, exit=124) — без установки не
-  проверены примеры A1–A3 и не гонялись фронтовые гейты. Два варианта с ценой —
-  `active/escalation.md`
+- **blockers:** none (снят 2026-08-04: диагноз был неверен — не «реестр
+  недоступен», а деградация канала под 15 параллельными сокетами npm; лечится
+  `maxsockets=2` в `.npmrc`, разбор с числами — `active/escalation.md`)
 - **waivers:** none
-- **new_dependency:** none
-  <!-- Появятся вместе с каркасом Astro: каждая прямая зависимость получит свою
-       строку с reason= и by=. На витрине это защита от превращения её в приложение. -->
+- **new_dependency:** astro reason=генератор статики, решение design §8.1 (минимум JS на выходе, markdown-контент из коробки); альтернатива Next.js отклонена там же as «не брать на MVP» by=agent:claude-code
+- **new_dependency:** @astrojs/check reason=проверка типов TS и .astro в `npm run build`; на этом стеке занимает роль mypy, которого в карте ролей нет by=agent:claude-code
+- **new_dependency:** typescript reason=peer-зависимость @astrojs/check, без неё проверка типов не запускается by=agent:claude-code
+  <!-- 219 пакетов в node_modules — транзитивные, они решением не являются (§3
+       new-dependency: объявляются только ПРЯМЫЕ). -->
 - **canon_drift_waiver:** no
 - **baseline_growth_waiver:** no
 - **observability:** 1
