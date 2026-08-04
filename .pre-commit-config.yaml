@@ -47,47 +47,6 @@ repos:
         files: ^backend/
       - id: ruff-format
         files: ^backend/
-
-  # -------------------------------------------------------------------------
-  # Python: mypy strict через проектный venv (local hook, НЕ mirrors-mypy: у того
-  # изолированное venv без проектных плагинов/модулей).
-  #
-  # ⚠ ОДИН вызов на пакет, `pass_filenames: false`. Раньше здесь стоял per-file
-  # прогон, и pre-commit разбивал файлы на пачки: на большом дереве (84 файла)
-  # mypy падал INTERNAL ERROR на второй пачке, тогда как первая печатала
-  # «Success». Причины две, обе неприятные: mypy на пачках теряет часть графа
-  # импортов, а краш ОБРЫВАЕТ джобу — шаги ниже не выполняются вовсе.
-  # Один прогон по пакету медленнее на коммите, но воспроизводим и кэшируется.
-  # -------------------------------------------------------------------------
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy strict (весь пакет, один вызов)
-        language: system
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        exclude: /tests/
-        # Имя пакета — из env, как все остальные пути (§6). До cqg@1.37 здесь
-        # стояло вшитое `features`, и на проекте с пакетом `app` хук падал
-        # `Cannot read file 'features'`. Само по себе это диагностируется по §6,
-        # но контраст «пути настраиваются через env» против «этот путь inline»
-        # стоил неверного диагноза: сводка «mypy strict … Failed» читалась как
-        # ошибки типов (развёртывание 2026-07-31, дефект прочтения, не механики).
-        #
-        # ⚠ `LINT_VENV` разрешается ПО КАНДИДАТАМ, как в четырёх скриптах гейтов, —
-        # находка 5 первого развёртывания. §6 обещает, что значение принимается и
-        # относительно backend, и от repo-root («скрипты разрешают оба написания»),
-        # но этот entry делал `cd backend` и брал значение уже ОТТУДА: разрешённое
-        # `backend/.venv` давало `backend/backend/.venv/bin/mypy` и **exit 127
-        # сырой ошибкой шелла**. Читается как поломка окружения, а не как
-        # расхождение канона с самим собой. Третий кандидат — venv в корне репо
-        # (тот же layout, что разрешают гейты). Инструмента нет — причина
-        # НАЗЫВАЕТСЯ, включая переменную, которой это правится: чужие слова
-        # («command not found») отправляют чинить не туда. Держит
-        # `TestMypyHookHonoursBothVenvSpellings`, включая обратный прогон.
-        entry: |-
-          bash -c 'R="$(git rev-parse --show-toplevel)" || exit 1; B="${LINT_BE_DIR:-backend}"; V="${LINT_VENV:-.venv}"; M=""; for c in "$R/$B/$V/bin/mypy" "$R/$V/bin/mypy" "$R/$B/.venv/bin/mypy"; do [ -x "$c" ] && { M="$c"; break; }; done; [ -n "$M" ] || { printf "\033[31mmypy не найден — искал %s и %s. LINT_VENV принимается и относительно %s, и от repo-root (§6); правится LINT_VENV / LINT_BE_DIR или установкой mypy в venv проекта\033[0m\n" "$B/$V/bin/mypy" "$V/bin/mypy" "$B"; exit 1; }; cd "$R/$B" || exit 1; "$M" --config-file pyproject.toml "${LINT_COV_PKG:-features}"'
-        pass_filenames: false
-
   # -------------------------------------------------------------------------
   # TypeScript / React: ESLint (per-file errors) + warning-ратчет + Prettier.
   # -------------------------------------------------------------------------
@@ -173,19 +132,19 @@ repos:
       - id: silent-except-gate
         name: silent-except — broad-except без raise/лога (AST)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && backend/.venv/bin/python scripts/lint/check_ast_gate.py --rule silent-except'
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && python3 scripts/lint/check_ast_gate.py --rule silent-except'
         files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
       - id: inline-prompt-gate
         name: inline-prompt — LLM-промпт инлайном в .py (AST)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && backend/.venv/bin/python scripts/lint/check_ast_gate.py --rule inline-prompt'
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && python3 scripts/lint/check_ast_gate.py --rule inline-prompt'
         files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
       - id: cpu-in-async-gate
         name: cpu-in-async — разбор/регулярка в цикле внутри async def (AST)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && backend/.venv/bin/python scripts/lint/check_ast_gate.py --rule cpu-in-async'
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && python3 scripts/lint/check_ast_gate.py --rule cpu-in-async'
         files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
 
@@ -197,7 +156,7 @@ repos:
       - id: unbounded-list-gate
         name: unbounded-list — эндпоинт отдаёт список без границы (AST)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && backend/.venv/bin/python scripts/lint/check_ast_gate.py --rule unbounded-list'
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && python3 scripts/lint/check_ast_gate.py --rule unbounded-list'
         files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
 
@@ -214,28 +173,26 @@ repos:
         pass_filenames: false
 
   # -------------------------------------------------------------------------
-  # import-linter — направление зависимостей между слоями.
-  # -------------------------------------------------------------------------
-  - repo: local
-    hooks:
-      - id: import-linter
-        name: import-linter — dependency direction
-        language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)/backend" && ./.venv/bin/lint-imports'
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-
-  # -------------------------------------------------------------------------
   # Функции и диагностируемость: сложность на уровне функции (плохой код живёт
   # там, а не в файле) и сообщения ошибок с контекстом (§2.4a).
   # -------------------------------------------------------------------------
   - repo: local
     hooks:
+      # ⚠ Значения env живут ЗДЕСЬ, в entry, а не в шелле: `git commit` запускает
+      # хук в своём окружении, и без них гейт ушёл бы в дефолт `frontend/src`,
+      # которого у этого проекта нет, — «просмотрено 0 файлов» с кодом 0 (§6).
       - id: complexity-gate
-        name: function complexity ratchet (C901/PLR09xx)
-        entry: bash scripts/lint/check_complexity_gate.sh
+        name: "function complexity ratchet (ts: eslint --rule)"
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && LINT_TS_SRC=src LINT_FE_DIR=. bash scripts/lint/check_complexity_gate.sh'
         language: system
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
+        files: ^(src/.*\.(ts|mts|js|mjs)|eslint\.config\.js|tsconfig\.json|\.pre-commit-config\.yaml|scripts/lint/.*)$
+        pass_filenames: false
+
+      - id: layers-gate
+        name: "layers — направление зависимостей (ts: dependency-cruiser)"
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && LINT_TS_SRC=src LINT_FE_DIR=. bash scripts/lint/check_layers_gate.sh'
+        language: system
+        files: ^(src/.*|\.dependency-cruiser\..*|tsconfig\.json|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
 
       - id: blind-error

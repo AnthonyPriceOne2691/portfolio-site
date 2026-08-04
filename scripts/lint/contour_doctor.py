@@ -134,6 +134,7 @@ TOOL_DEPENDENT = {
     "check_diff_coverage.sh": "pytest-cov",
     "check_ci_status.sh": "gh",
     "check_complexity_gate.sh": "ruff",
+    "check_layers_gate.sh": "lint-imports / depcruise",
 }
 
 # `PATH` без homebrew и venv: coreutils и git на месте, а jscpd/mutmut/gh/ruff —

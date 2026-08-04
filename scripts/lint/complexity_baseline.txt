@@ -1,0 +1,4 @@
+# complexity_baseline.txt — снимок нарушений сложности ФУНКЦИЙ по файлам.
+# Формат: <число нарушений>:<путь>. Половины, снявшие снимок: ts
+# ts: eslint {"complexity":["error",10],"max-depth":["error",4],"max-params":["error",8],"max-statements":["error",50]} (порог у гейта, env LINT_TS_COMPLEXITY_RULES).
+# Снимок только ТАЕТ: тронул файл — раздели функцию и пере-сними вниз.
