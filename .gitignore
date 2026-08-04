@@ -1,0 +1,22 @@
+# build & deps
+node_modules/
+dist/
+.astro/
+.output/
+
+# окружение и секреты — репозиторий публичный, это не формальность
+.env
+.env.*
+!.env.example
+
+# кэши инструментов контура
+.jscpd/
+coverage/
+.coverage
+coverage.json
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+
+# macOS
+.DS_Store

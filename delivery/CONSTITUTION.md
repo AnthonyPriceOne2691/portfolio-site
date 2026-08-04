@@ -1,0 +1,125 @@
+# Delivery constitution — portfolio-site
+
+**Version:** 1.0
+**Ratified:** 2026-08-04
+**Canon stack:** delivery@1.49 · cqg@1.65 · okf@absent
+<!-- okf absent сознательно: у витрины нет канона домена — политик, ADR и метрик
+     предметной области. Развернуть его сюда значило бы завести пустой слой. -->
+**CI:** not-deployed
+<!-- Обновить на `deployed (github-actions)` после шага CI (CQG §8), и только
+     по факту ЗЕЛЁНОГО прогона, а не по факту наличия workflow. -->
+
+## Что это за проект (одним абзацем)
+
+Публичная витрина: за 30–60 секунд объяснить, кто я, чем ценен и что могу
+показать. Дизайн-документ — `PORTFOLIO_SITE_DESIGN.md` v0.7, он источник правды
+по содержанию и решениям; здесь — только правила процесса.
+
+## Non-negotiables
+
+- **Репозиторий публичный.** Секрет, попавший в историю, считается
+  скомпрометированным навсегда — приватность здесь не «настройка», а свойство
+  продукта. Никаких `.env`, ключей, токенов аналитики в коде.
+- **Ни одного NDA-следа.** Нет названий компании и клиентов, доменов, реальных
+  писем и узнаваемого UI без блюра. Скриншот, в котором сомневаешься, не
+  публикуется.
+- **EN — источник истины, RU правится ТЕМ ЖЕ коммитом.** Языковой дрейф — главный
+  риск двух веток (design §13); допускать «RU догонит потом» можно только явной
+  строкой в спеке поставки.
+- Done закрывается **зелёным CI-прогоном** (§10.4), не локальным «у меня прошло».
+- `STRICT=0` / `git commit -n` — аварийная локальная мера, видимая в PR; в CI
+  запрещены.
+
+## Product principles (проверяемые, а не вкусовые)
+
+1. **Новый проект — это КОНТЕНТ, а не код.** Пара md-файлов (EN+RU) плюс медиа,
+   без правки шаблонов. Это критерий приёмки, а не пожелание: если добавление
+   пятого проекта потребовало трогать `.astro`, шаблон спроектирован неверно.
+2. **Путь рекрутёра 60 секунд — линза для любого решения.** Превью ссылки →
+   hero → три цифры → кейс → контакт. Что не работает на этот путь, кандидат на
+   удаление, а не на «пусть полежит».
+3. **Anti-bloat.** Статика, минимум JS на выходе, без тяжёлого UI-kit. Каждая
+   зависимость объявляется строкой `new_dependency:` в STATUS — на витрине это
+   не формальность, а защита от превращения её в приложение.
+4. **Доказательство раньше описания.** На странице проекта тизер-луп стоит до
+   текста: рекрутёра нельзя заставлять скроллить до пруфа.
+5. **Цифры на сайте — только сверенные.** Каждая метрика имеет источник в
+   дизайн-документе §5; расхождение с CV/кейсом чинится синхронно во всех
+   местах, иначе счётчик живёт в трёх местах и разъезжается.
+6. **Доступность не опциональна:** контраст, фокус, `prefers-reduced-motion` для
+   автоплей-видео. Витрина инженера, которая не открывается с клавиатуры, —
+   антиреклама.
+7. **Хостинг остаётся бесплатным** до появления публичного API-демо. Появилось
+   желание «поднять всё на сервер» — это отдельная поставка со своей спекой.
+
+## Что НЕ берём (осознанно, чтобы не переоткрывать)
+
+Next.js + SSR, VPS, CMS, форма обратной связи (статика + спам), аналитика с
+трекингом. Контакт — mailto, Telegram, LinkedIn текстом.
+
+## Process principles
+
+1. Spec before broad implementation (class M/L).
+2. Vertical slices; no oneshot of the whole plan.
+3. Done = oracles (shape + behavior + product), never self-declaration alone.
+4. Builder ≠ Verifier.
+5. Agent mistake → strengthen harness (oracle / breaker / hook), not only prompts.
+6. One `delivery/active` at a time.
+
+## Coding-agent contract (thin ABC)
+
+### Preconditions
+- STATUS.md read; class S/M/L known; branch/worktree set.
+- Before implement: artifacts per harness §2.2 (S: tasks; M/L: spec+plan+tasks + human_ok_spec).
+
+### Invariants
+- No secrets in git; no force-push to main; no done-on-red; no silent scope creep.
+- Публикуемый контент проходит проверку на NDA-следы до коммита, а не до деплоя.
+
+### Governance
+- Human OK on spec (M/L). Human OK on plan (L / risky). HITL на публикацию
+  нового контента с фото/видео и на смену домена.
+
+### Recovery
+- On oracle red: fix ≤ retry budget, else escalate in STATUS.md.
+
+## Agent permissions (§4.5)
+
+Источник истины по **действиям**. Строки ниже обязаны совпадать с
+`.claude/settings.json` (`permissions.deny` / `permissions.ask`) — сверяет
+`delivery_check` в обе стороны. Правило здесь и не в настройках = запрет,
+который не работает; в настройках и не здесь = граница, сдвинутая без ревью.
+
+`allow` тут не перечисляется: это накопительный список конкретных команд,
+его место — только в настройках (§4.5, почему).
+
+```text
+agent-permissions
+# Необратимое: подтверждение здесь не защита, а соучастие.
+deny: Bash(git push --force:*)
+deny: Bash(git push:* --force-with-lease)
+deny: Bash(rm -rf /:*)
+deny: Bash(psql:*)
+deny: Bash(mysql:*)
+deny: Read(./.env)
+deny: Read(./**/.env)
+# Обратимо, но платит человек своим временем.
+ask: Bash(git push:*)
+ask: Bash(gh pr merge:*)
+ask: Bash(pip install:*)
+ask: Bash(npm install:*)
+ask: WebFetch
+```
+
+<!-- Правь под проект: список выше — рабочий минимум, а не догма. Добавляя
+     строку в настройки, добавь её и здесь одним коммитом; иначе гейт упадёт,
+     и это правильное поведение (граница двигается только через ревью). -->
+
+## Pointers to sibling layers (fill if deployed)
+
+- Code shape oracles: `CODE_QUALITY_GATES.md` — [ ] not deployed / [x] deployed
+      (адаптирован под TS-стек: карта ролей — в `delivery/STACK-ACCEPTANCE.md`)
+- Domain canon: `OKF_KNOWLEDGE_BUNDLE.md` / `knowledge/` — [x] absent (см. выше)
+- Agent hooks (§10): [x] not deployed / [ ] deployed
+- CI oracles (§10.4, workflow per CQG §8): [x] not deployed / [ ] deployed
+- Skills catalog: `skills/README.md` — [x] absent / [ ] present
