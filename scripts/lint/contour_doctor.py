@@ -386,9 +386,24 @@ class Doctor:
 
     # --- C. инструменты ------------------------------------------------------
     def check_tools(self) -> None:
-        venvs = [self.root / ".venv" / "bin", self.root / "backend" / ".venv" / "bin"]
+        # ⚠ `node_modules/.bin` в списке ОБЯЗАТЕЛЕН, и это не удобство. Локальная
+        # devDependency npm-проекта живёт только там: без этого каталога доктор
+        # печатал `ABSENT инструмент jscpd — нет → DRY-гейт не работает` и
+        # четырьмя строками ниже `AUTO область check_jscpd_gate.sh — просмотрено
+        # 2 файл(ов)`. Отчёт, содержащий взаимоисключающие строки о собственном
+        # гейте, обесценивает подпись «лжи нет» в подвале — а она и есть продукт
+        # доктора. Тот же класс, что чинили весь день: заявление разошлось с
+        # деревом, и увидел это человек, а не механика.
+        #
+        # Проверка областей окружение хука уже воспроизводит (тянет `LINT_*` из
+        # `entry:`), а проба инструментов — нет. Здесь минимум: каталоги, куда
+        # инструмент кладут менеджеры пакетов обоих экосистем.
+        fe = os.environ.get("LINT_FE_DIR", "frontend")
+        venvs = [self.root / ".venv" / "bin", self.root / "backend" / ".venv" / "bin",
+                 self.root / "node_modules" / ".bin", self.root / fe / "node_modules" / ".bin"]
         for tool, why in TOOLS.items():
-            found = next((str(v / tool) for v in venvs if (v / tool).is_file()), None) \
+            found = next((str(v / tool) for v in venvs
+                          if (v / tool).is_file() or (v / tool).is_symlink()), None) \
                 or shutil.which(tool) \
                 or (shutil.which("gtimeout") if tool == "timeout" else None)
             self.add(AUTO if found else ABSENT, f"инструмент {tool}",
