@@ -111,8 +111,10 @@ repos:
       - id: jscpd-dry-gate
         name: DRY — рост копипаста (jscpd clone-count ratchet)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && bash scripts/lint/check_jscpd_gate.sh'
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
+        # cqg@1.76: у гейта появилась TS-половина. LINT_JSCPD_TS_EXTS обязателен —
+        # замер: без него `.astro` не считается ВООБЩЕ (1 файл вместо 2).
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && LINT_TS_SRC=src LINT_FE_DIR=. LINT_PY_SRC=нет-python LINT_JSCPD_TS_EXTS="typescript:ts,tsx,astro" bash scripts/lint/check_jscpd_gate.sh'
+        files: ^(src/.*|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
 
   # -------------------------------------------------------------------------

@@ -18,7 +18,6 @@ env:
   # Односоставный npm-проект: python-половины нет вовсе, фронт в корне.
   LINT_TS_SRC: src
   LINT_FE_DIR: .
-  LINT_COV_PKG: features
 
 jobs:
   gates:

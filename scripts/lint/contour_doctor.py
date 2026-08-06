@@ -678,7 +678,13 @@ class Doctor:
         secrets-хук с голым `command -v` печатал `Passed`, не просмотрев ни файла
         (F10); `deps_audit_waiver: no` работал как разрешение при critical=1.
         """
-        point = f"честный пропуск {script.name} (нет {tool})"
+        # ⚠ В названии точки сказано, ЧЬЁ окружение проверяется. Проба идёт с
+        # голым PATH и без переменных хука — это её замысел, но вердикт
+        # «нет каталога фронта (frontend)» читался как диагноз ПРОЕКТУ, хотя под
+        # pre-commit тот же гейт работает. Полевой аудит поймал ровно это:
+        # доктор писал WEAK там, где настроено верно. Зонд, не воспроизводящий
+        # окружение хука, обязан хотя бы не выдавать себя за него.
+        point = f"честный пропуск {script.name} (в пробе нет {tool})"
         with tempfile.TemporaryDirectory(prefix="doctor-skip-") as tmp:
             lab = Path(tmp)
             (lab / "backend" / "features").mkdir(parents=True)
