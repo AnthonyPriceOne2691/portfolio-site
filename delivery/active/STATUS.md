@@ -1,7 +1,7 @@
 # Active delivery status
 
 - **slug:** contour-bootstrap
-- **stack:** delivery@1.50, cqg@1.77, okf@absent
+- **stack:** delivery@1.50, cqg@1.78, okf@absent
 - **class:** M
 - **kind:** bootstrap
 - **repro_test:** n/a reason=не bugfix, продуктового кода ещё нет

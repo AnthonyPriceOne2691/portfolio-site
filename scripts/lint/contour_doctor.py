@@ -307,6 +307,21 @@ class Doctor:
         return out
 
     # --- A. каноны -----------------------------------------------------------
+    def _declared_version(self, prefix: str) -> str:
+        """Версия слоя из строки `stack:` в STATUS — то, что проект ЗАЯВИЛ.
+
+        Заявление и снимок обязаны совпадать: расходятся — одно из двух врёт, и
+        какое именно, отсюда не видно, но молчать нельзя.
+        """
+        if not prefix:
+            return ""
+        st = self.root / "delivery" / "active" / "STATUS.md"
+        if not st.is_file():
+            return ""
+        m = re.search(rf"\b({re.escape(prefix)}@[0-9][0-9.]*)",
+                      st.read_text("utf-8", errors="replace"))
+        return m.group(1) if m else ""
+
     def check_canons(self) -> None:
         # Каноны лежат ЛИБО в корне, ЛИБО в снимке `docs/canon/` — и второе не
         # экзотика, а дефолт: §5 шаг 11 велит агенту выбирать вариант C, не
@@ -324,8 +339,23 @@ class Doctor:
             m = re.search(r"\*\*Canon version:\*\*\s*`([^`]+)`", p.read_text("utf-8")) \
                 or re.search(r"\*\*Эта карта:\*\*\s*`([^`]+)`", p.read_text("utf-8"))
             where = "" if p.parent == self.root else f" ({p.parent.relative_to(self.root)})"
-            self.add(AUTO if m else WEAK, f"канон {name}",
-                     (f"версия {m.group(1)}" if m else "версия в шапке не читается") + where)
+            # Снимок сверяется с ЗАЯВЛЕННОЙ версией из STATUS. Иначе он —
+            # единственный источник правды о самом себе: доктор читал шапку
+            # снимка и считал её истиной, а проект тем временем развернул более
+            # новый payload. Замер на живом проекте: скрипты 1.77, снимок 1.75,
+            # STATUS 1.77 — и никто не сказал ни слова.
+            #
+            # Это делает честным и диагноз расхождения скриптов: без такой
+            # проверки совет «обнови скрипт из payload'а» вреден, когда на самом
+            # деле отстал снимок, а не скрипт.
+            declared = self._declared_version(m.group(1).split("@")[0] if m else "")
+            drift = ""
+            if m and declared and declared != m.group(1):
+                drift = (f" — STATUS заявляет {declared}: снимок ОТСТАЛ от "
+                         "развёрнутого payload, обнови docs/canon (§5 шаг 11)")
+            self.add(AUTO if (m and not drift) else WEAK, f"канон {name}",
+                     (f"версия {m.group(1)}" if m else "версия в шапке не читается")
+                     + where + drift)
 
     # --- B. места принуждения ------------------------------------------------
     def check_enforcement(self) -> None:
