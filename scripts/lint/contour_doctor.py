@@ -161,6 +161,36 @@ SKIP_WORDS = ("пропущен", "не судит", "не проверен", "�
 SUCCESS_WORDS = (": OK", "OK —", "OK -")
 
 
+def _block_after(text: str, marker: str, lang: str) -> str | None:
+    """Первый блок ```lang после marker — с учётом ВЛОЖЕННЫХ фенсов.
+
+    Наивная регулярка обрывается на первом же вложенном фенсе (шаблоны канона их
+    содержат), и сравнение тел давало бы вечное «разошлось». Тот же построчный
+    сканер, что blocks() в stack_selftest и block_after в сьюте канона.
+    """
+    if marker not in text:
+        return None
+    out, depth, started = [], 0, False
+    for line in text.split(marker, 1)[1].splitlines():
+        if line.startswith("```"):
+            info = line[3:].strip().lower()
+            if not started:
+                if info == lang:
+                    started, depth = True, 1
+                continue
+            if info:
+                depth += 1
+            else:
+                depth -= 1
+                if depth == 0:
+                    return "\n".join(out)
+            out.append(line)
+            continue
+        if started:
+            out.append(line)
+    return None
+
+
 def run(cmd: list[str], cwd: Path, env: dict | None = None) -> tuple[int, str]:
     e = {**os.environ, **(env or {})}
     try:
@@ -278,15 +308,24 @@ class Doctor:
 
     # --- A. каноны -----------------------------------------------------------
     def check_canons(self) -> None:
+        # Каноны лежат ЛИБО в корне, ЛИБО в снимке `docs/canon/` — и второе не
+        # экзотика, а дефолт: §5 шаг 11 велит агенту выбирать вариант C, не
+        # спрашивая. Первая редакция смотрела только в корень и на правильно
+        # развёрнутом проекте печатала «файла нет — слой не развёрнут» по всем
+        # четырём. ABSENT не роняет прогон, поэтому ошибка тихая: доктор говорил
+        # «бедность» там, где всё на месте, и приёмка §6 читалась бы по нему.
         for name in CANONS:
             p = self.root / name
+            if not p.is_file():
+                p = self.root / "docs" / "canon" / name
             if not p.is_file():
                 self.add(ABSENT, f"канон {name}", "файла нет — слой не развёрнут")
                 continue
             m = re.search(r"\*\*Canon version:\*\*\s*`([^`]+)`", p.read_text("utf-8")) \
                 or re.search(r"\*\*Эта карта:\*\*\s*`([^`]+)`", p.read_text("utf-8"))
+            where = "" if p.parent == self.root else f" ({p.parent.relative_to(self.root)})"
             self.add(AUTO if m else WEAK, f"канон {name}",
-                     f"версия {m.group(1)}" if m else "версия в шапке не читается")
+                     (f"версия {m.group(1)}" if m else "версия в шапке не читается") + where)
 
     # --- B. места принуждения ------------------------------------------------
     def check_enforcement(self) -> None:
@@ -414,7 +453,14 @@ class Doctor:
         cfg = self.root / ".pre-commit-config.yaml"
         if not d.is_dir() or not cfg.is_file():
             return
-        text = cfg.read_text(encoding="utf-8", errors="replace")
+        raw = cfg.read_text(encoding="utf-8", errors="replace")
+        # ⚠ Конфиг читается БЕЗ комментариев. Шапка поставляемого файла объясняет
+        # настройку ПРИМЕРОМ («… bash scripts/lint/check_grep_gate.sh --rule …»),
+        # и проверка «вписан ли гейт» ловила этот пример как проводку: доктор
+        # гонял гейт, снятый с коммита, и честно объявлял его слепым. Пятый
+        # рецидив класса, ради которого в сьюте живёт `extract.code_only()`, —
+        # и второй за одну правку: читалку env чинили тем же способом абзацем ниже.
+        text = "\n".join(l for l in raw.splitlines() if not l.lstrip().startswith("#"))
 
         # ⚠ Судить слепоту можно ТОЛЬКО там, где есть чему быть увиденным.
         # На bootstrap-развёртывании (контур поставлен, кода ещё нет) ноль
@@ -489,6 +535,71 @@ class Doctor:
                          "подключён и смотрит в ПУСТОТУ: просмотрено 0 файлов. "
                          "Роль объявлена закрытой, а гейт не видит кода — маска "
                          "или путь остались шаблонными (§6: значения в `entry:`)")
+
+    # --- Что в контуре разошлось с каноном и почему (cqg@1.71) ----------------
+    # Обновление контура было археологией: §5 описывает развёртывание на
+    # greenfield, а что делать со СТАРЫМ проектом, часть скриптов которого
+    # адаптирована под стек, не сказано нигде. Слепое копирование payload'а
+    # адаптацию уничтожает — замерено на Swift-проекте: канонная python-версия
+    # затёрла `check_grep_gate.sh` с тремя своими правилами (`force-unwrap`,
+    # `hardcoded-network`), и спасло только чистое дерево и `git checkout`.
+    #
+    # Различать «адаптирован» и «просто устарел» приходилось глазами, и признак
+    # неочевиден: из шести разошедшихся скриптов два оказались НЕ адаптированными
+    # (ноль упоминаний своего стека в теле), один — настоящей адаптацией, а
+    # ещё один нёс адаптацию ЛИШНЮЮ: маска Swift была зашита в тело, хотя
+    # канонная версия давно принимает её через `LINT_LENGTH_GLOBS`.
+    #
+    # Отсюда `scripts/lint/adapted.json`: проект объявляет, что и почему изменено
+    # против канона. Расхождение без объявления — не ложь (быть на версию позади
+    # нормально), но и не молчание: печатается списком, чтобы обновление
+    # начиналось с готового ответа, а не с раскопок.
+    ADAPTED = "scripts/lint/adapted.json"
+
+    def check_divergence_from_canon(self) -> None:
+        snap = self.root / "docs" / "canon" / "CODE_QUALITY_GATES.md"
+        d = self.root / "scripts" / "lint"
+        if not snap.is_file() or not d.is_dir():
+            return                       # снимка канона нет — сверять не с чем
+        text = snap.read_text(encoding="utf-8", errors="replace")
+
+        declared = {}
+        f = self.root / self.ADAPTED
+        if f.is_file():
+            try:
+                declared = json.loads(f.read_text(encoding="utf-8")) or {}
+            except (OSError, ValueError) as exc:
+                self.add(SKIP, self.ADAPTED, f"не разобран ({exc}) — адаптации "
+                                             "объявлены и не прочитаны")
+        for script in sorted(d.glob("*")):
+            if not script.is_file() or script.suffix not in (".sh", ".py"):
+                continue
+            marker = f"### `scripts/lint/{script.name}`"
+            if marker not in text:
+                continue                 # свой гейт проекта — не наше дело
+            lang = "python" if script.suffix == ".py" else "bash"
+            body = _block_after(text, marker, lang)
+            if body is None:
+                continue
+            same = body.strip() == script.read_text(
+                encoding="utf-8", errors="replace").strip()
+            spec = declared.get(script.name)
+            point = f"расхождение с каноном {script.name}"
+            if same:
+                if spec:
+                    self.add(WEAK, point, "объявлен адаптированным, а тело "
+                                          "СОВПАДАЕТ с каноном — объявление "
+                                          "устарело и мешает обновлению")
+                continue
+            if isinstance(spec, dict) and str(spec.get("reason", "")).strip():
+                self.add(WEAK, point, "адаптирован намеренно: "
+                                      + str(spec["reason"])[:90])
+            else:
+                self.add(WEAK, point,
+                         "тело отличается от снимка канона, а объявления нет. "
+                         "Либо устарел (обнови из payload'а), либо адаптирован "
+                         f"под стек (объяви в {self.ADAPTED} с причиной) — "
+                         "иначе обновление начнётся с раскопок и затрёт правку")
 
     def check_canaries(self) -> None:
         d = self.root / "scripts" / "lint"
@@ -785,6 +896,7 @@ def main() -> int:
     doc.check_snapshots()
     doc.check_canaries()
     doc.check_gates_see_code()
+    doc.check_divergence_from_canon()
     return doc.report(args.json)
 
 

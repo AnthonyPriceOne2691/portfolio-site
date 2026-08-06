@@ -69,7 +69,7 @@ def _toml(text: str):
         return None
     try:
         return tomllib.loads(text)
-    except Exception:  # noqa: BLE001 -- битый TOML: пусть работает фолбэк
+    except Exception:  # noqa: BLE001  # silent-ok: битый TOML — ниже фолбэк на regex
         return None
 
 

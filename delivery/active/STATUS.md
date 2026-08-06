@@ -1,7 +1,7 @@
 # Active delivery status
 
 - **slug:** contour-bootstrap
-- **stack:** delivery@1.50, cqg@1.72, okf@absent
+- **stack:** delivery@1.50, cqg@1.75, okf@absent
 - **class:** M
 - **kind:** bootstrap
 - **repro_test:** n/a reason=не bugfix, продуктового кода ещё нет
@@ -21,6 +21,10 @@
        прогона, а не по факту наличия файла. Пункт backlog: развернуть CI (CQG §8). -->
 - **worktree:** none (bootstrap трогает дерево контура целиком, §7.2 шаг 6)
 - **hooks:** not-deployed
+- **stack-selftest:** ci (vendored)
+  <!-- §5 шаг 11, вариант C: снимок канонов в docs/canon/ + stack_selftest.py
+       рядом. Каталог в BREAKER_EXCLUDE (механика контура, не поставка);
+       шаг «Canon payload selftest» в quality.yml — исполнитель этой строки. -->
 - **blockers:** none (снят 2026-08-04: диагноз был неверен — не «реестр
   недоступен», а деградация канала под 15 параллельными сокетами npm; лечится
   `maxsockets=2` в `.npmrc`, разбор с числами — `active/escalation.md`)

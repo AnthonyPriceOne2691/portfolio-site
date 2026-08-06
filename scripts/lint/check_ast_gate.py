@@ -52,6 +52,46 @@ def _is_broad(handler: ast.ExceptHandler) -> bool:
     return False
 
 
+def _module_has_logging(tree: ast.AST) -> bool:
+    """Импортирует ли модуль logging (в любой форме)."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(a.name.split(".")[0] == "logging" for a in node.names):
+                return True
+        elif isinstance(node, ast.ImportFrom):
+            if (node.module or "").split(".")[0] == "logging":
+                return True
+    return False
+
+
+def _print_shows_the_error(handler: ast.ExceptHandler) -> bool:
+    """print(), печатающий САМУ ошибку, — след не хуже лога.
+
+    Расхождение братьев, найденное обновлением чужого проекта: соседнее правило
+    `unstructured-log` про print говорит прямо — «в CLI и скриптах он законен», и
+    потому его не ловит. А `silent-except` следом его не считал, и краснел на
+    обработчике, который ошибку ПЕЧАТАЕТ с контекстом. Два правила одного канона
+    смотрели на один и тот же print и расходились.
+
+    Признано следом узко, и каждое сужение нужно:
+      · только в модуле БЕЗ `logging` — там print и есть канал вывода. Модуль,
+        который логгер импортировал, обязан им пользоваться;
+      · только если печатается связанное имя ошибки (`except … as e` + `e` в
+        аргументах). `print("не вышло")` следом не является: он не отличает
+        причины друг от друга, а весь смысл правила в контексте.
+    """
+    if handler.name is None:
+        return False
+    for node in ast.walk(handler):
+        if not (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name) and node.func.id == "print"):
+            continue
+        for arg in ast.walk(node):
+            if isinstance(arg, ast.Name) and arg.id == handler.name:
+                return True
+    return False
+
+
 def _handler_leaves_trace(handler: ast.ExceptHandler) -> bool:
     for node in ast.walk(handler):
         if isinstance(node, ast.Raise):
@@ -89,9 +129,16 @@ def _docstring_ids(tree: ast.AST) -> set[int]:
 
 def find_silent_except(tree: ast.AST, src_lines: list[str]) -> list[int]:
     out = []
+    has_logging = _module_has_logging(tree)
     for node in ast.walk(tree):
-        if isinstance(node, ast.ExceptHandler) and _is_broad(node) and not _handler_leaves_trace(node) and not _handler_has_silent_ok(node, src_lines):
-            out.append(node.lineno)
+        if not (isinstance(node, ast.ExceptHandler) and _is_broad(node)):
+            continue
+        if _handler_leaves_trace(node) or _handler_has_silent_ok(node, src_lines):
+            continue
+        # print с самой ошибкой — след, но только в модуле-скрипте (без logging)
+        if not has_logging and _print_shows_the_error(node):
+            continue
+        out.append(node.lineno)
     return out
 
 
