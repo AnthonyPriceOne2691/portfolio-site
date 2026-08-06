@@ -56,28 +56,28 @@ repos:
         name: ESLint (TypeScript) — вне снимка ошибок
         language: system
         types_or: [ts, tsx]
-        files: ^frontend/src/
+        files: ^src/
         # Файлы, стоящие в снимке ошибок, здесь ПРОПУСКАЮТСЯ: их судит ратчет
         # (`eslint-error-ratchet`, только вниз). Иначе два хука противоречили бы
         # друг другу — ратчет разрешает легаси-долг, а этот валил бы на нём всегда,
         # и для brownfield-фронта не оставалось пути войти (cqg@1.38).
         # Здесь остаётся то, что ратчет и требует: файл ВНЕ снимка обязан быть чист.
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)"; b=scripts/lint/eslint_warnings_baseline.txt; files=(); for f in "$@"; do rel="${f#frontend/}"; grep -qE "^[0-9]+:${rel}\$" "$b" 2>/dev/null || files+=("$rel"); done; [ ${#files[@]} -eq 0 ] && exit 0; cd frontend && npx --no-install eslint "${files[@]}"' --
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)"; b=scripts/lint/eslint_warnings_baseline.txt; files=(); for f in "$@"; do grep -qE "^[0-9]+:${f}\$" "$b" 2>/dev/null || files+=("$f"); done; [ ${#files[@]} -eq 0 ] && exit 0; npx --no-install eslint "${files[@]}"' --
         pass_filenames: true
 
       - id: eslint-warning-ratchet
         name: ESLint warnings — рост запрещён (count-ratchet)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && bash scripts/lint/check_eslint_warnings.sh'
-        files: ^frontend/src/.*\.(ts|tsx)$
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && LINT_FE_DIR=. bash scripts/lint/check_eslint_warnings.sh'
+        files: ^src/.*\.(ts|tsx|astro)$
         pass_filenames: false
 
       - id: prettier
         name: Prettier (TypeScript / JSON / CSS)
         language: system
         types_or: [ts, tsx, javascript, json, css]
-        files: ^frontend/src/
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)/frontend" && files=(); for f in "$@"; do files+=("${f#frontend/}"); done; npx --no-install prettier --check "${files[@]}"' --
+        files: ^src/
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && npx --no-install prettier --check "$@"' --
         pass_filenames: true
 
   # -------------------------------------------------------------------------
@@ -88,80 +88,17 @@ repos:
       - id: file-length
         name: Файлы кода <= 500/1000 строк (baseline-ratchet)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && bash scripts/lint/check_file_length.sh'
-        types_or: [python, ts, tsx]
+        # ⚠ Маска ОБЯЗАНА называть .astro, и это проверено исполнением, а не
+        # чтением: с дефолтом `*.py *.ts *.tsx` файл на 900 строк в src/pages/
+        # давал «file-length: OK — просмотрено 1 файл(ов)», exit 0. Весь код
+        # проекта живёт в .astro, то есть гейт был слеп целиком. `types_or`
+        # тоже не знает про .astro — берём files-регуляркой.
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && LINT_LENGTH_GLOBS="*.astro *.ts *.tsx *.js *.mjs *.css" bash scripts/lint/check_file_length.sh'
+        files: \.(astro|ts|tsx|js|mjs|css)$
         pass_filenames: false
 
   # -------------------------------------------------------------------------
   # Греп-гейты конвенций (per-file baseline-ratchet).
-  # -------------------------------------------------------------------------
-  - repo: local
-    hooks:
-      # -----------------------------------------------------------------------
-      # ⚠ files: у гейтов ниже включает и КОНФИГИ, не только код. Причина: с маской
-      # `^backend/.*\.py$` коммит, меняющий `pyproject.toml`, `.pre-commit-config.yaml`
-      # или снимок в `scripts/lint/`, не запускал ни одного гейта — то есть правка
-      # САМИХ ПОРОГОВ порогами не проверялась. Нашли два развёртывания независимо.
-      # Бюджет §8.6 не страдает: такие коммиты редки, у гейтов `pass_filenames: false`,
-      # и на обычной правке кода маска работает как раньше.
-      # -----------------------------------------------------------------------
-      - id: config-access-gate
-        name: config-access — типизированный config.X, не getattr/os.getenv
-        language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && bash scripts/lint/check_grep_gate.sh --rule config-access'
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-      - id: di-indirection-gate
-        name: di-indirection — без pkg/session/ctx Any и importlib reach-back
-        language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && bash scripts/lint/check_grep_gate.sh --rule di-indirection'
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-      - id: service-no-web-gate
-        name: service-no-web — сервис-слой не импортирует web-фреймворк
-        language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && bash scripts/lint/check_grep_gate.sh --rule service-no-web'
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-      - id: no-grab-bag-module-gate
-        name: no-grab-bag — utils/misc/common/helpers.py без темы запрещены
-        language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && bash scripts/lint/check_grep_gate.sh --rule no-grab-bag-module'
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-      - id: silent-except-gate
-        name: silent-except — broad-except без raise/лога (AST)
-        language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && python3 scripts/lint/check_ast_gate.py --rule silent-except'
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-      - id: inline-prompt-gate
-        name: inline-prompt — LLM-промпт инлайном в .py (AST)
-        language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && python3 scripts/lint/check_ast_gate.py --rule inline-prompt'
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-      - id: cpu-in-async-gate
-        name: cpu-in-async — разбор/регулярка в цикле внутри async def (AST)
-        language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && python3 scripts/lint/check_ast_gate.py --rule cpu-in-async'
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-
-  # -------------------------------------------------------------------------
-  # DRY / copy-paste гейт (jscpd clone-count ratchet).
-  # -------------------------------------------------------------------------
-  - repo: local
-    hooks:
-      - id: unbounded-list-gate
-        name: unbounded-list — эндпоинт отдаёт список без границы (AST)
-        language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && python3 scripts/lint/check_ast_gate.py --rule unbounded-list'
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-
-  # -------------------------------------------------------------------------
-  # DRY / copy-paste гейт (jscpd clone-count ratchet).
   # -------------------------------------------------------------------------
   - repo: local
     hooks:
@@ -193,19 +130,6 @@ repos:
         entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && LINT_TS_SRC=src LINT_FE_DIR=. bash scripts/lint/check_layers_gate.sh'
         language: system
         files: ^(src/.*|\.dependency-cruiser\..*|tsconfig\.json|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-
-      - id: blind-error
-        name: error messages carry context
-        entry: bash scripts/lint/check_grep_gate.sh --rule blind-error
-        language: system
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
-        pass_filenames: false
-      - id: unstructured-log
-        name: logs are structured (searchable by field)
-        entry: bash scripts/lint/check_grep_gate.sh --rule unstructured-log
-        language: system
-        files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
 
   # deps-audit и mutation — НЕ на commit (§8.6: бюджет 5 с). deps-audit ходит в

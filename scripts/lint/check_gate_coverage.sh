@@ -192,6 +192,122 @@ if (( ${#gates[@]} == 0 )); then
   exit 1
 fi
 
+# --- Карта ролей обязана совпадать с деревом (cqg@1.70) -----------------------
+# `delivery/STACK-ACCEPTANCE.md` — то, чем проект ОТВЕЧАЕТ на вопрос «что здесь
+# закрыто». До сих пор её не читал никто: чистая проза, заполняемая руками.
+#
+# Замер, из которого правило родилось (Astro/TS): в карте стояло четыре ✅ —
+# `file-length` «маска изменена», `eslint`, его ратчет и `prettier`
+# «подключён», — а в конфиге маски остались шаблонными, и все четыре смотрели в
+# пустоту. Плюс ✅ у `jscpd`, которого в проекте не установлено вовсе. Пять
+# ложных строк в документе, который для читателя и есть ответ про покрытие.
+#
+# Сверяется НЕ «работает ли гейт» (это A1 и канарейка), а согласованность
+# ЗАЯВЛЕНИЯ с механикой: ✅ против объявленного `n/a`, `n/a` без объявления,
+# ссылка на несуществующий скрипт. Заявление и механика расходятся молча — и
+# именно это молчание документ и продаёт как покрытие.
+MAP_FILE="delivery/STACK-ACCEPTANCE.md"
+if [[ -f "$MAP_FILE" && -n "${PY_NA:-$(command -v python3 2>/dev/null || true)}" ]]; then
+  # Причина бывает ДВУХ законных происхождений, и обе печатаются на прогоне:
+  # проектная (not-applicable.json) и канонная (not_wired_reason() — ручной
+  # DoD-шаг, измерительный инструмент, CI-only). Первая редакция знала только
+  # первую и обвинила check_diff_coverage.sh, у которого причина канонная и
+  # видна на каждом прогоне. Ложное срабатывание — дефект проверки (§4.3b).
+  # ⚠ Список считается ЗДЕСЬ, а не из массива `gates`: он заполняется ниже по
+  # файлу, и первая редакция читала его пустым — то есть канонные причины не
+  # учитывались вовсе, и проверка обвиняла всех подряд. Молчаливая пустота
+  # массива вместо ошибки — ровно тот сорт отказа, против которого весь контур.
+  canon_na=""
+  while IFS= read -r g; do
+    [[ -n "$g" ]] || continue
+    b=$(basename "$g")
+    not_wired_reason "$b" >/dev/null 2>&1 && canon_na="$canon_na$b "
+  done < <(git ls-files "$LINT_DIR/check_*.sh" "$LINT_DIR/check_*.py" 2>/dev/null)
+  map_out=$("${PY_NA:-python3}" - "$MAP_FILE" "$NA_FILE" "$LINT_DIR" "$canon_na" 2>&1 <<'PYMAP'
+import json, os, re, sys
+mp, na_file, lint_dir = sys.argv[1], sys.argv[2], sys.argv[3]
+canon_na = set((sys.argv[4] if len(sys.argv) > 4 else "").split())
+declared = {}
+if os.path.isfile(na_file):
+    try:
+        declared = json.load(open(na_file, encoding="utf-8")) or {}
+    except Exception:
+        declared = {}          # битый файл ругается в своём месте, не тут
+# ⚠ ДВА множества, и путать их — смысловая ошибка, а не небрежность:
+#   not-applicable.json — роль НЕ покрыта: на этом стеке у неё нет предмета;
+#   not_wired_reason()  — роль покрыта, просто не на коммите (pre-push, CI,
+#                         ручной DoD-шаг) либо это инструмент, а не гейт.
+# Первая редакция слила их и обвинила check_new_dependency.py: в карте честное
+# (роль закрыта на pre-push), а проверка прочла канонную причину как
+# «объявлен неприменимым». Для «плюс против n/a» годится ТОЛЬКО первое
+# множество; для «n/a без объявления» — оба: причина печатается в обоих случаях.
+na_scripts = {str(k).split(":")[0] for k in declared}
+reasoned = na_scripts | canon_na
+
+# Строка карты называет роль ЛИБО именем файла (check_jscpd_gate.sh), либо
+# ярлыком (jscpd-DRY) — обе формы живые, и вторая встречается чаще: карта
+# пишется человеком про роли, а не про файлы. Псевдоним выводится из имени
+# скрипта, а не берётся из выдуманной таблицы соответствий: такая таблица
+# разъехалась бы с каталогом §3 на первом же новом гейте.
+#
+# ⚠ Ни одного символа-бэктика в этом блоке: heredoc живёт внутри $( … ), и
+# разбор bash на них спотыкается («unexpected EOF while looking for matching»)
+# даже при закавыченном разделителе. Поймано прогоном, а не чтением.
+def aliases(fname):
+    stem = re.sub(r"^check_|_gate$|\.(sh|py)$", "", fname)
+    stem = re.sub(r"_gate$", "", stem)
+    return {fname.lower(), stem.lower(), stem.replace("_", "-").lower()}
+
+scripts = [f for f in sorted(os.listdir(lint_dir))
+           if f.startswith("check_") and f.endswith((".sh", ".py"))] \
+    if os.path.isdir(lint_dir) else []
+by_alias = {a: f for f in scripts for a in aliases(f)}
+
+problems = []
+for line in open(mp, encoding="utf-8"):
+    if not line.lstrip().startswith("|"):
+        continue
+    names = []
+    for tok in re.findall(r"\x60([^\x60]+)\x60", line):
+        key = tok.strip().lower()
+        # jscpd-DRY -> ярлык jscpd;  check_x.sh --rule y -> имя файла
+        key = re.split(r"\s|--", key)[0].strip()
+        for cand in (key, key.split("-")[0]):
+            if cand in by_alias:
+                names.append(by_alias[cand])
+                break
+    names = sorted(set(names))
+    if not names:
+        continue
+    low = line.lower()
+    claims_na = "n/a" in low or "⛔" in line
+    claims_on = ("✅" in line or "подключ" in low) and not claims_na
+    for n in names:
+        if claims_on and n in na_scripts:
+            problems.append(
+                "%s: в карте ролей ✅, а в not-applicable.json объявлен n/a" % n)
+        if claims_na and n not in reasoned and os.path.isfile(
+                os.path.join(lint_dir, n)):
+            problems.append(
+                "%s: в карте ролей n/a, а объявления нет — причина живёт только "
+                "в прозе и на прогонах не печатается" % n)
+        if not os.path.isfile(os.path.join(lint_dir, n)) and claims_on:
+            problems.append("%s: в карте ролей ✅, а скрипта в %s нет"
+                            % (n, lint_dir))
+for p in sorted(set(problems)):
+    sys.stderr.write(p + "\n")
+raise SystemExit(1 if problems else 0)
+PYMAP
+)
+  if (( $? != 0 )); then
+    printf '%s✗ карта ролей разошлась с деревом (%s):%s\n' "$red" "$MAP_FILE" "$reset" >&2
+    printf '%s\n' "$map_out" | sed 's/^/  /' >&2
+    printf 'Карта ролей — то, чем проект отвечает на вопрос «что закрыто».\n' >&2
+    printf 'Заявление, разошедшееся с механикой, продаёт покрытие, которого нет.\n' >&2
+    exit 1
+  fi
+fi
+
 unwired=()
 unwired_rules=()
 exempted=0

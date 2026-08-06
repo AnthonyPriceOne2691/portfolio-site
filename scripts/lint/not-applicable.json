@@ -1,0 +1,15 @@
+{
+  "check_grep_gate.sh:config-access": "правило про os.getenv/os.environ — python-кода в проекте нет вовсе",
+  "check_grep_gate.sh:di-indirection": "importlib-обходы — питоновская конструкция",
+  "check_grep_gate.sh:service-no-web": "нет сервисного слоя: весь код — генерация статических страниц",
+  "check_grep_gate.sh:blind-error": "нет рантайма и исключений: сайт статический, сборка падает на этапе build",
+  "check_grep_gate.sh:unstructured-log": "логов нет: статика без сервера",
+  "check_ast_gate.py:silent-except": "разбор python-AST, python-кода в проекте нет",
+  "check_ast_gate.py:inline-prompt": "разбор python-AST, python-кода в проекте нет",
+  "check_ast_gate.py:cpu-in-async": "разбор python-AST, python-кода в проекте нет",
+  "check_ast_gate.py:unbounded-list": "разбор python-AST, python-кода в проекте нет",
+  "check_diff_coverage.sh": "тестов нет вовсе. Вернуть вместе с первым тестом, иначе гейт мерил бы пустоту",
+  "check_mutation_gate.sh": "мутировать нечего: тестов нет. Ветка на Stryker готова и ждёт первого теста (§12.6 STATUS runtime_paths)",
+  "check_ast_gate.py": "разбор python-AST целиком: продуктового python-кода в проекте нет (только payload контура, а он из области гейтов исключён). Вернуть в тот же день, когда появится первый .py проекта",
+  "check_grep_gate.sh:no-grab-bag-module": "правило осмысленно и на TS (utils.ts — та же помойка), но канонный паттерн ловит только .py. Переписывать под язык — работа с замером; пока предмета нет (файлов src/utils.* не существует), вернуть при появлении"
+}

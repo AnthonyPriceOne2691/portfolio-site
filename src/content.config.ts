@@ -1,5 +1,5 @@
-import { defineCollection, z } from 'astro:content';
-import { glob } from 'astro/loaders';
+import { defineCollection, z } from "astro:content";
+import { glob } from "astro/loaders";
 
 /**
  * Единственный контракт, который обязан соблюсти новый проект, чтобы попасть на
@@ -15,7 +15,7 @@ const projectSchema = z.object({
   oneLiner: z.string().min(1),
   /** Одна ключевая метрика карточки (design 4.3) — не список. */
   metric: z.string().min(1),
-  status: z.enum(['production', 'local-demo', 'poc']),
+  status: z.enum(["production", "local-demo", "poc"]),
   stack: z.array(z.string().min(1)).nonempty(),
   /** Хотя бы один пруф обязателен: карточка без доказательства — реклама. */
   proof: z
@@ -27,7 +27,7 @@ const projectSchema = z.object({
       case: z.string().optional(),
     })
     .refine((p) => Object.values(p).some(Boolean), {
-      message: 'нужен хотя бы один proof: video | teaser | github | case',
+      message: "нужен хотя бы один proof: video | teaser | github | case",
     }),
   /** Секция Under contract — сквозной мотив сайта (design 3.1, 4.4). */
   contract: z.string().min(1),
@@ -38,12 +38,12 @@ const projectSchema = z.object({
 });
 
 const en = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/projects/en' }),
+  loader: glob({ pattern: "**/*.md", base: "./src/content/projects/en" }),
   schema: projectSchema,
 });
 
 const ru = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/projects/ru' }),
+  loader: glob({ pattern: "**/*.md", base: "./src/content/projects/ru" }),
   schema: projectSchema,
 });
 

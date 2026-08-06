@@ -240,12 +240,21 @@ class Doctor:
     def add(self, verdict: str, point: str, detail: str) -> None:
         self.rows.append((verdict, point, detail))
 
-    def _read_own_canaries(self) -> dict[str, tuple[str, str]]:
+    def _read_own_canaries(self) -> dict[str, list[tuple[str | None, str, str]]]:
         """Канарейки, объявленные проектом. Битый файл — НАЗВАТЬ, а не пропустить.
 
         Молчаливое «не разобрал → канареек нет» вернуло бы ровно тот класс, за
         которым доктор и придуман: объявление есть, проверки нет, и об этом никто
         не сказал.
+
+        Ключ — `<скрипт>` **или** `<скрипт>:<правило>`, как в
+        `not-applicable.json`. Форма с правилом обязательна, и это не симметрия
+        ради симметрии: многоправильный гейт БЕЗ `--rule` падает с usage, а
+        доктор принимал это за «гейт красный и без канарейки — судить нечем».
+        Замерено на первом же применении: два адаптированных гейта Swift-проекта
+        (`check_grep_gate.sh`, `check_ast_gate.py`) уходили в SKIP, то есть
+        объявление снова принималось и не исполнялось — тот самый класс, ради
+        которого этот механизм и чинили.
         """
         f = self.root / OWN_CANARIES
         if not f.is_file():
@@ -256,13 +265,15 @@ class Doctor:
             self.add(SKIP, OWN_CANARIES, f"не разобран ({exc}) — свои гейты НЕ "
                                          "проверены, хотя канарейки объявлены")
             return {}
-        out: dict[str, tuple[str, str]] = {}
-        for name, spec in (raw or {}).items():
-            if isinstance(spec, dict) and spec.get("path") and spec.get("content"):
-                out[str(name)] = (str(spec["path"]), str(spec["content"]))
-            else:
-                self.add(SKIP, f"канарейка {name}",
+        out: dict[str, list[tuple[str | None, str, str]]] = {}
+        for key, spec in (raw or {}).items():
+            if not (isinstance(spec, dict) and spec.get("path") and spec.get("content")):
+                self.add(SKIP, f"канарейка {key}",
                          f"объявление без path/content в {OWN_CANARIES}")
+                continue
+            name, _, rule = str(key).partition(":")
+            out.setdefault(name, []).append(
+                (rule or None, str(spec["path"]), str(spec["content"])))
         return out
 
     # --- A. каноны -----------------------------------------------------------
@@ -335,6 +346,150 @@ class Doctor:
             return []
         return [l.strip() for l in out.splitlines() if l.strip() and " " not in l.strip()]
 
+    # --- Видит ли подключённый гейт код ЭТОГО проекта (cqg@1.69) --------------
+    # Вторая половина вопроса «а судит ли вписанное». Первая — «умеет ли гейт
+    # краснеть» — закрыта канарейкой. Эта — «нацелен ли он на код», и до сих пор
+    # её не задавал никто:
+    #
+    #   gate-coverage  — вписан ли скрипт в конфиг. ТЕКСТОВЫЙ вопрос: хук с
+    #                    неверной маской вписан и проходит;
+    #   канарейка      — умеет ли гейт краснеть. Проба СВОЯ, поэтому слепой гейт
+    #                    ловит канарейку прекрасно и остаётся слепым к проекту;
+    #   сьют канона    — ловит ли правило нарушение. Стенд синтетический: тест
+    #                    сам пишет файлы, которые потом проверяет, поэтому
+    #                    расхождение маски с расширениями проекта там невыразимо
+    #                    ПО ПОСТРОЕНИЮ.
+    #
+    # Замер, из которого правило родилось (Astro/TS, четыре гейта разом):
+    # `file-length` с дефолтной маской `*.py *.ts *.tsx` не видел `.astro` —
+    # файл на 900 строк давал «OK — просмотрено 1 файл(ов)», exit 0; eslint,
+    # его ратчет и prettier стояли с шаблонной маской `^frontend/src/`, каталога
+    # такого нет — три `Skipped (no files to check)`. Мета-гейт при этом зелёный,
+    # доктор `DEAD 0`. Роль объявлена закрытой в карте ролей, гейт смотрит в
+    # пустоту, и молчание выглядит как успех.
+    #
+    # Гоняются ТОЛЬКО гейты, вписанные в `.pre-commit-config.yaml`, и это не
+    # осторожность, а точный признак дешевизны: §8.6 держит бюджет коммита в 5
+    # секунд, значит всё, что там стоит, дёшево ПО ПОСТРОЕНИЮ. Сетевые и
+    # минутные (`deps-audit`, `mutation`, `diff-coverage`) живут в CI и сюда не
+    # попадают — их и не запустим.
+    # ⚠ ДВЕ формулировки, и порядок слов в них РАЗНЫЙ: успех печатает
+    # «просмотрено N файл(ов)», а ноль — «0 файлов просмотрено — проверь LINT_…».
+    # Первая редакция знала только первую форму, и слепой гейт попадал в SKIP
+    # вместо DEAD — то есть проверка на «зелёный на непроверенном» сама молчала
+    # ровно на том случае, ради которого написана. Поймано третьим прогоном на
+    # живом проекте (`check_grep_gate.sh` с дефолтным `LINT_PY_SRC`).
+    SCANNED_RE = re.compile(r"просмотрено\s+(\d+)|(\d+)\s+файл\w*\s+просмотрено")
+
+    def _hook_env(self, text: str, name: str) -> dict:
+        """`LINT_*` из строк `entry:`, где зовётся этот скрипт.
+
+        Значения живут в `entry:` (§6), и гонять гейт без них значило бы мерить
+        не тот путь — то есть выдать ложную слепоту. Заодно это проверка самой
+        §6: переменной нет в entry — гейт и на коммите работает по дефолту.
+        """
+        env = {}
+        for line in text.splitlines():
+            # ⚠ КОММЕНТАРИИ пропускаются, и это не микрооптимизация. Шапка
+            # поставляемого `.pre-commit-config.yaml` объясняет, как задавать
+            # переменные, ПРИМЕРОМ: `… LINT_PY_SRC=backend/app bash …`. Первая
+            # редакция читала его как настоящую настройку и объявляла гейт
+            # «настроенным на несуществующий путь» — то есть проверка против
+            # ложного зелёного сама давала ложное красное, прочитав пояснение к
+            # себе же. Четвёртый рецидив класса, ради которого в сьюте канона
+            # живёт `extract.code_only()` (cqg@1.59).
+            if line.lstrip().startswith("#") or name not in line:
+                continue
+            for m in re.finditer(r"\b(LINT_[A-Z_]+)=(\"[^\"]*\"|'[^']*'|\S+)", line):
+                env[m.group(1)] = m.group(2).strip("\"'")
+        return env
+
+    #: Расширения, по которым видно, что в репозитории вообще есть исходники.
+    SOURCE_EXT = (".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".astro",
+                  ".vue", ".svelte", ".swift", ".go", ".rs", ".java", ".kt",
+                  ".rb", ".php", ".cs", ".c", ".cc", ".cpp", ".m", ".mm")
+
+    def check_gates_see_code(self) -> None:
+        d = self.root / "scripts" / "lint"
+        cfg = self.root / ".pre-commit-config.yaml"
+        if not d.is_dir() or not cfg.is_file():
+            return
+        text = cfg.read_text(encoding="utf-8", errors="replace")
+
+        # ⚠ Судить слепоту можно ТОЛЬКО там, где есть чему быть увиденным.
+        # На bootstrap-развёртывании (контур поставлен, кода ещё нет) ноль
+        # просмотренных — честная бедность, а не ложь, и красный доктор на таком
+        # стенде снимут первым: §4.3b, и ровно об этом предупреждает собственный
+        # тест процедуры («доктор, красный на неполном стенде, снимают первым»).
+        # Поймано этим тестом, а не полем.
+        code, listing = run(["git", "ls-files"], self.root)
+        files = [l for l in listing.splitlines()
+                 if l.endswith(self.SOURCE_EXT) and not l.startswith("scripts/lint/")]
+        if code != 0 or not files:
+            self.add(SKIP, "область гейтов",
+                     "в репозитории нет исходников вне scripts/lint — слепоту "
+                     "судить не на чем (bootstrap: контур есть, кода ещё нет)")
+            return
+        for script in sorted(d.glob("check_*")):
+            name = script.name
+            if not script.is_file() or name in NOT_GATES:
+                continue
+            if name not in text:                      # не на коммите — не наш случай
+                continue
+            point = f"область {name}"
+            cmd = (["python3"] if script.suffix == ".py" else ["bash"]) + [str(script)]
+            # Многоправильный гейт без `--rule` падает с usage. Область у правил
+            # одного скрипта общая, поэтому довольно первого вписанного.
+            body = script.read_text(encoding="utf-8", errors="replace")
+            if "--list-rules" in body:
+                wired = re.findall(rf"{re.escape(name)}\s+--rule\s+([A-Za-z0-9_-]+)", text)
+                if not wired:
+                    continue
+                cmd += ["--rule", wired[0]]
+            env = self._hook_env(text, name)
+            code, out = run(cmd, self.root, env=env)
+            m = self.SCANNED_RE.search(out)
+            if not m:
+                # Гейт не отчитывается числом — либо не сканирующий, либо красный
+                # по делу. Молча зачесть за успех нельзя, но и ронять не за что.
+                self.add(SKIP, point, "гейт не печатает «просмотрено N» — "
+                                      "сканирующий ли он, отсюда не видно")
+                continue
+            n = int(m.group(1) or m.group(2))
+            if n:
+                self.add(AUTO, point, f"просмотрено {n} файл(ов)")
+                continue
+
+            # Ноль бывает ДВУХ природ, и путать их нельзя.
+            #
+            # ① Гейт настроен на НЕСУЩЕСТВУЮЩИЙ путь — это ложь всегда: роль
+            #    объявлена закрытой, а смотреть физически некуда.
+            # ② У правила свой FILTER (`service-no-web` смотрит только в
+            #    `/services/`), и ноль честно значит «предмета здесь нет».
+            #
+            # Первая редакция звала DEAD в обоих случаях и обвинила
+            # `check_grep_gate.sh` на стенде, где каталог был на месте, а у
+            # правила просто не было предмета. Ложное срабатывание — дефект
+            # проверки (§4.3b), и такой доктор снимают раньше, чем он окупится.
+            # Поймано собственным тестом процедуры, а не полем.
+            roots = [v for k, v in env.items() if k.endswith("_SRC") or k.endswith("_DIR")]
+            missing = [r for r in roots if r and not (self.root / r).is_dir()]
+            if missing:
+                self.add(DEAD, point,
+                         "настроен на НЕСУЩЕСТВУЮЩИЙ путь "
+                         f"({', '.join(missing)}) — смотреть некуда, а роль "
+                         "объявлена закрытой (§6: значения живут в `entry:`)")
+            elif "--list-rules" in body:
+                self.add(WEAK, point,
+                         "просмотрено 0 файлов. У правила свой FILTER, поэтому "
+                         "ноль может честно значить «предмета нет» — но может и "
+                         "«маска шаблонная». Отсюда не различить: сверь §6")
+            else:
+                self.add(DEAD, point,
+                         "подключён и смотрит в ПУСТОТУ: просмотрено 0 файлов. "
+                         "Роль объявлена закрытой, а гейт не видит кода — маска "
+                         "или путь остались шаблонными (§6: значения в `entry:`)")
+
     def check_canaries(self) -> None:
         d = self.root / "scripts" / "lint"
         if not d.is_dir():
@@ -358,7 +513,8 @@ class Doctor:
             # есть и класс нарушения ему известен, — это сильнее, чем проверка
             # «а честно ли гейт пропускает, когда инструмента нет».
             if name in self.own:
-                self._probe_declared(script, *self.own[name])
+                for rule, path, body in self.own[name]:
+                    self._probe_declared(script, path, body, rule)
                 continue
             if name in TOOL_DEPENDENT:
                 self._probe_honest_skip(script, TOOL_DEPENDENT[name])
@@ -456,7 +612,8 @@ class Doctor:
                 self.add(DEAD, point,
                          f"пропуск НЕ НАЗВАН и не красный: {out.strip()[:70]!r}")
 
-    def _probe_declared(self, script: Path, path: str, content: str) -> None:
+    def _probe_declared(self, script: Path, path: str, content: str,
+                        rule: str | None = None) -> None:
         """Гейт по канарейке, объявленной проектом — ДИФФЕРЕНЦИАЛЬНО и В ДЕРЕВЕ.
 
         Прогонов два: **зелен без канарейки и красен с ней**. Одного «красный с
@@ -476,9 +633,11 @@ class Doctor:
         есть (чужое не трогаем), и удаление в `finally` вместе с каталогами,
         которые создали сами. Коммитить канарейку НЕЛЬЗЯ: индекс проекта не наш.
         """
-        point = f"канарейка {script.name} (своя)"
+        point = f"канарейка {script.name}" + (f":{rule}" if rule else "") + " (своя)"
         target = self.root / path
         cmd = (["python3"] if script.suffix == ".py" else ["bash"]) + [str(script)]
+        if rule:
+            cmd += ["--rule", rule]
 
         # Канарейка бывает ДВУХ видов, и оба законны: новый файл (нарушение,
         # которого в дереве нет) и ПОДМЕНА существующего (вендоренная копия
@@ -538,7 +697,8 @@ class Doctor:
         if canary is None:
             declared = self.own.get(script.name)
             if declared:
-                self._probe_declared(script, *declared)
+                for d_rule, d_path, d_body in declared:
+                    self._probe_declared(script, d_path, d_body, d_rule or rule)
                 return
             self.add(SKIP, point, "канарейки для этого правила у доктора нет — "
                                   "правило НЕ проверено исполнением. Свой гейт? "
@@ -624,6 +784,7 @@ def main() -> int:
     doc.check_tools()
     doc.check_snapshots()
     doc.check_canaries()
+    doc.check_gates_see_code()
     return doc.report(args.json)
 
 

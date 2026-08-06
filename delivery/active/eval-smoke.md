@@ -1,6 +1,22 @@
-# Eval smoke — this shipment
+# Eval smoke — эта поставка
 
-Derived from spec acceptance. Run during verify.
+Из acceptance-примеров спеки. Гоняется на verify. Отметка ставится по ФАКТУ
+исполнения, а не по намерению: каждая строка ниже — это прогон, который был.
 
-- [ ] …
-- [ ] …
+## Проверено исполнением
+
+- [x] **A1** — `npm run build` на валидном дереве → exit 0, `dist/index.html` есть
+- [x] **A2** — сборка с убранным обязательным `oneLiner` → **exit 1**, назван файл и поле
+- [x] **A3** — `status: "прод"` вне enum → **exit 1**, назван допустимый набор
+- [x] **A4** — файл на 900 строк в `src/pages/` → **exit 1**, назван файл и порог.
+      ⚠ 06.08 этот прогон и вскрыл дыру: до починки маски он давал exit 0
+      («просмотрено 1 файл(ов)»), потому что гейт не видел `.astro`
+- [x] **A5** — `AWS_SECRET_ACCESS_KEY` в `src/__probe_secret.ts` →
+      `detect-secrets-guard` **Failed**, «Potential secrets about to be
+      committed»; проба удалена, дерево чистое
+- [x] **A6** — `contour_doctor.py` → `DEAD 0`, непокрытое видно как `WEAK`/`ABSENT`
+
+## Не проверено, и это названо
+
+- [ ] **A7** — проект добавляется парой md без правки `.astro`: страницы
+      `/projects` и кольца «Next» ещё нет, проверять нечем. Вернуть вместе с ними

@@ -15,9 +15,9 @@ concurrency:
 
 env:
   STRICT: "1"                 # soft-режим в CI запрещён (Delivery §10.4)
-  LINT_PY_SRC: backend/features
-  LINT_FE_DIR: frontend
-  LINT_BE_DIR: backend
+  # Односоставный npm-проект: python-половины нет вовсе, фронт в корне.
+  LINT_TS_SRC: src
+  LINT_FE_DIR: .
   LINT_COV_PKG: features
 
 jobs:
@@ -41,37 +41,17 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install backend deps
-        run: |
-          python -m venv backend/.venv
-          # if-блок, а не `test -f X && cmd`: под `bash -e` ложный test уронил бы шаг.
-          # requirements-dev.txt может отсутствовать (uv/pyproject-проект) — до
-          # lab-11 F9 безусловный `pip install -r` обрывал ЗДЕСЬ всю джобу гейтов,
-          # при том что охрана стояла на соседней строке. Нет манифеста — ставится
-          # тот же список инструментов, что в манифесте (сверяется тестом), и выбор
-          # печатается: молча разные окружения = «у меня локально проходило».
-          if [ -f backend/requirements-dev.txt ]; then
-            echo "deps: backend/requirements-dev.txt"
-            backend/.venv/bin/pip install -r backend/requirements-dev.txt
-          else
-            echo "deps: манифеста нет — dev-инструменты гейтов по списку Приложения B"
-            backend/.venv/bin/pip install 'ruff>=0.6.9' 'mypy>=1.11.2' 'types-PyYAML>=6.0' 'pre-commit>=3.8.0' 'detect-secrets>=1.5.0' 'pip-audit>=2.7' 'mutmut>=3.6' 'pytest-cov>=5.0' 'pytest-env>=1.1' 'hypothesis>=6.100' 'import-linter>=2.0'
-          fi
-          if [ -f backend/requirements.txt ]; then
-            backend/.venv/bin/pip install -r backend/requirements.txt
-          fi
-          # Рантайм-зависимости pyproject-проекта: без них mypy падает «Error
-          # importing plugin pydantic.mypy», и диагноз читается как дефект
-          # проекта (lab-11 F6). Неудача editable не роняет шаг: гейты ниже
-          # скажут о своей беде сами, а предупреждение называет причину.
-          if [ -f backend/pyproject.toml ]; then
-            backend/.venv/bin/pip install -e backend || echo "::warning::editable-установка backend не удалась — mypy может не видеть рантайм-зависимости проекта"
-          fi
+      # Питон нужен ТОЛЬКО контуру (pre-commit, detect-secrets): продуктового
+      # python-кода в проекте нет, поэтому ни venv, ни ruff/mypy/mutmut здесь
+      # не ставятся. Роли, которые они закрывали, объявлены n/a в
+      # scripts/lint/not-applicable.json с причинами.
+      - name: Install contour deps
+        run: pip install 'pre-commit>=3.8.0' 'detect-secrets>=1.5.0' 'PyYAML>=6.0'
 
-      - name: Install frontend deps
-        run: npm ci --prefix frontend
+      - name: Install npm deps
+        run: npm ci
 
       # ⚠ `if: always()` на КАЖДОМ независимом гейте — не косметика.
       # Шаг, который не просто падает, а КРАШИТСЯ (mypy INTERNAL ERROR), обрывает

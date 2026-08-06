@@ -1,7 +1,7 @@
 # Active delivery status
 
 - **slug:** contour-bootstrap
-- **stack:** delivery@1.50, cqg@1.67, okf@absent
+- **stack:** delivery@1.50, cqg@1.72, okf@absent
 - **class:** M
 - **kind:** bootstrap
 - **repro_test:** n/a reason=не bugfix, продуктового кода ещё нет
@@ -31,6 +31,7 @@
 - **new_dependency:** eslint reason=инструмент TS-половины гейта сложности (CQG §3, cqg@1.66); пороги навязывает гейт флагом --rule, конфиг проекта даёт только парсер by=agent:claude-code
 - **new_dependency:** typescript-eslint reason=парсер TS для eslint; без него espree печатает «Parsing error» и гейт краснеет на всех файлах, не проверив ни одного by=agent:claude-code
 - **new_dependency:** dependency-cruiser reason=инструмент роли «направление зависимостей» на TS (CQG §3.6); замена import-linter, которого на этом стеке нет by=agent:claude-code
+- **new_dependency:** jscpd reason=роль DRY стояла в карте ролей как подключённая, а инструмента не было — таблица утверждала покрытие, которого нет; дешевле поставить, чем понижать заявление by=agent:claude-code
   <!-- 219 пакетов в node_modules — транзитивные, они решением не являются (§3
        new-dependency: объявляются только ПРЯМЫЕ). -->
 - **runtime_paths:** src/pages/
