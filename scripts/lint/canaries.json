@@ -1,0 +1,6 @@
+{
+  "check_layers_gate.sh": {
+    "path": "src/content/__canary.ts",
+    "content": "import Page from '../pages/index.astro';\nexport const probe = Page;\n"
+  }
+}

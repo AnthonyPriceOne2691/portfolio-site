@@ -1,7 +1,7 @@
 # Active delivery status
 
 - **slug:** contour-bootstrap
-- **stack:** delivery@1.49, cqg@1.66, okf@absent
+- **stack:** delivery@1.50, cqg@1.67, okf@absent
 - **class:** M
 - **kind:** bootstrap
 - **repro_test:** n/a reason=не bugfix, продуктового кода ещё нет
@@ -33,6 +33,10 @@
 - **new_dependency:** dependency-cruiser reason=инструмент роли «направление зависимостей» на TS (CQG §3.6); замена import-linter, которого на этом стеке нет by=agent:claude-code
   <!-- 219 пакетов в node_modules — транзитивные, они решением не являются (§3
        new-dependency: объявляются только ПРЯМЫЕ). -->
+- **runtime_paths:** src/pages/
+  <!-- §12.6. Экран: раскладку Astro не проверяет ничто — сборка зелёная, а
+       панель может уехать. Схема контента (src/content/) сюда НЕ входит:
+       zod валидирует её на сборке, и это доказано примерами A2/A3. -->
 - **canon_drift_waiver:** no
 - **baseline_growth_waiver:** no
 - **observability:** 1

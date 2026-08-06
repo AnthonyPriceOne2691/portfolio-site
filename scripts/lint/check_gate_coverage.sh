@@ -44,6 +44,87 @@ red=$(printf '\033[31m'); yellow=$(printf '\033[33m'); green=$(printf '\033[32m'
 #
 # Этот файл в исключения НЕ вносится: мета-гейт, который сам никем не вызывается,
 # — ровно та дыра, от которой он защищает, на уровень выше.
+# --- Проектные исключения ролей (cqg@1.67) ------------------------------------
+# `not_wired_reason()` ниже — исключения САМОГО КАНОНА, одинаковые везде. Но есть
+# второй, куда более частый случай: роль каталога §3 неприменима НА ЭТОМ СТЕКЕ.
+# Карта ролей §Применимость велит пометить такую строку `n/a + причина`, а
+# механики для этого не было вовсе — и последствия замерены на живом
+# Astro/TS-проекте: четыре python-правила и хук mypy остались подключёнными и
+# красными, потому что зовут `backend/.venv/bin/python`, которого нет.
+#
+# Выключить их правкой ЭТОГО скрипта нельзя: payload сверяется байт-в-байт
+# (`assert_digest.sh`), и проект, поправивший `not_wired_reason()`, разъезжается
+# с каноном навсегда. Поэтому объявление живёт в файле ПРОЕКТА — тот же приём,
+# что `canaries.json` (cqg@1.64):
+#
+#   scripts/lint/not-applicable.json
+#   {
+#     "check_ast_gate.py:silent-except": "нет python-кода: проект на Astro/TS",
+#     "check_deps_audit.sh": "python-манифеста нет; npm-половина работает"
+#   }
+#
+# Ключ — имя скрипта ИЛИ `имя:правило`: гранулярность правила обязательна, потому
+# что `check_ast_gate.py` несёт четыре правила разом, и «выключить всё или
+# ничего» здесь означало бы выключить всё.
+#
+# Причина ОБЯЗАТЕЛЬНА и печатается на каждом прогоне — как у `not_wired_reason()`,
+# и по той же причине: состояние проекта меняется («тестов нет», «нет TS»), и
+# устаревшее исключение должно попадаться на глаза, а не лежать в файле.
+NA_FILE="$LINT_DIR/not-applicable.json"
+na_reasons=""
+if [[ -f "$NA_FILE" ]]; then
+  PY_NA=$(command -v python3 2>/dev/null || true)
+  if [[ -z "$PY_NA" ]]; then
+    printf '%s⚠ есть %s, но python3 не найден — проектные исключения НЕ прочитаны.\n' \
+      "$yellow" "$NA_FILE"
+    printf 'Это не «исключений нет»: они объявлены и не применены.%s\n' "$reset"
+  else
+    # stderr забирается ВМЕСТЕ с stdout, и только на ошибке. Первая редакция
+    # печатала `$na_reasons` (то есть stdout) в сообщении об ошибке, а диагноз
+    # питон писал в stderr — выходило «не применён: » с пустым местом там, где
+    # должна стоять причина. Гейт, не назвавший причину, — тот же класс, что
+    # «пропуск с чужим диагнозом»: поймано собственным тестом.
+    na_out=$("$PY_NA" - "$NA_FILE" 2>&1 <<'PYNA'
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception as exc:
+    sys.stderr.write("не разобран как JSON (%s)\n" % exc)
+    raise SystemExit(2)
+if not isinstance(data, dict):
+    sys.stderr.write("ожидался объект {ключ: причина}\n")
+    raise SystemExit(2)
+for k, v in data.items():
+    reason = str(v).strip()
+    if not reason:
+        sys.stderr.write("%s: объявление БЕЗ причины\n" % k)
+        raise SystemExit(3)
+    sys.stdout.write("%s\t%s\n" % (k, reason))
+PYNA
+)
+    na_rc=$?
+    if (( na_rc != 0 )); then
+      printf '%s✗ %s не применён:%s\n' "$red" "$NA_FILE" "$reset" >&2
+      printf '%s\n' "$na_out" | sed 's/^/  /' >&2
+      printf 'Исключение без причины исключением не является (карта ролей\n' >&2
+      printf '§Применимость): «не думали» и «подумали и нет» обязаны различаться\n' >&2
+      printf 'в тексте, а не в тишине.\n' >&2
+      exit 1
+    fi
+    na_reasons="$na_out"
+  fi
+fi
+
+# Причина исключения по ключу `<скрипт>` или `<скрипт>:<правило>`; пусто — нет.
+na_reason() {
+  [[ -n "$na_reasons" ]] || return 1
+  local hit
+  hit=$(printf '%s
+' "$na_reasons" | awk -F'	' -v k="$1" '$1 == k { print $2; exit }')
+  [[ -n "$hit" ]] || return 1
+  printf '%s' "$hit"
+}
+
 not_wired_reason() {
   case "$1" in
     check_diff_coverage.sh)
@@ -130,6 +211,12 @@ for path in "${gates[@]}"; do
     exempted=$((exempted + 1))
     continue
   fi
+  # Роль неприменима НА ЭТОМ СТЕКЕ — объявлено проектом, причина печатается.
+  if reason=$(na_reason "$base"); then
+    printf '  ○ %-30s n/a на этом стеке: %s\n' "$base" "$reason"
+    exempted=$((exempted + 1))
+    continue
+  fi
   # -F: имя содержит точку, как regex она матчила бы лишний символ.
   if ! grep -qsF -- "$base" "${CONFIGS[@]}"; then
     unwired+=("$base")
@@ -154,6 +241,14 @@ for path in "${gates[@]}"; do
     esac
     while IFS= read -r rule; do
       [[ -n "$rule" ]] || continue
+      # Гранулярность ПРАВИЛА и здесь: `check_ast_gate.py` несёт четыре правила,
+      # и на чужом стеке неприменимы обычно все — но объявлять их надо поимённо,
+      # иначе «выключить одно» неотличимо от «выключить весь скрипт».
+      if reason=$(na_reason "$base:$rule"); then
+        printf '  ○ %-30s n/a на этом стеке: %s\n' "$base --rule $rule" "$reason"
+        exempted=$((exempted + 1))
+        continue
+      fi
       rules_checked=$((rules_checked + 1))
       if ! printf '%s\n' "$wired_rules" | grep -qxF -- "$rule"; then
         unwired_rules+=("$base --rule $rule")

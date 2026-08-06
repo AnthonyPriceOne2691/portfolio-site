@@ -350,6 +350,16 @@ class Doctor:
                 continue
             if not name.startswith("check_"):
                 continue
+            # Объявленная проектом канарейка идёт ПЕРВОЙ — раньше пробы
+            # честного пропуска. До cqg@1.67 порядок был обратным, и для
+            # tool-зависимого гейта до `_probe_declared` дело не доходило
+            # НИКОГДА: объявление принималось и молча не исполнялось. Проект,
+            # положивший канарейку, тем самым утверждает, что инструмент у него
+            # есть и класс нарушения ему известен, — это сильнее, чем проверка
+            # «а честно ли гейт пропускает, когда инструмента нет».
+            if name in self.own:
+                self._probe_declared(script, *self.own[name])
+                continue
             if name in TOOL_DEPENDENT:
                 self._probe_honest_skip(script, TOOL_DEPENDENT[name])
                 continue
@@ -447,46 +457,75 @@ class Doctor:
                          f"пропуск НЕ НАЗВАН и не красный: {out.strip()[:70]!r}")
 
     def _probe_declared(self, script: Path, path: str, content: str) -> None:
-        """Чужой гейт по канарейке, объявленной проектом — ДИФФЕРЕНЦИАЛЬНО.
+        """Гейт по канарейке, объявленной проектом — ДИФФЕРЕНЦИАЛЬНО и В ДЕРЕВЕ.
 
-        Свои гейты доктор судит одним прогоном: он знает, что канарейка нарушает
-        ровно их класс. Про чужой гейт он этого не знает, и «красный с канарейкой»
-        сам по себе ничего не значит — гейт мог упасть на отсутствии окружения.
-        Поэтому прогонов два: **зелен без канарейки и красен с ней** — иначе
-        судить нечем, и это SKIP с названной причиной, а не AUTO.
+        Прогонов два: **зелен без канарейки и красен с ней**. Одного «красный с
+        канарейкой» мало — гейт мог упасть на отсутствии окружения; тогда судить
+        нечем, и это SKIP с названной причиной, а не AUTO.
+
+        ⚠ **Проба идёт в дереве САМОГО ПРОЕКТА, и это исправление, а не стиль.**
+        До cqg@1.67 канарейка разворачивалась во временном репозитории, куда
+        копировались только скрипт и `canaries.json`. Для гейта, стоящего на
+        внешнем инструменте, там нет ни `node_modules`, ни `tsconfig.json`, ни
+        конфига контрактов — то есть **проектный контракт был непроверяем в
+        принципе**, и объявление молча не исполнялось. Замерено на живом
+        развёртывании: проект объявил две канарейки, доктор напечатал `DEAD 0` и
+        ни строки про них. Принятое и неисполненное объявление хуже отсутствующего.
+
+        Цена: доктор пишет файл в рабочее дерево. Поэтому — отказ, если файл уже
+        есть (чужое не трогаем), и удаление в `finally` вместе с каталогами,
+        которые создали сами. Коммитить канарейку НЕЛЬЗЯ: индекс проекта не наш.
         """
         point = f"канарейка {script.name} (своя)"
-        with tempfile.TemporaryDirectory(prefix="doctor-own-") as tmp:
-            lab = Path(tmp)
-            (lab / "scripts" / "lint").mkdir(parents=True)
-            shutil.copy(script, lab / "scripts" / "lint" / script.name)
-            for rel in ("scripts/lint/canaries.json",):
-                src_f = self.root / rel
-                if src_f.is_file():
-                    shutil.copy(src_f, lab / rel)
-            target = lab / path
+        target = self.root / path
+        cmd = (["python3"] if script.suffix == ".py" else ["bash"]) + [str(script)]
+
+        # Канарейка бывает ДВУХ видов, и оба законны: новый файл (нарушение,
+        # которого в дереве нет) и ПОДМЕНА существующего (вендоренная копия
+        # канона — находка 7). Первая редакция пробы в дереве отказывалась
+        # трогать существующий файл и тем сломала второй вид — поймано
+        # собственным сьютом, а не полем. Поэтому: содержимое сохраняем и
+        # возвращаем, созданное — удаляем.
+        clean = target.exists()
+        backup = target.read_text(encoding="utf-8") if clean else None
+        made: list[Path] = []
+        d = target.parent
+        while not d.exists() and d != self.root:
+            made.append(d)
+            d = d.parent
+        try:
+            before_code, before_out = run(cmd, self.root)
             target.parent.mkdir(parents=True, exist_ok=True)
-            clean = target.exists()
-            run(["git", "init", "-q", "."], lab)
-            cmd = (["python3"] if script.suffix == ".py" else ["bash"]) \
-                + [str(lab / "scripts" / "lint" / script.name)]
-
-            def commit_and_run() -> tuple[int, str]:
-                run(["git", "add", "-A"], lab)
-                run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
-                     "commit", "-qm", "canary"], lab)
-                return run(cmd, lab, env={"LINT_PY_SRC": "backend/features"})
-
-            before_code, before_out = commit_and_run()
             target.write_text(content, encoding="utf-8")
-            after_code, after_out = commit_and_run()
+            after_code, after_out = run(cmd, self.root)
+        finally:
+            if backup is None:
+                if target.exists():
+                    target.unlink()
+                for d in made:                  # только свои, снизу вверх
+                    try:
+                        d.rmdir()
+                    except OSError:
+                        break
+            else:
+                target.write_text(backup, encoding="utf-8")
+
+        # Гейт, судящий по `git ls-files`, некоммитнутой канарейки не увидит, и
+        # его зелёное здесь ничего не значит. Отличаем это от настоящего DEAD:
+        # молчать «проверено» на непроверенном — ровно то, против чего доктор.
+        body = script.read_text(encoding="utf-8", errors="replace")
+        if before_code == 0 and after_code == 0 and "ls-files" in body:
+            self.add(SKIP, point, "гейт судит по `git ls-files`, а канарейка не "
+                                  "закоммичена — проверить исполнением нечем "
+                                  "(индекс проекта доктор не трогает)")
+            return
 
         if before_code != 0:
             self.add(SKIP, point, "гейт красный и БЕЗ канарейки "
                                   f"({before_out.strip()[:60]!r}) — судить нечем")
         elif after_code != 0:
             self.add(AUTO, point, "канарейка поймана"
-                                  + ("" if clean else f" ({path})"))
+                                  + (f" ({path})" if not clean else ""))
         elif any(w in after_out for w in SKIP_WORDS):
             self.add(WEAK, point, after_out.strip().splitlines()[0][:80])
         else:
