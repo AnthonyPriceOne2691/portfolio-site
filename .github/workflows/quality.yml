@@ -70,7 +70,13 @@ jobs:
         id: precommit
         run: |
           pip install pre-commit
-          pre-commit run --all-files --show-diff-on-failure
+          # ⚠ `--verbose` обязателен, и это не шумность. Без него pre-commit
+          # печатает у ПРОШЕДШЕГО хука только «Passed», проглатывая stdout — а
+          # значит числа «просмотрено N файл(ов)» в логе CI нет. Критерий §6
+          # («зелёный гейт, который ничего не видит, хуже красного») оказывался
+          # проверяемым локально и НЕпроверяемым там, где по §10.4 живёт истина.
+          # Найдено на первом же зелёном прогоне 07.08.
+          pre-commit run --all-files --show-diff-on-failure --verbose
 
       - name: Gate coverage (все гейты подключены)
         if: always()
