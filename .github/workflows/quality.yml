@@ -15,10 +15,13 @@ concurrency:
 
 env:
   STRICT: "1"                 # soft-режим в CI запрещён (Delivery §10.4)
-  LINT_PY_SRC: backend/features
-  LINT_FE_DIR: frontend
-  LINT_BE_DIR: backend
-  LINT_COV_PKG: features
+  # Односоставный npm-проект: python-половины нет вовсе, фронт в корне.
+  # ⚠ АДАПТАЦИЯ ПОД СТЕК: накат канона 2026-08-07 затёр этот блок дефолтами
+  # (`backend/features`, `frontend`) — и никакой механизм об этом не сказал:
+  # сверка расхождений доктора смотрит только `scripts/lint/*`, конфиги и
+  # workflow'ы в неё не входят. Восстановлено вручную; находка ушла в канон.
+  LINT_TS_SRC: src
+  LINT_FE_DIR: .
 
 jobs:
   gates:
