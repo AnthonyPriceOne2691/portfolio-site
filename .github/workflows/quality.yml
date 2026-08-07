@@ -35,7 +35,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"   # ← выровнять с локальной версией проекта
-          cache: pip
+          # ⚠ `cache: pip` СНЯТ, и это не экономия наоборот. Кэш ищет
+          # `**/requirements.txt` или `**/pyproject.toml` для хэша, а на
+          # не-Python проекте их нет — шаг падал с «No file matched», и вместе
+          # с ним НЕ ВЫПОЛНЯЛСЯ `pre-commit (all files, STRICT=1)`, шедший ниже.
+          # Соседние гейты с `if: always()` при этом отчитались зелёным, потому
+          # что инструментов в окружении не было: ровно тот «зелёный на
+          # непроверенном», против которого написан §6. Восьмой рецидив класса
+          # «шаблон канона несёт питоновское допущение».
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -63,7 +70,13 @@ jobs:
         id: precommit
         run: |
           pip install pre-commit
-          pre-commit run --all-files --show-diff-on-failure
+          # ⚠ `--verbose` обязателен, и это не шумность. Без него pre-commit
+          # печатает у ПРОШЕДШЕГО хука только «Passed», проглатывая stdout — а
+          # значит числа «просмотрено N файл(ов)» в логе CI нет. Критерий §6
+          # («зелёный гейт, который ничего не видит, хуже красного») оказывался
+          # проверяемым локально и НЕпроверяемым там, где по §10.4 живёт истина.
+          # Найдено на первом же зелёном прогоне 07.08.
+          pre-commit run --all-files --show-diff-on-failure --verbose
 
       - name: Gate coverage (все гейты подключены)
         if: always()

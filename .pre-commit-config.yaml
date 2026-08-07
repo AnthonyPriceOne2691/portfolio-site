@@ -191,7 +191,13 @@ repos:
       #   stages: [pre-push]
       - id: deps-audit
         name: no new vulnerable dependencies (CI-only по бюджету §8.6)
-        entry: bash scripts/lint/check_deps_audit.sh
+        # LINT_FE_DIR=. обязателен: дефолт скрипта — `frontend`, и без него
+        # `npm audit --prefix frontend` уходил в несуществующий каталог. В CI
+        # переменная стоит в `env:` workflow, поэтому роль там работала, а
+        # локальный хук смотрел в пустоту — доктор назвал это DEAD, как только
+        # гейт научился печатать число (cqg@1.79). Седьмой рецидив класса
+        # «заявление в карте ролей, шаблонный путь в конфиге».
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && LINT_FE_DIR=. bash scripts/lint/check_deps_audit.sh'
         language: system
         stages: [manual]
         pass_filenames: false
