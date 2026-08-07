@@ -13,8 +13,9 @@ import json
 import os
 import re
 import shutil
+from pathlib import Path
 
-from doctor_core import ABSENT, AUTO, DEAD, SKIP, WEAK, _block_after
+from doctor_core import ABSENT, AUTO, DEAD, SKIP, WEAK, _block_after, run
 
 CANONS = ("AGENT_STACK.md", "AGENT_DELIVERY_HARNESS.md",
           "CODE_QUALITY_GATES.md", "OKF_KNOWLEDGE_BUNDLE.md")
@@ -103,10 +104,24 @@ class LayoutChecks:
 
         # Установлен ли хук ФАКТИЧЕСКИ. Конфиг без `pre-commit install` — это
         # список пожеланий: ни один хук не запустится, и об этом ничто не скажет.
+        # ⚠ Каталог хуков берётся у git, а не собирается из `.git/hooks`
+        # (`cqg@1.90`). В worktree `.git` — ФАЙЛ со ссылкой, хуки лежат в общем
+        # каталоге основного репозитория, и доктор объявлял их неустановленными
+        # ровно там, где они только что отработали на коммите. Ложное срабатывание
+        # — дефект проверки (§4.3b), причём этот стоил бы дороже обычного: два
+        # `DEAD` роняют прогон, то есть обновление контура в worktree выглядело бы
+        # провалом. Поймано первым же применением: канон разворачивали в worktree,
+        # чтобы не трогать рабочую ветку проекта.
+        code, common = run(["git", "rev-parse", "--git-common-dir"], self.root)
+        gitdir = Path(common.strip()) if code == 0 and common.strip() else self.root / ".git"
+        if not gitdir.is_absolute():
+            gitdir = self.root / gitdir
         for hook in ("pre-commit", "pre-push"):
-            h = self.root / ".git" / "hooks" / hook
+            h = gitdir / "hooks" / hook
             if h.is_file() and "pre-commit" in h.read_text("utf-8", errors="ignore"):
-                self.add(AUTO, f"хук {hook} установлен", str(h.relative_to(self.root)))
+                self.add(AUTO, f"хук {hook} установлен",
+                         str(h if not h.is_relative_to(self.root)
+                             else h.relative_to(self.root)))
             else:
                 self.add(DEAD if cfg.is_file() else ABSENT, f"хук {hook} установлен",
                          "конфиг есть, а хук НЕ установлен: `pre-commit install"
