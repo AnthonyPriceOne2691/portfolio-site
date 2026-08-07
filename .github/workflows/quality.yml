@@ -98,11 +98,26 @@ jobs:
       # нет: инструменты ставятся шагом выше, и их отсутствие означает, что шаг
       # упал. Поэтому здесь пропуск переводится в КРАСНОЕ, и делается это до
       # гейтов, чтобы причина стояла в логе раньше их зелёных галок.
+      # ⚠ АДАПТАЦИЯ ПОД СТЕК. Список канона — `backend/.venv/bin/{ruff,mypy,
+      # detect-secrets}` — здесь неверен дважды: ruff и mypy объявлены `n/a`
+      # в `scripts/lint/not-applicable.json` (питон-кода нет), а detect-secrets
+      # живёт в PATH, потому что venv мы не заводим (см. шаг установки выше).
+      # Замысел шага при этом сохранён ПОЛНОСТЬЮ: проверяются инструменты,
+      # отсутствие которых превращает гейт в тихий пропуск. На этом стеке
+      # несущие — фронтовые, и без них eslint/jscpd/layers/prettier уходят в
+      # мягкий skip, а джоба выглядит проверенной.
+      #
+      # ⚠ `prettier` намеренно в списке, хотя в `package.json` его НЕТ: он
+      # приезжает транзитивно. Гейт формата стоит на пакете, которого никто не
+      # гарантирует — исчезнет у апстрима, и хук умрёт молча. Проверка ловит это
+      # сразу; правильная починка — объявить prettier прямой devDependency
+      # (задача T1 поставки mvp-shell-home).
       - name: Инструменты гейтов на месте (иначе пропуск читается как успех)
         run: |
           missing=""
-          for t in ruff mypy detect-secrets; do
-            "backend/.venv/bin/$t" --version >/dev/null 2>&1 || missing="$missing $t"
+          command -v detect-secrets >/dev/null 2>&1 || missing="$missing detect-secrets"
+          for t in eslint jscpd depcruise prettier; do
+            [ -x "node_modules/.bin/$t" ] || missing="$missing $t"
           done
           if [ -n "$missing" ]; then
             echo "::error::инструменты гейтов не поставились:$missing"
@@ -110,7 +125,7 @@ jobs:
             echo "Смотри шаг установки: он упал или поставил не туда (§8.3)."
             exit 1
           fi
-          echo "toolchain: ruff/mypy/detect-secrets на месте"
+          echo "toolchain: detect-secrets + eslint/jscpd/depcruise/prettier на месте"
 
       # ⚠ `if: always()` на КАЖДОМ независимом гейте — не косметика.
       # Шаг, который не просто падает, а КРАШИТСЯ (mypy INTERNAL ERROR), обрывает
