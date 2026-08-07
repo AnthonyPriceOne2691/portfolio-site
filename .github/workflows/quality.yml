@@ -57,32 +57,26 @@ jobs:
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
           cache-dependency-path: '**/package-lock.json' 
 
-      - name: Install backend deps
-        run: |
-          python -m venv backend/.venv
-          # if-блок, а не `test -f X && cmd`: под `bash -e` ложный test уронил бы шаг.
-          # requirements-dev.txt может отсутствовать (uv/pyproject-проект) — до
-          # lab-11 F9 безусловный `pip install -r` обрывал ЗДЕСЬ всю джобу гейтов,
-          # при том что охрана стояла на соседней строке. Нет манифеста — ставится
-          # тот же список инструментов, что в манифесте (сверяется тестом), и выбор
-          # печатается: молча разные окружения = «у меня локально проходило».
-          if [ -f backend/requirements-dev.txt ]; then
-            echo "deps: backend/requirements-dev.txt"
-            backend/.venv/bin/pip install -r backend/requirements-dev.txt
-          else
-            echo "deps: манифеста нет — dev-инструменты гейтов по списку Приложения B"
-            backend/.venv/bin/pip install 'ruff>=0.6.9' 'mypy>=1.11.2' 'types-PyYAML>=6.0' 'pre-commit>=3.8.0' 'detect-secrets>=1.5.0' 'pip-audit>=2.7' 'mutmut>=3.6' 'pytest-cov>=5.0' 'pytest-env>=1.1' 'hypothesis>=6.100' 'import-linter>=2.0'
-          fi
-          if [ -f backend/requirements.txt ]; then
-            backend/.venv/bin/pip install -r backend/requirements.txt
-          fi
-          # Рантайм-зависимости pyproject-проекта: без них mypy падает «Error
-          # importing plugin pydantic.mypy», и диагноз читается как дефект
-          # проекта (lab-11 F6). Неудача editable не роняет шаг: гейты ниже
-          # скажут о своей беде сами, а предупреждение называет причину.
-          if [ -f backend/pyproject.toml ]; then
-            backend/.venv/bin/pip install -e backend || echo "::warning::editable-установка backend не удалась — mypy может не видеть рантайм-зависимости проекта"
-          fi
+      # ⚠ АДАПТАЦИЯ ПОД СТЕК. Канонный шаг «Install backend deps» здесь ЗАМЕНЁН,
+      # и это не упрощение, а починка ложного красного.
+      #
+      # Канонный шаг безусловно делает `python -m venv backend/.venv` и ставит
+      # туда весь питоновский инструментарий гейтов. На проекте, где питона нет,
+      # он тем самым СОЗДАЁТ каталог `backend/` — и охрана `-d "$BE_DIR"` в
+      # `check_deps_audit.sh` (§3, python-половина) становится истинной. Дальше
+      # `pip-audit` аудитит не проект, которого в этой половине не существует, а
+      # СОБСТВЕННУЮ оснастку гейтов: прогон 07.08 дал `py_total: 6 (было 0)` и
+      # уронил джобу. Гейт измерил сам себя и предъявил счёт проекту.
+      #
+      # Питон нужен ТОЛЬКО контуру: pre-commit, detect-secrets, PyYAML. Роли,
+      # которые закрывали ruff/mypy/mutmut/import-linter, объявлены n/a в
+      # `scripts/lint/not-applicable.json` с причинами.
+      #
+      # Находка канона (в BACKLOG): охрана python-половины обязана спрашивать
+      # «есть ли у ПРОЕКТА python-манифест», а не «существует ли каталог» —
+      # каталог ей создаёт соседний шаг того же workflow.
+      - name: Install contour deps
+        run: pip install 'pre-commit>=3.8.0' 'detect-secrets>=1.5.0' 'PyYAML>=6.0'
 
       - name: Install frontend deps
         run: |
