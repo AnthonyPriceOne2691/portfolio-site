@@ -143,7 +143,7 @@ else
     printf 'LINT_JSCPD_TS_EXTS (§6): ноль дублей на непросмотренном — не «чисто».\n'
     exit 0
   fi
-  printf '%sjscpd: OK%s (%s) — просмотрено %d файл(ов), clone-пар %d, снимок %d\n' \
-    "$green" "$reset" "$halves" "$scanned" "$count" "$baseline"
+  printf '%sjscpd: OK%s (%s) — просмотрено %d файл(ов), clone-пар %d, снимок %d, по маске: %s\n' \
+    "$green" "$reset" "$halves" "$scanned" "$count" "$baseline" "$PY_SRC/** $TS_SRC/**"
 fi
 exit 0

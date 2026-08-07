@@ -15,9 +15,10 @@ concurrency:
 
 env:
   STRICT: "1"                 # soft-режим в CI запрещён (Delivery §10.4)
-  # Односоставный npm-проект: python-половины нет вовсе, фронт в корне.
-  LINT_TS_SRC: src
-  LINT_FE_DIR: .
+  LINT_PY_SRC: backend/features
+  LINT_FE_DIR: frontend
+  LINT_BE_DIR: backend
+  LINT_COV_PKG: features
 
 jobs:
   gates:
@@ -32,32 +33,87 @@ jobs:
       # интерпретатор, а разработка идёт на другом, и часть падений видна только
       # в CI (реальный случай: mypy крашился на 3.12 и работал на 3.14). Держи
       # одно значение здесь и в `requires-python` / `.python-version` проекта.
+      # ⚠ `cache:` вычисляется, а не пишется константой, и это не аккуратность.
+      # `cache: pip` требует python-манифеста: на проекте без него (Astro/TS)
+      # `setup-python` падает с `No file matched to [**/requirements.txt or
+      # **/pyproject.toml]` — то есть шаблон канона нёс питоновское допущение и
+      # ронял ВСЮ джобу гейтов до первого гейта. Замерено на восьмом развёртывании;
+      # тот же класс, что маска гейта, не знающая про `.astro` (cqg@1.69).
+      # Пустая строка = кэш выключен, и это штатное значение действия.
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"   # ← выровнять с локальной версией проекта
-          # ⚠ `cache: pip` СНЯТ, и это не экономия наоборот. Кэш ищет
-          # `**/requirements.txt` или `**/pyproject.toml` для хэша, а на
-          # не-Python проекте их нет — шаг падал с «No file matched», и вместе
-          # с ним НЕ ВЫПОЛНЯЛСЯ `pre-commit (all files, STRICT=1)`, шедший ниже.
-          # Соседние гейты с `if: always()` при этом отчитались зелёным, потому
-          # что инструментов в окружении не было: ровно тот «зелёный на
-          # непроверенном», против которого написан §6. Восьмой рецидив класса
-          # «шаблон канона несёт питоновское допущение».
+          cache: ${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') != '' && 'pip' || '' }}
+      # То же для npm: путь к lock-файлу задан ПАТТЕРНОМ, потому что фронт живёт
+      # либо в подкаталоге, либо в корне репозитория. Жёсткий
+      # `frontend/package-lock.json` роняет действие на «Some specified paths were
+      # not resolved» ровно там, где фронт и есть весь проект.
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: package-lock.json
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+          cache-dependency-path: '**/package-lock.json' 
 
-      # Питон нужен ТОЛЬКО контуру (pre-commit, detect-secrets): продуктового
-      # python-кода в проекте нет, поэтому ни venv, ни ruff/mypy/mutmut здесь
-      # не ставятся. Роли, которые они закрывали, объявлены n/a в
-      # scripts/lint/not-applicable.json с причинами.
-      - name: Install contour deps
-        run: pip install 'pre-commit>=3.8.0' 'detect-secrets>=1.5.0' 'PyYAML>=6.0'
+      - name: Install backend deps
+        run: |
+          python -m venv backend/.venv
+          # if-блок, а не `test -f X && cmd`: под `bash -e` ложный test уронил бы шаг.
+          # requirements-dev.txt может отсутствовать (uv/pyproject-проект) — до
+          # lab-11 F9 безусловный `pip install -r` обрывал ЗДЕСЬ всю джобу гейтов,
+          # при том что охрана стояла на соседней строке. Нет манифеста — ставится
+          # тот же список инструментов, что в манифесте (сверяется тестом), и выбор
+          # печатается: молча разные окружения = «у меня локально проходило».
+          if [ -f backend/requirements-dev.txt ]; then
+            echo "deps: backend/requirements-dev.txt"
+            backend/.venv/bin/pip install -r backend/requirements-dev.txt
+          else
+            echo "deps: манифеста нет — dev-инструменты гейтов по списку Приложения B"
+            backend/.venv/bin/pip install 'ruff>=0.6.9' 'mypy>=1.11.2' 'types-PyYAML>=6.0' 'pre-commit>=3.8.0' 'detect-secrets>=1.5.0' 'pip-audit>=2.7' 'mutmut>=3.6' 'pytest-cov>=5.0' 'pytest-env>=1.1' 'hypothesis>=6.100' 'import-linter>=2.0'
+          fi
+          if [ -f backend/requirements.txt ]; then
+            backend/.venv/bin/pip install -r backend/requirements.txt
+          fi
+          # Рантайм-зависимости pyproject-проекта: без них mypy падает «Error
+          # importing plugin pydantic.mypy», и диагноз читается как дефект
+          # проекта (lab-11 F6). Неудача editable не роняет шаг: гейты ниже
+          # скажут о своей беде сами, а предупреждение называет причину.
+          if [ -f backend/pyproject.toml ]; then
+            backend/.venv/bin/pip install -e backend || echo "::warning::editable-установка backend не удалась — mypy может не видеть рантайм-зависимости проекта"
+          fi
 
-      - name: Install npm deps
-        run: npm ci
+      - name: Install frontend deps
+        run: |
+          # Фронт бывает в подкаталоге И в корне. `npm ci --prefix frontend` на
+          # проекте, где фронт и есть корень, обрывал джобу до первого гейта.
+          FE=${LINT_FE_DIR:-frontend}
+          if [ -f "$FE/package-lock.json" ]; then
+            npm ci --prefix "$FE"
+          elif [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "::notice::npm-манифеста нет — фронтовые гейты уйдут в честный пропуск"
+          fi
+
+      # ⚠ ГЛАВНЫЙ УРОК восьмого развёртывания, и он не про кэш. Когда шаг установки
+      # упал, соседние гейты с `if: always()` отработали и отчитались ЗЕЛЁНЫМ —
+      # каждый честно сказал «инструмента нет → пропуск», а в сумме это читается
+      # как «гейты прошли». Локально такой пропуск честен (стенд беден), в CI —
+      # нет: инструменты ставятся шагом выше, и их отсутствие означает, что шаг
+      # упал. Поэтому здесь пропуск переводится в КРАСНОЕ, и делается это до
+      # гейтов, чтобы причина стояла в логе раньше их зелёных галок.
+      - name: Инструменты гейтов на месте (иначе пропуск читается как успех)
+        run: |
+          missing=""
+          for t in ruff mypy detect-secrets; do
+            "backend/.venv/bin/$t" --version >/dev/null 2>&1 || missing="$missing $t"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::инструменты гейтов не поставились:$missing"
+            echo "Гейты ниже уйдут в честный пропуск, и джоба будет ВЫГЛЯДЕТЬ проверенной."
+            echo "Смотри шаг установки: он упал или поставил не туда (§8.3)."
+            exit 1
+          fi
+          echo "toolchain: ruff/mypy/detect-secrets на месте"
 
       # ⚠ `if: always()` на КАЖДОМ независимом гейте — не косметика.
       # Шаг, который не просто падает, а КРАШИТСЯ (mypy INTERNAL ERROR), обрывает
@@ -66,16 +122,16 @@ jobs:
       # diff-coverage — не запускались за всё развёртывание, и об этом никто не
       # сообщил: в логе их просто нет. Подключённый гейт за упавшим шагом
       # неотличим от отсутствующего (Delivery §3.1a).
+      # ⚠ `--verbose` обязателен, и это не отладка. Без него pre-commit ГЛОТАЕТ
+      # stdout прошедших хуков, и числа «просмотрено N файл(ов)» в лог не
+      # попадают. Строка приёмки §6 («каждый гейт показал непустое число») тогда
+      # проверяема локально и НЕПРОВЕРЯЕМА в CI — то есть ровно там, где по
+      # §10.4 живёт истина, которую агент не может обойти. Найдено приёмкой
+      # восьмого развёртывания.
       - name: pre-commit (all files, STRICT=1)
         id: precommit
         run: |
           pip install pre-commit
-          # ⚠ `--verbose` обязателен, и это не шумность. Без него pre-commit
-          # печатает у ПРОШЕДШЕГО хука только «Passed», проглатывая stdout — а
-          # значит числа «просмотрено N файл(ов)» в логе CI нет. Критерий §6
-          # («зелёный гейт, который ничего не видит, хуже красного») оказывался
-          # проверяемым локально и НЕпроверяемым там, где по §10.4 живёт истина.
-          # Найдено на первом же зелёном прогоне 07.08.
           pre-commit run --all-files --show-diff-on-failure --verbose
 
       - name: Gate coverage (все гейты подключены)

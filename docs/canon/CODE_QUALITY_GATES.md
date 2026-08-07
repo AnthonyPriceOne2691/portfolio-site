@@ -8,7 +8,7 @@
 > домена — в OKF. Если в проекте ещё нет `delivery/` — сначала Delivery
 > ([AGENT_STACK.md](AGENT_STACK.md) §2.A), потом этот канон.
 
-**Canon version:** `cqg@1.79` · 2026-08-06 (Changelog — в конце файла). Версию впиши в
+**Canon version:** `cqg@1.89` · 2026-08-07 (Changelog — в конце файла). Версию впиши в
 `delivery/CONSTITUTION.md` / `STATUS.md` (`stack:`) при развёртывании.
 
 **Самодостаточный документ.** Всё, что нужно для этой системы качества, — здесь: правила с порогами,
@@ -1044,20 +1044,33 @@ mutants/tests/test_calc.py`, `Interrupted: 1 error during collection`. Заме�
 |---|---|
 | `scripts/lint/check_grep_gate.sh` (6 правил) | Приложение A |
 | `scripts/lint/check_ast_gate.py` (4 правила) | Приложение A |
+| `scripts/lint/ast_rules.py` (правила про тело функции) | Приложение A |
+| `scripts/lint/ast_web_rules.py` (правила про роуты и async) | Приложение A |
 | `scripts/lint/check_file_length.sh` | Приложение A |
 | `scripts/lint/check_jscpd_gate.sh` | Приложение A |
 | `scripts/lint/check_eslint_warnings.sh` | Приложение A |
 | `scripts/lint/check_complexity_gate.sh` | Приложение A |
+| `scripts/lint/complexity_halves.sh` (половины py/ts) | Приложение A |
 | `scripts/lint/check_deps_audit.sh` | Приложение A |
 | `scripts/lint/check_new_dependency.py` | Приложение A |
+| `scripts/lint/dependency_manifests.py` (разбор манифестов) | Приложение A |
 | `scripts/lint/check_mutation_gate.sh` | Приложение A |
+| `scripts/lint/mutation_ts.sh` · `mutation_py.sh` · `mutation_verdict.sh` | Приложение A |
 | `scripts/lint/check_diff_coverage.sh` | Приложение A |
 | `scripts/lint/check_ci_status.sh` | Приложение A |
 | `scripts/lint/check_layers_gate.sh` (python + ts) | Приложение A |
 | `scripts/lint/check_gate_coverage.sh` (мета) | Приложение A |
+| `scripts/lint/gate_coverage_roles.sh` · `gate_coverage_template.sh` | Приложение A |
 | `scripts/lint/check_gate_value.sh` (инструмент) | Приложение A |
 | `scripts/lint/contour_doctor.py` (инструмент: пробует гейты канарейкой) | Приложение A |
+| `scripts/lint/doctor_core.py` (вердикты и запуск — общее для частей доктора) | Приложение A |
+| `scripts/lint/doctor_layout.py` (каноны, принуждение, инструменты, чтение хуков) | Приложение A |
+| `scripts/lint/doctor_hooks.py` (чтение `.pre-commit-config.yaml`) | Приложение A |
+| `scripts/lint/doctor_areas.py` (видит ли гейт код проекта) | Приложение A |
+| `scripts/lint/doctor_canaries.py` (данные проб и объявления проекта) | Приложение A |
+| `scripts/lint/doctor_probes.py` (пробы исполнением) | Приложение A |
 | `scripts/lint/assert_digest.sh` (инструмент) | Приложение A |
+| `scripts/delivery_check.py` — 11 файлов (`delivery@1.53`) | Delivery, Приложение B и B1–B10 |
 | **`scripts/lint/check_baseline_ratchet.sh`** (мета) | **§8.2 — не в приложении** |
 | **`scripts/merge_guard.sh`** (гейт мержа) | **§8.5.2 — не в приложении** |
 | `.pre-commit-config.yaml`, `pyproject`-фрагменты, `.importlinter`, `.dependency-cruiser.cjs` | Приложение B |
@@ -1065,8 +1078,16 @@ mutants/tests/test_calc.py`, `Interrupted: 1 error during collection`. Заме�
 | `.github/workflows/main-guard.yml` (issue на красное в main) | §8.5.1 ④ |
 
 **Правило:** сверяйся с этой таблицей, а не с оглавлением приложений. Если
-скриптовый обход даёт меньше 18 файлов в `scripts/**` — обход неполон, и
+скриптовый обход даёт меньше 33 файлов в `scripts/**` — обход неполон, и
 `check_gate_coverage.sh` это подтвердит.
+
+⚠ **Скрипт может быть КОМПЛЕКТОМ, а не файлом** (`cqg@1.82`–`1.83`, планка 300
+строк §9.1a п.5). Доктор — шесть файлов, `check_ast_gate.py` — три,
+`check_new_dependency.py` — два, мутационный и мета-гейт — по четыре и три,
+гейт сложности — два. Копировать надо все: без своей части вход не
+стартует вовсе, и это выбрано сознательно — стартовать с частью проверок значило
+бы печатать таблицу, в которой чего-то молча нет, а именно этот класс контур и
+ловит. Признак простой: гейт называется `check_*`, его части — нет.
 
 <!-- Число 18 держит `test_prose_matches_payload`, а не обещание: до cqg@1.66 тут
      стояло «16» при фактических 17 — счётчик разъехался молча, ровно как версии в
@@ -1214,7 +1235,10 @@ mutants/tests/test_calc.py`, `Interrupted: 1 error during collection`. Заме�
    нарушением ровно его класса и требует красного. Между «вписан» и «судит» лежит
    целый класс отказов, и он замерен, а не предположен: гейт, у которого правило
    возвращает пустой список, печатает уверенное `OK — просмотрено 1 файл(ов)`, и
-   первые два шага этого не видят. Доктор роняет прогон **только на лжи** (DEAD):
+   первые два шага этого не видят. **Само это число доктор сверяет с деревом**
+   (`cqg@1.80`): «просмотрено 1 из 4 файл(ов) области» — не успех, а `WEAK` с
+   составом дерева, потому что дыра, из которой проверка родилась, была
+   ЕДИНИЦЕЙ, а не нулём. Доктор роняет прогон **только на лжи** (DEAD):
    отсутствие инструмента и мягкий пропуск с названной причиной — честная
    непокрытость, и она не провал. Он же покажет то, что не ловит ничто другое:
    конфиг есть, а `pre-commit install` не сделан — тогда гейтов нет ни одного.
@@ -1474,6 +1498,24 @@ run --all-files` — если гейт зелен и при этом не печ
 Признак, что развёртывание закончено: `pre-commit run --all-files` зелёный **и**
 каждый гейт в выводе показал непустое число просканированных файлов.
 
+⚠ **Числа обязаны попадать в ЛОГ CI, иначе строка непроверяема там, где живёт
+истина** (`cqg@1.87`). `pre-commit run --all-files` без `--verbose` глотает stdout
+ПРОШЕДШИХ хуков: локально исполнитель числа видит, а в CI — нет, хотя по §10.4
+именно CI агент обойти не может. Приёмка восьмого развёртывания: числа появились в
+логе только после флага и совпали с локальными (4 файла, 2, 1, 3 модуля, 1, 16).
+Флаг стоит в шаблоне §8.3 — если ты собирал workflow сам, добавь его.
+
+⚠ **«Непустое» — не значит «полное», и это стоило отдельной находки
+(`cqg@1.80`).** На Astro-проекте `file-length` печатал `OK — просмотрено 1
+файл(ов)` при четырёх файлах кода: `.ts` попадал в дефолтную маску, три `.astro` —
+нет. Строка чеклиста при этом ВЫПОЛНЕНА, роль объявлена закрытой, а три файла из
+четырёх не смотрит никто. Поэтому число сверяется с деревом, и сверяет его
+механика: `contour_doctor.py` печатает `просмотрено 1 из 4 файл(ов) области` и
+даёт `WEAK` с составом дерева (`.astro ×3, .ts ×1`). Читать надо **оба** числа:
+пороги «не ноль» и «не пусто» частичную слепоту пропускают по построению, а на
+смешанном стеке опасна ровно она — полная слепота видна сразу, частичная
+читается как успех.
+
 **Законное исключение, одно.** У правила, которое выбирает файлы **по имени
 нарушителя** (`no-grab-bag-module`: `utils|misc|common|helpers`), пустая выборка на
 здоровом проекте — норма, а не непокрытость: нарушителей просто нет. Такой гейт
@@ -1722,15 +1764,26 @@ jobs:
       # интерпретатор, а разработка идёт на другом, и часть падений видна только
       # в CI (реальный случай: mypy крашился на 3.12 и работал на 3.14). Держи
       # одно значение здесь и в `requires-python` / `.python-version` проекта.
+      # ⚠ `cache:` вычисляется, а не пишется константой, и это не аккуратность.
+      # `cache: pip` требует python-манифеста: на проекте без него (Astro/TS)
+      # `setup-python` падает с `No file matched to [**/requirements.txt or
+      # **/pyproject.toml]` — то есть шаблон канона нёс питоновское допущение и
+      # ронял ВСЮ джобу гейтов до первого гейта. Замерено на восьмом развёртывании;
+      # тот же класс, что маска гейта, не знающая про `.astro` (cqg@1.69).
+      # Пустая строка = кэш выключен, и это штатное значение действия.
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"   # ← выровнять с локальной версией проекта
-          cache: pip
+          cache: ${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') != '' && 'pip' || '' }}
+      # То же для npm: путь к lock-файлу задан ПАТТЕРНОМ, потому что фронт живёт
+      # либо в подкаталоге, либо в корне репозитория. Жёсткий
+      # `frontend/package-lock.json` роняет действие на «Some specified paths were
+      # not resolved» ровно там, где фронт и есть весь проект.
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+          cache-dependency-path: '**/package-lock.json' 
 
       - name: Install backend deps
         run: |
@@ -1760,7 +1813,38 @@ jobs:
           fi
 
       - name: Install frontend deps
-        run: npm ci --prefix frontend
+        run: |
+          # Фронт бывает в подкаталоге И в корне. `npm ci --prefix frontend` на
+          # проекте, где фронт и есть корень, обрывал джобу до первого гейта.
+          FE=${LINT_FE_DIR:-frontend}
+          if [ -f "$FE/package-lock.json" ]; then
+            npm ci --prefix "$FE"
+          elif [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "::notice::npm-манифеста нет — фронтовые гейты уйдут в честный пропуск"
+          fi
+
+      # ⚠ ГЛАВНЫЙ УРОК восьмого развёртывания, и он не про кэш. Когда шаг установки
+      # упал, соседние гейты с `if: always()` отработали и отчитались ЗЕЛЁНЫМ —
+      # каждый честно сказал «инструмента нет → пропуск», а в сумме это читается
+      # как «гейты прошли». Локально такой пропуск честен (стенд беден), в CI —
+      # нет: инструменты ставятся шагом выше, и их отсутствие означает, что шаг
+      # упал. Поэтому здесь пропуск переводится в КРАСНОЕ, и делается это до
+      # гейтов, чтобы причина стояла в логе раньше их зелёных галок.
+      - name: Инструменты гейтов на месте (иначе пропуск читается как успех)
+        run: |
+          missing=""
+          for t in ruff mypy detect-secrets; do
+            "backend/.venv/bin/$t" --version >/dev/null 2>&1 || missing="$missing $t"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::инструменты гейтов не поставились:$missing"
+            echo "Гейты ниже уйдут в честный пропуск, и джоба будет ВЫГЛЯДЕТЬ проверенной."
+            echo "Смотри шаг установки: он упал или поставил не туда (§8.3)."
+            exit 1
+          fi
+          echo "toolchain: ruff/mypy/detect-secrets на месте"
 
       # ⚠ `if: always()` на КАЖДОМ независимом гейте — не косметика.
       # Шаг, который не просто падает, а КРАШИТСЯ (mypy INTERNAL ERROR), обрывает
@@ -1769,11 +1853,17 @@ jobs:
       # diff-coverage — не запускались за всё развёртывание, и об этом никто не
       # сообщил: в логе их просто нет. Подключённый гейт за упавшим шагом
       # неотличим от отсутствующего (Delivery §3.1a).
+      # ⚠ `--verbose` обязателен, и это не отладка. Без него pre-commit ГЛОТАЕТ
+      # stdout прошедших хуков, и числа «просмотрено N файл(ов)» в лог не
+      # попадают. Строка приёмки §6 («каждый гейт показал непустое число») тогда
+      # проверяема локально и НЕПРОВЕРЯЕМА в CI — то есть ровно там, где по
+      # §10.4 живёт истина, которую агент не может обойти. Найдено приёмкой
+      # восьмого развёртывания.
       - name: pre-commit (all files, STRICT=1)
         id: precommit
         run: |
           pip install pre-commit
-          pre-commit run --all-files --show-diff-on-failure
+          pre-commit run --all-files --show-diff-on-failure --verbose
 
       - name: Gate coverage (все гейты подключены)
         if: always()
@@ -2796,7 +2886,10 @@ if [[ "$scanned" -eq 0 ]]; then
     "$yellow" "$RULE" "$reset"
   exit 0
 fi
-printf '%s%s: OK%s — просмотрено %d файл(ов), в снимке %d\n' "$green" "$RULE" "$reset" "$scanned" "$snap_n"
+# Маска — корень и расширение выборки (§6): см. `check_file_length.sh` о том,
+# зачем число без маски не даёт отличить узкую маску от узкой области.
+printf '%s%s: OK%s — просмотрено %d файл(ов), в снимке %d, по маске: %s\n' \
+  "$green" "$RULE" "$reset" "$scanned" "$snap_n" "$PY_SRC/**"
 exit 0
 ```
 
@@ -2830,14 +2923,197 @@ repo-root); файл проходит при count <= снимок; файл в�
 
 from __future__ import annotations
 
+
+from __future__ import annotations
+
 import argparse
 import ast
 import os
 import sys
 from pathlib import Path
 
+from ast_rules import find_inline_prompt, find_silent_except
+from ast_web_rules import find_cpu_in_async, find_unbounded_list
+
 FEATURES = Path(os.environ.get("LINT_PY_SRC", "backend/features"))
 SKIP_PARTS = ("/tests/", "/migrations/")
+
+
+RULES = {
+    "silent-except": {
+        "find": find_silent_except,
+        "baseline": "silent_except_baseline.txt",
+        "label": "silent-except: broad-except без raise/лога",
+        "hint": "Оставь след: logger.warning/exception с контекстом, либо пробрось. Осознанный fail-soft — пометь `# silent-ok: <причина>` в хендлере.",
+    },
+    "unbounded-list": {
+        "find": find_unbounded_list,
+        "baseline": "unbounded_list_baseline.txt",
+        "label": "unbounded-list: эндпоинт отдаёт список без границы",
+        "hint": "Добавь `limit` (и `offset`/курсор) с потолком по умолчанию — иначе объём ответа растёт вместе с корпусом, и это вектор отказа, а не медленный ответ. Набор, который по устройству не растёт, помечай `# unbounded-ok: <причина>`.",
+    },
+    "cpu-in-async": {
+        "find": find_cpu_in_async,
+        "baseline": "cpu_in_async_baseline.txt",
+        "label": "cpu-in-async: разбор/регулярка в цикле внутри async def",
+        "hint": "Стоимость растёт с размером выборки, а event loop встаёт на всё это время. Ограничь выборку (limit), перенеси разбор в БД/индекс, либо унеси в пул: `await asyncio.to_thread(...)`. Осознанно оставить — `# cpu-ok: <причина>` на строке вызова.",
+    },
+    "inline-prompt": {
+        "find": find_inline_prompt,
+        "baseline": "inline_prompt_baseline.txt",
+        "label": "inline-prompt: LLM-промпт инлайном в .py",
+        "hint": "Промпт — в отдельный <name>.md + lazy-load, не строкой в коде.",
+    },
+}
+
+
+def iter_target_files(repo_root: Path):
+    for path in sorted((repo_root / FEATURES).rglob("*.py")):
+        rel = path.as_posix()
+        if any(part in rel for part in SKIP_PARTS):
+            continue
+        if path.name.startswith("test_") or path.name == "conftest.py":
+            continue
+        yield path
+
+
+def repo_rel(path: Path, repo_root: Path) -> str:
+    return path.relative_to(repo_root).as_posix()
+
+
+def load_baseline(baseline_path: Path) -> dict[str, int]:
+    snap: dict[str, int] = {}
+    if not baseline_path.is_file():
+        return snap
+    for line in baseline_path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("#") or ":" not in line:
+            continue
+        count, _, p = line.partition(":")
+        if count.isdigit():
+            snap[p] = int(count)
+    return snap
+
+
+
+
+def scan(repo_root: Path, rule: dict) -> tuple[dict[str, int], int]:
+    """→ ({путь: сколько находок}, сколько файлов ПРОСМОТРЕНО).
+
+    `scanned` считается после успешного разбора: файл, который не прочитался или
+    не распарсился, гейт не смотрел, и записывать его в доказательство нельзя.
+    """
+    counts: dict[str, int] = {}
+    scanned = 0
+    for path in iter_target_files(repo_root):
+        try:
+            src = path.read_text(encoding="utf-8")
+            tree = ast.parse(src)
+        except (OSError, SyntaxError):
+            continue
+        scanned += 1
+        hits = rule["find"](tree, src.splitlines())
+        if hits:
+            counts[repo_rel(path, repo_root)] = len(hits)
+    return counts, scanned
+
+
+def write_baseline(baseline_path: Path, rule: dict, counts: dict[str, int],
+                   scanned: int) -> int:
+    lines = [
+        f"# {rule['baseline']} — снимок AST-гейта. Генерируется --generate, НЕ руками.",
+        f"# Правило: {rule['label']}",
+        "# Формат: <count>:<path> (path от repo-root). Ратчет вниз: файл проходит при count <= снимок;",
+        "# файл ВНЕ снимка (новый) — hard 0.",
+    ]
+    lines += [f"{c}:{p}" for p, c in sorted(counts.items())]
+    baseline_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(
+        f"baseline пересобран: {baseline_path.name} — просмотрено {scanned} файл(ов), "
+        f"с находками {len(counts)}, сайтов {sum(counts.values())}"
+    )
+    return 0
+
+
+def judge(rule_name: str, rule: dict, counts: dict[str, int], snap: dict[str, int],
+          scanned: int, strict: bool) -> int:
+    """Сверка со снимком и печать. Успех обязан назвать число просмотренного.
+
+    Иначе «код чист» и «просканировано ноль» неотличимы, а приёмка §6 требует
+    именно этого числа. Класс закрывался трижды (grep-гейт 1.19, complexity
+    1.20/1.22) и трижды не переносился сюда: пятое развёртывание нашло его тремя
+    арками сразу — этот скрипт единственный не печатал НИЧЕГО ни на одном пути.
+    """
+    violations = [(p, c, snap.get(p, 0)) for p, c in sorted(counts.items())
+                  if c > snap.get(p, 0)]
+    if violations:
+        mark = "✗" if strict else "⚠"
+        for p, c, allowed in violations:
+            print(f"  {mark}  {p}: {c} нарушений (разрешено {allowed})")
+        print(f"\n{'ERROR' if strict else 'WARNING'}: {len(violations)} файл(ов) нарушают правило {rule_name}.")
+        print(rule["hint"])
+        print("Легаси из baseline — ок до чистки; новый код держим на нуле. Пересъём вниз: --generate.")
+        return 1 if strict else 0
+    if scanned == 0:
+        print(f"{rule_name}: 0 файлов просмотрено — проверь LINT_PY_SRC (§6): "
+              "гейт, который ничего не видит, хуже красного")
+        return 0
+    # Маска печатается вместе с числом (`cqg@1.88`): без неё доктор мог только
+    # подозревать частичную слепоту, а с ней — считает расхождение.
+    print(f"{rule_name}: OK — просмотрено {scanned} файл(ов), в снимке {len(snap)}, "
+          f"по маске: {FEATURES}/**/*.py")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    # --list-rules печатает правила этого скрипта: мета-гейт сверяет подключение
+    # ПРАВИЛ, а не только файлов (F7). Поэтому --rule не required: список должен
+    # быть доступен без выбора правила.
+    parser.add_argument("--rule", choices=sorted(RULES))
+    parser.add_argument("--generate", action="store_true")
+    parser.add_argument("--list-rules", action="store_true")
+    args = parser.parse_args()
+    if args.list_rules:
+        for name in sorted(RULES):
+            print(name)
+        return 0
+    if not args.rule:
+        parser.error("--rule обязателен (или --list-rules)")
+
+    rule = RULES[args.rule]
+    script_dir = Path(__file__).resolve().parent
+    repo_root = script_dir.parent.parent  # <repo-root>/scripts/lint/ -> repo-root
+    baseline_path = script_dir / rule["baseline"]
+
+    counts, scanned = scan(repo_root, rule)
+    if args.generate:
+        return write_baseline(baseline_path, rule, counts, scanned)
+    return judge(args.rule, rule, counts, load_baseline(baseline_path), scanned,
+                 os.environ.get("STRICT", "1") == "1")
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+### `scripts/lint/ast_rules.py`
+
+```python
+#!/usr/bin/env python3
+"""Правила AST-гейта: молчащий except и вшитый промпт.
+
+Часть `check_ast_gate.py` (`cqg@1.83`) — гейт разрезан по планке 300 строк
+(Delivery §9.1a п.5). Здесь два правила про ТЕЛО функции; правила про роуты и
+async живут в `ast_web_rules.py`, а обход дерева и снимок — во входном скрипте.
+
+Каждая функция — оракул одного класса: получает разобранное дерево и строки
+исходника, возвращает список номеров строк-нарушений.
+"""
+
+from __future__ import annotations
+
+import ast
+
 SILENT_OK_MARKER = "# silent-ok:"
 
 _LOG_BASES = {"logger", "logging", "log", "warnings"}
@@ -2959,6 +3235,23 @@ def find_inline_prompt(tree: ast.AST, src_lines: list[str]) -> list[int]:  # noq
                 out.append(node.lineno)
     return out
 
+
+```
+
+### `scripts/lint/ast_web_rules.py`
+
+```python
+#!/usr/bin/env python3
+"""Правила AST-гейта про роуты и async: безграничный список и CPU в event loop.
+
+Часть `check_ast_gate.py` (`cqg@1.83`). Оба правила смотрят не на тело вообще, а
+на КОНТРАКТ функции: что она отдаёт наружу и чем занимает цикл событий. Правила
+про тело — в `ast_rules.py`.
+"""
+
+from __future__ import annotations
+
+import ast
 
 _ROUTE_DECOR = ("get", "post", "put", "patch", "delete", "route", "api_route")
 _BOUND_PARAMS = ("limit", "page_size", "per_page", "size", "count", "top", "first",
@@ -3123,147 +3416,8 @@ def find_cpu_in_async(tree: ast.AST, src_lines: list[str]) -> list[int]:
     return sorted(set(out))
 
 
-RULES = {
-    "silent-except": {
-        "find": find_silent_except,
-        "baseline": "silent_except_baseline.txt",
-        "label": "silent-except: broad-except без raise/лога",
-        "hint": "Оставь след: logger.warning/exception с контекстом, либо пробрось. Осознанный fail-soft — пометь `# silent-ok: <причина>` в хендлере.",
-    },
-    "unbounded-list": {
-        "find": find_unbounded_list,
-        "baseline": "unbounded_list_baseline.txt",
-        "label": "unbounded-list: эндпоинт отдаёт список без границы",
-        "hint": "Добавь `limit` (и `offset`/курсор) с потолком по умолчанию — иначе объём ответа растёт вместе с корпусом, и это вектор отказа, а не медленный ответ. Набор, который по устройству не растёт, помечай `# unbounded-ok: <причина>`.",
-    },
-    "cpu-in-async": {
-        "find": find_cpu_in_async,
-        "baseline": "cpu_in_async_baseline.txt",
-        "label": "cpu-in-async: разбор/регулярка в цикле внутри async def",
-        "hint": "Стоимость растёт с размером выборки, а event loop встаёт на всё это время. Ограничь выборку (limit), перенеси разбор в БД/индекс, либо унеси в пул: `await asyncio.to_thread(...)`. Осознанно оставить — `# cpu-ok: <причина>` на строке вызова.",
-    },
-    "inline-prompt": {
-        "find": find_inline_prompt,
-        "baseline": "inline_prompt_baseline.txt",
-        "label": "inline-prompt: LLM-промпт инлайном в .py",
-        "hint": "Промпт — в отдельный <name>.md + lazy-load, не строкой в коде.",
-    },
-}
-
-
-def iter_target_files(repo_root: Path):
-    for path in sorted((repo_root / FEATURES).rglob("*.py")):
-        rel = path.as_posix()
-        if any(part in rel for part in SKIP_PARTS):
-            continue
-        if path.name.startswith("test_") or path.name == "conftest.py":
-            continue
-        yield path
-
-
-def repo_rel(path: Path, repo_root: Path) -> str:
-    return path.relative_to(repo_root).as_posix()
-
-
-def load_baseline(baseline_path: Path) -> dict[str, int]:
-    snap: dict[str, int] = {}
-    if not baseline_path.is_file():
-        return snap
-    for line in baseline_path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("#") or ":" not in line:
-            continue
-        count, _, p = line.partition(":")
-        if count.isdigit():
-            snap[p] = int(count)
-    return snap
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    # --list-rules печатает правила этого скрипта: мета-гейт сверяет подключение
-    # ПРАВИЛ, а не только файлов (F7). Поэтому --rule не required: список должен
-    # быть доступен без выбора правила.
-    parser.add_argument("--rule", choices=sorted(RULES))
-    parser.add_argument("--generate", action="store_true")
-    parser.add_argument("--list-rules", action="store_true")
-    args = parser.parse_args()
-    if args.list_rules:
-        for name in sorted(RULES):
-            print(name)
-        return 0
-    if not args.rule:
-        parser.error("--rule обязателен (или --list-rules)")
-
-    strict = os.environ.get("STRICT", "1") == "1"
-    rule = RULES[args.rule]
-
-    script_dir = Path(__file__).resolve().parent
-    repo_root = script_dir.parent.parent  # <repo-root>/scripts/lint/ -> repo-root
-    baseline_path = script_dir / rule["baseline"]
-
-    counts: dict[str, int] = {}
-    # `scanned` — число ПРОСМОТРЕННЫХ файлов, а не файлов с находками (§6). Считается
-    # после успешного разбора: файл, который не прочитался или не распарсился, гейт
-    # не смотрел, и записывать его в доказательство нельзя.
-    scanned = 0
-    for path in iter_target_files(repo_root):
-        try:
-            src = path.read_text(encoding="utf-8")
-            tree = ast.parse(src)
-        except (OSError, SyntaxError):
-            continue
-        scanned += 1
-        hits = rule["find"](tree, src.splitlines())
-        if hits:
-            counts[repo_rel(path, repo_root)] = len(hits)
-
-    if args.generate:
-        lines = [
-            f"# {rule['baseline']} — снимок AST-гейта. Генерируется --generate, НЕ руками.",
-            f"# Правило: {rule['label']}",
-            "# Формат: <count>:<path> (path от repo-root). Ратчет вниз: файл проходит при count <= снимок;",
-            "# файл ВНЕ снимка (новый) — hard 0.",
-        ]
-        lines += [f"{c}:{p}" for p, c in sorted(counts.items())]
-        baseline_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        print(
-            f"baseline пересобран: {baseline_path.name} — просмотрено {scanned} файл(ов), "
-            f"с находками {len(counts)}, сайтов {sum(counts.values())}"
-        )
-        return 0
-
-    snap = load_baseline(baseline_path)
-    violations = []
-    for p, c in sorted(counts.items()):
-        allowed = snap.get(p, 0)
-        if c > allowed:
-            violations.append((p, c, allowed))
-
-    if violations:
-        mark = "✗" if strict else "⚠"
-        for p, c, allowed in violations:
-            print(f"  {mark}  {p}: {c} нарушений (разрешено {allowed})")
-        print(f"\n{'ERROR' if strict else 'WARNING'}: {len(violations)} файл(ов) нарушают правило {args.rule}.")
-        print(rule["hint"])
-        print("Легаси из baseline — ок до чистки; новый код держим на нуле. Пересъём вниз: --generate.")
-        return 1 if strict else 0
-
-    # Успешный путь обязан печатать число просмотренных файлов — иначе «код чист» и
-    # «просканировано ноль» неотличимы, а приёмка §6 требует именно этого числа.
-    # Класс закрывался трижды (grep-гейт 1.19, complexity 1.20/1.22), и трижды не
-    # переносился на этот скрипт: пятое развёртывание нашло его тремя арками сразу —
-    # он единственный не печатал НИЧЕГО ни на одном пути.
-    if scanned == 0:
-        print(f"{args.rule}: 0 файлов просмотрено — проверь LINT_PY_SRC (§6): "
-              "гейт, который ничего не видит, хуже красного")
-        return 0
-    print(f"{args.rule}: OK — просмотрено {scanned} файл(ов), в снимке {len(snap)}")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
 ```
+
 
 ### `scripts/lint/check_file_length.sh`
 
@@ -3364,7 +3518,9 @@ baseline_lookup() {
 # снимок продуктовых нарушений при развёртывании: канон поставлял скрипт,
 # нарушающий собственное правило, а процедура молча узаконивала это снимком.
 # Найдено полем (lab-2); зеркало решения для breaker'ов (Delivery §3.4).
-# Размер скриптов контура мерится отдельно — метрика контура (Delivery §9.1a).
+# Размер скриптов контура мерится отдельно — ратчет ВЕСА (Delivery §9.1a): снимок
+# `tests/contour_size_baseline.txt` в репозитории канона, потолок на скрипт только
+# вниз, планка нового — 300. До cqg@1.81 эта строка обещала замер, которого не было.
 exclude_contour() {
   grep -vE '^(scripts/lint/|scripts/delivery_(check|metrics)\.py$|scripts/okf_[a-z_]+\.py$|scripts/merge_guard\.sh$|delivery/|knowledge/)'
 }
@@ -3551,8 +3707,13 @@ if (( scanned == 0 )); then
     "$yellow" "$reset"
   exit 0
 fi
-printf '%sfile-length: OK%s — просмотрено %d файл(ов), в снимке %d\n' \
-  "$green" "$reset" "$scanned" "$baseline_n"
+# ⚠ МАСКА печатается вместе с числом (`cqg@1.88`). Число отвечает «сколько
+# посмотрел», но не «на что смотрел вообще», и без второго доктор мог только
+# ПОДОЗРЕВАТЬ частичную слепоту: «просмотрено 1 из 4» одинаково выглядит и при
+# узкой маске, и при законном сужении области. С маской это перестаёт быть
+# догадкой — расхождение СЧИТАЕТСЯ, а не предполагается.
+printf '%sfile-length: OK%s — просмотрено %d файл(ов), в снимке %d, по маске: %s\n' \
+  "$green" "$reset" "$scanned" "$baseline_n" "$LENGTH_GLOBS"
 exit 0
 ```
 
@@ -3704,8 +3865,8 @@ else
     printf 'LINT_JSCPD_TS_EXTS (§6): ноль дублей на непросмотренном — не «чисто».\n'
     exit 0
   fi
-  printf '%sjscpd: OK%s (%s) — просмотрено %d файл(ов), clone-пар %d, снимок %d\n' \
-    "$green" "$reset" "$halves" "$scanned" "$count" "$baseline"
+  printf '%sjscpd: OK%s (%s) — просмотрено %d файл(ов), clone-пар %d, снимок %d, по маске: %s\n' \
+    "$green" "$reset" "$halves" "$scanned" "$count" "$baseline" "$PY_SRC/** $TS_SRC/**"
 fi
 exit 0
 ```
@@ -4162,7 +4323,9 @@ cd "$REPO_ROOT" || exit 1
 
 yellow=$(printf '\033[33m'); green=$(printf '\033[32m'); reset=$(printf '\033[0m')
 
-if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
+# `gh auth token` — локальная проверка учёток; `gh auth status` ходит в СЕТЬ и
+# на порванном канале объявляет отсутствие логина (`cqg@1.89`, пришло полем).
+if ! command -v gh >/dev/null 2>&1 || ! gh auth token >/dev/null 2>&1; then
   printf '%s⚠ gate-value: нужен авторизованный gh — без него данных о срабатываниях нет.%s\n' \
     "$yellow" "$reset" >&2
   printf 'Решение «убрать гейт» без данных принимать нельзя (§9.1a).\n' >&2
@@ -4257,18 +4420,134 @@ exit 0
 
     python3 scripts/lint/contour_doctor.py            # таблица + вердикт
     python3 scripts/lint/contour_doctor.py --json     # машинно-читаемо
+
+Разрезан на модули (`cqg@1.82`): 1082 строки при планке 300 (Delivery §9.1a п.5),
+и рос он быстрее проверяемого — это назвал полевой отчёт раньше, чем ратчет веса.
+Здесь вход и сборка; части лежат рядом и грузятся из каталога скрипта:
+
+    doctor_core.py       вердикты, палитра, запуск подпроцесса (не знает соседей)
+    doctor_layout.py     каноны, принуждение, инструменты, снимки, чтение хуков
+    doctor_areas.py      видит ли гейт код проекта (1.69) + сверка с деревом (1.80)
+    doctor_canaries.py   данные проб и объявления проекта
+    doctor_probes.py     сами пробы исполнением
+
+Развёртывание копирует ВСЕ шесть файлов: без любого из них доктор не стартует —
+и это лучше, чем стартовать без части проверок (§5.0 инвентарь).
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
-import re
-import shutil
-import subprocess
 import sys
-import tempfile
+from pathlib import Path
+
+# ⚠ Байт-код НЕ пишем, и это не микрооптимизация. Доктор работает В ДЕРЕВЕ
+# проекта, а с `cqg@1.82` он импортирует соседние модули — Python положил бы
+# `scripts/lint/__pycache__/` в чужой рабочий каталог, и `git status` после
+# диагностики показал бы мусор, которого не просили. Проба обязана уходить не
+# оставив следов — то же правило, что у канареек (`cqg@1.67`). Флаг выставляется
+# ДО импорта частей: после них кэш уже записан. Поймано собственным тестом
+# «проба оставила дерево как было», а не полем.
+sys.dont_write_bytecode = True
+
+from doctor_areas import AreaChecks
+from doctor_canaries import CanaryData
+from doctor_core import ABSENT, AUTO, COLOR, DEAD, ORDER, RESET, SKIP, TOOL, WEAK, run
+from doctor_hooks import HookReaders
+from doctor_layout import LayoutChecks
+from doctor_probes import ProbeChecks
+
+
+class Doctor(LayoutChecks, HookReaders, AreaChecks, CanaryData, ProbeChecks):
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.rows: list[tuple[str, str, str]] = []
+        self.own = self._read_own_canaries()
+
+    def add(self, verdict: str, point: str, detail: str) -> None:
+        self.rows.append((verdict, point, detail))
+
+
+    # --- вывод ---------------------------------------------------------------
+    def report(self, as_json: bool) -> int:
+        dead = [r for r in self.rows if r[0] == DEAD]
+        if as_json:
+            print(json.dumps({
+                "verdicts": [{"verdict": v, "point": p, "detail": d}
+                             for v, p, d in self.rows],
+                "counts": {k: sum(1 for r in self.rows if r[0] == k) for k in ORDER},
+                "dead": len(dead),
+            }, ensure_ascii=False, indent=2))
+            return 1 if dead else 0
+
+        for verdict, point, detail in sorted(self.rows, key=lambda r: (ORDER[r[0]], r[1])):
+            print(f"{COLOR[verdict]}{verdict:6}{RESET} {point:44} {detail}")
+
+        counts = {k: sum(1 for r in self.rows if r[0] == k) for k in ORDER}
+        print(f"\ncontour-doctor: AUTO {counts[AUTO]} · WEAK {counts[WEAK]} · "
+              f"ABSENT {counts[ABSENT]} · TOOL {counts[TOOL]} · "
+              f"SKIP {counts[SKIP]} · DEAD {counts[DEAD]}")
+        # Примечание про SKIP печатается ТОЛЬКО когда они есть. Иначе доктор
+        # объявлял бы слепоту, которой у него нет, — а преувеличенная скромность
+        # так же уводит от правды, как преувеличенная уверенность.
+        if counts[SKIP]:
+            print("SKIP — область, которую доктор не пробовал: это его собственная "
+                  "непокрытость,\nи она названа, а не спрятана.")
+        if dead:
+            print(f"\n\033[31mERROR{RESET}: {len(dead)} проверк(и) объявлены и МОЛЧАТ "
+                  "на своём же нарушении.")
+            print("Это не бедность (ABSENT/WEAK честны и не роняют доктора), а ложь: "
+                  "контур\nсообщает о защите, которой нет.")
+            return 1
+        print("\nЛжи нет: всё объявленное либо судит, либо честно названо непокрытым.")
+        return 0
+
+
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="диагностика развёрнутого контура")
+    ap.add_argument("--json", action="store_true", help="машинно-читаемый вывод")
+    ap.add_argument("--root", default=None, help="корень проекта (по умолчанию — git-root)")
+    args = ap.parse_args()
+
+    root = Path(args.root) if args.root else None
+    if root is None:
+        code, out = run(["git", "rev-parse", "--show-toplevel"], Path.cwd())
+        root = Path(out.strip()) if code == 0 and out.strip() else Path.cwd()
+
+    doc = Doctor(root.resolve())
+    doc.check_canons()
+    doc.check_enforcement()
+    doc.check_tools()
+    doc.check_snapshots()
+    doc.check_canaries()
+    doc.check_gates_see_code()
+    doc.check_divergence_from_canon()
+    return doc.report(args.json)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+### `scripts/lint/doctor_core.py`
+
+```python
+#!/usr/bin/env python3
+"""Общее для всех частей доктора: вердикты, палитра, запуск подпроцесса.
+
+Доктор разрезан на модули (`cqg@1.82`): он вырос до 1082 строк при планке 300
+(Delivery §9.1a п.5), и рос быстрее, чем проверяемое им, — это назвал полевой
+отчёт раньше, чем ратчет веса. Здесь то, что нужно ВСЕМ частям, и только оно:
+модуль не импортирует соседей, поэтому цикла быть не может по построению.
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
 from pathlib import Path
 
 # --- вердикты ----------------------------------------------------------------
@@ -4284,105 +4563,8 @@ COLOR = {AUTO: "\033[32m", WEAK: "\033[33m", DEAD: "\033[31m",
          ABSENT: "\033[90m", SKIP: "\033[36m", TOOL: "\033[90m"}
 RESET = "\033[0m"
 
-CANONS = ("AGENT_STACK.md", "AGENT_DELIVERY_HARNESS.md",
-          "CODE_QUALITY_GATES.md", "OKF_KNOWLEDGE_BUNDLE.md")
-
-# Инструменты, на которых стоят гейты. `timeout` отдельно: он GNU coreutils и на
-# macOS отсутствует по умолчанию — без него мутационный гейт пропускается.
-TOOLS = {
-    "ruff": "гейт сложности, основной линт",
-    "mypy": "типы",
-    # `pragma` — не украшение и не подавление находки. Имя инструмента содержит
-    # слово из denylist'а его же KeywordDetector'а, а дальше по строке идут
-    # двоеточие и значение в кавычках — та самая форма, которую он считает
-    # секретом. Первое развёртывание намерило это находкой: канон поставлял
-    # payload, который метит его же гейт. Форма подавления взята у самого
-    # инструмента, чтобы след был читаемым, а не спрятанным в baseline проекта.
-    # Регрессия — `tests/test_payload_clean_for_scanners.py`.
-    "detect-secrets": "secrets-гейт (§2.7)",  # pragma: allowlist secret
-    "pip-audit": "deps-audit, python-половина",
-    "mutmut": "mutation — «тесты утверждают» (§3.7)",
-    "jscpd": "DRY-гейт",
-    "npm": "deps-audit, js-половина; eslint-ратчет",
-    "timeout": "бюджет мутационного гейта (macOS: brew install coreutils)",
-}
-
-# Канарейка = «файл с нарушением ровно этого класса». Ключ — имя правила из
-# `--list-rules`, чтобы список правил брался у СКРИПТА, а не дублировался здесь:
-# правило, для которого канарейки нет, попадает в SKIP по имени, а не пропадает.
-CANARIES: dict[str, tuple[str, str]] = {
-    # grep-правила
-    "config-access": ("canary.py", "import os\nX = os.getenv('SECRET')\n"),
-    "di-indirection": ("canary.py", "from importlib import import_module\n"
-                                    "m = import_module('pkg.sub')\n"),
-    "service-no-web": ("service.py", "from fastapi import APIRouter\nr = APIRouter()\n"),
-    "no-grab-bag-module": ("utils.py", "def helper():\n    return 1\n"),
-    "blind-error": ("canary.py", 'def f():\n    raise Exception("bad")\n'),
-    "unstructured-log": ("canary.py", "import logging\n"
-                                      "logger = logging.getLogger(__name__)\n"
-                                      "def f(url):\n"
-                                      '    logger.info(f"fetch {url}")\n'),
-    # ast-правила
-    "silent-except": ("canary.py", "def f():\n    try:\n        pass\n"
-                                   "    except Exception:\n        pass\n"),
-    "inline-prompt": ("canary.py", 'P = """ты — помощник\n' + "строка\n" * 8 + '"""\n'),
-    "cpu-in-async": ("canary.py", "import json\n"
-                                  "async def f(rows):\n"
-                                  "    for r in rows:\n"
-                                  "        json.loads(r)\n"),
-    # Односложные гейты: ключ — имя скрипта, у них нет `--list-rules`.
-    "check_file_length.sh": ("huge.py", "x = 1\n" * 700),
-    "check_complexity_gate.sh": ("complex.py",
-        "def f(a):\n" + "".join(f"    if a == {i}:\n        return {i}\n"
-                                for i in range(14))),
-    "unbounded-list": ("canary.py", "from fastapi import APIRouter\n"
-                                    "router = APIRouter()\n\n\n"
-                                    '@router.get("/all")\n'
-                                    "async def all_items() -> list[dict]:\n"
-                                    "    return await repo.everything()\n"),
-}
-
-
-# Не гейты: измерительные инструменты и сам доктор. Канарейку им подсовывать
-# бессмысленно — они ничего не запрещают. Раньше они попадали в SKIP и раздували
-# «непробовано», то есть доктор преувеличивал свою слепоту.
 NOT_GATES = {"check_gate_value.sh", "assert_digest.sh", "contour_doctor.py"}
 
-# Гейты, стоящие на внешнем инструменте. Прямая канарейка требует самого
-# инструмента (сеть, npm, venv), поэтому пробуется ДРУГОЕ свойство, и оно важнее:
-# **честность пропуска**. Отсутствие инструмента гейт обязан НАЗВАТЬ и не выдать за
-# успех. Это не теория: класс ловился трижды — `timeout` на macOS (F14), голый
-# `command -v` у secrets-хука (F10), `deps_audit_waiver: no` как разрешение.
-TOOL_DEPENDENT = {
-    "check_jscpd_gate.sh": "jscpd",
-    "check_deps_audit.sh": "pip-audit / npm",
-    "check_mutation_gate.sh": "mutmut",
-    "check_eslint_warnings.sh": "eslint / npm",
-    "check_diff_coverage.sh": "pytest-cov",
-    "check_ci_status.sh": "gh",
-    "check_complexity_gate.sh": "ruff",
-    "check_layers_gate.sh": "lint-imports / depcruise",
-}
-
-# `PATH` без homebrew и venv: coreutils и git на месте, а jscpd/mutmut/gh/ruff —
-# нет. Та же раскладка, что в сьюте канона (`tests/`), и она не выдумана: гейты
-# ищут инструмент через `command -v`, а живут эти инструменты вне /usr/bin.
-BARE_PATH = "/usr/bin:/bin"
-
-# Гейты, которых канон НЕ поставляет, — свои у проекта (`check_canon_vendor.sh` в
-# первом настоящем развёртывании, находка 7). Канарейку для них доктор выдумать не
-# может: класс нарушения знает только автор гейта. Но проект может её ОБЪЯВИТЬ —
-# файлом ниже, — и тогда чужой гейт проверяется исполнением, как свои. Без этого
-# «свой гейт» навсегда оставался SKIP, то есть областью, где ЛОЖЬ невидима, а
-# именно чужие гейты никто больше и не проверяет.
-#
-# Формат — {имя скрипта: {"path": путь от корня репо, "content": текст}}:
-#   {"check_canon_vendor.sh": {"path": "docs/canon/AGENT_STACK.md",
-#                              "content": "подменённая копия канона\n"}}
-OWN_CANARIES = "scripts/lint/canaries.json"
-
-# Слова, которыми гейт называет пропуск. Если пропуск назван — это WEAK (бедность),
-# если гейт при этом заявляет успех — DEAD (ложь).
 SKIP_WORDS = ("пропущен", "не судит", "не проверен", "нет каталога", "ПРОПУЩЕНА",
               "WARNING", "не найден", "недоступен", "не смог")
 SUCCESS_WORDS = (": OK", "OK —", "OK -")
@@ -4428,111 +4610,57 @@ def run(cmd: list[str], cwd: Path, env: dict | None = None) -> tuple[int, str]:
     return p.returncode, (p.stdout or "") + (p.stderr or "")
 
 
-def _setup_gate_coverage(lab: Path) -> tuple[list[str], dict]:
-    """Скрипт лежит в `scripts/lint`, но в конфиге его нет → мета-гейт краснеет.
+```
 
-    Именно этот случай и породил мета-гейт: jscpd был извлечён, адаптирован и не
-    вписан, а приёмка показала 7/7 зелёных.
-    """
-    (lab / ".pre-commit-config.yaml").write_text(
-        "repos:\n  - repo: local\n    hooks:\n      - id: nothing\n"
-        "        name: ничего не подключает\n        entry: true\n"
-        "        language: system\n", encoding="utf-8")
-    (lab / "scripts" / "lint" / "check_orphan_gate.sh").write_text(
-        "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
-    return [], {}
+### `scripts/lint/doctor_layout.py`
 
+```python
+#!/usr/bin/env python3
+"""Раскладка контура: каноны, принуждение, инструменты, снимки, чтение хуков.
 
-def _setup_new_dependency(lab: Path) -> tuple[list[str], dict]:
-    """Пакет добавлен в манифест и НЕ объявлен в STATUS → гейт краснеет."""
-    (lab / "backend").mkdir(exist_ok=True)
-    man = lab / "backend" / "pyproject.toml"
-    man.write_text('[project]\nname = "app"\ndependencies = ["pydantic>=2.0"]\n',
-                   encoding="utf-8")
-    (lab / "delivery" / "active").mkdir(parents=True, exist_ok=True)
-    (lab / "delivery" / "active" / "STATUS.md").write_text(
-        "# STATUS\n\n- class: S\n", encoding="utf-8")
-    run(["git", "add", "-A"], lab)
-    run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
-         "commit", "-qm", "manifest"], lab)
-    run(["git", "branch", "-f", "b0"], lab)
-    man.write_text('[project]\nname = "app"\n'
-                   'dependencies = ["pydantic>=2.0", "httpx>=0.27"]\n', encoding="utf-8")
-    run(["git", "add", "-A"], lab)
-    run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
-         "commit", "-qm", "add dep"], lab)
-    return [], {"BASE": "b0"}
+Часть доктора (`cqg@1.82`, вход — `contour_doctor.py`). Здесь вопросы «что
+развёрнуто и как настроено»: они дёшевы, ничего не запускают и отвечаются до
+любых проб. Сюда же чтение `.pre-commit-config.yaml` (`_hook_env`,
+`_hook_files_re`) — это тоже раскладка, а не суждение о гейте.
+"""
 
+from __future__ import annotations
 
-def _setup_baseline_ratchet(lab: Path) -> tuple[list[str], dict]:
-    """Снимок переснят ВВЕРХ → легализация свежих нарушений, гейт краснеет."""
-    base = lab / "scripts" / "lint" / "file_length_baseline.txt"
-    base.write_text("# снимок\n[baseline]\n120:backend/features/a.py\n", encoding="utf-8")
-    run(["git", "add", "-A"], lab)
-    run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
-         "commit", "-qm", "baseline"], lab)
-    run(["git", "branch", "-f", "b0"], lab)
-    base.write_text("# снимок\n[baseline]\n400:backend/features/a.py\n", encoding="utf-8")
-    run(["git", "add", "-A"], lab)
-    run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
-         "commit", "-qm", "raise snapshot"], lab)
-    return [], {"BASE": "b0"}
+import json
+import os
+import re
+import shutil
 
+from doctor_core import ABSENT, AUTO, DEAD, SKIP, WEAK, _block_after
 
-# Гейты со своей постановкой: канарейка тут — не файл с нарушением, а СОСТОЯНИЕ
-# репозитория (несвязанный скрипт, необъявленная зависимость, поднятый снимок).
-DIRECT_SETUP = {
-    "check_gate_coverage.sh": _setup_gate_coverage,
-    "check_new_dependency.py": _setup_new_dependency,
-    "check_baseline_ratchet.sh": _setup_baseline_ratchet,
+CANONS = ("AGENT_STACK.md", "AGENT_DELIVERY_HARNESS.md",
+          "CODE_QUALITY_GATES.md", "OKF_KNOWLEDGE_BUNDLE.md")
+
+# Инструменты, на которых стоят гейты. `timeout` отдельно: он GNU coreutils и на
+
+TOOLS = {
+    "ruff": "гейт сложности, основной линт",
+    "mypy": "типы",
+    # `pragma` — не украшение и не подавление находки. Имя инструмента содержит
+    # слово из denylist'а его же KeywordDetector'а, а дальше по строке идут
+    # двоеточие и значение в кавычках — та самая форма, которую он считает
+    # секретом. Первое развёртывание намерило это находкой: канон поставлял
+    # payload, который метит его же гейт. Форма подавления взята у самого
+    # инструмента, чтобы след был читаемым, а не спрятанным в baseline проекта.
+    # Регрессия — `tests/test_payload_clean_for_scanners.py`.
+    "detect-secrets": "secrets-гейт (§2.7)",  # pragma: allowlist secret
+    "pip-audit": "deps-audit, python-половина",
+    "mutmut": "mutation — «тесты утверждают» (§3.7)",
+    "jscpd": "DRY-гейт",
+    "npm": "deps-audit, js-половина; eslint-ратчет",
+    "timeout": "бюджет мутационного гейта (macOS: brew install coreutils)",
 }
 
+# Канарейка = «файл с нарушением ровно этого класса». Ключ — имя правила из
+# `--list-rules`, чтобы список правил брался у СКРИПТА, а не дублировался здесь:
 
-class Doctor:
-    def __init__(self, root: Path) -> None:
-        self.root = root
-        self.rows: list[tuple[str, str, str]] = []
-        self.own = self._read_own_canaries()
 
-    def add(self, verdict: str, point: str, detail: str) -> None:
-        self.rows.append((verdict, point, detail))
-
-    def _read_own_canaries(self) -> dict[str, list[tuple[str | None, str, str]]]:
-        """Канарейки, объявленные проектом. Битый файл — НАЗВАТЬ, а не пропустить.
-
-        Молчаливое «не разобрал → канареек нет» вернуло бы ровно тот класс, за
-        которым доктор и придуман: объявление есть, проверки нет, и об этом никто
-        не сказал.
-
-        Ключ — `<скрипт>` **или** `<скрипт>:<правило>`, как в
-        `not-applicable.json`. Форма с правилом обязательна, и это не симметрия
-        ради симметрии: многоправильный гейт БЕЗ `--rule` падает с usage, а
-        доктор принимал это за «гейт красный и без канарейки — судить нечем».
-        Замерено на первом же применении: два адаптированных гейта Swift-проекта
-        (`check_grep_gate.sh`, `check_ast_gate.py`) уходили в SKIP, то есть
-        объявление снова принималось и не исполнялось — тот самый класс, ради
-        которого этот механизм и чинили.
-        """
-        f = self.root / OWN_CANARIES
-        if not f.is_file():
-            return {}
-        try:
-            raw = json.loads(f.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            self.add(SKIP, OWN_CANARIES, f"не разобран ({exc}) — свои гейты НЕ "
-                                         "проверены, хотя канарейки объявлены")
-            return {}
-        out: dict[str, list[tuple[str | None, str, str]]] = {}
-        for key, spec in (raw or {}).items():
-            if not (isinstance(spec, dict) and spec.get("path") and spec.get("content")):
-                self.add(SKIP, f"канарейка {key}",
-                         f"объявление без path/content в {OWN_CANARIES}")
-                continue
-            name, _, rule = str(key).partition(":")
-            out.setdefault(name, []).append(
-                (rule or None, str(spec["path"]), str(spec["content"])))
-        return out
-
+class LayoutChecks:
     # --- A. каноны -----------------------------------------------------------
     def _declared_version(self, prefix: str) -> str:
         """Версия слоя из строки `stack:` в STATUS — то, что проект ЗАЯВИЛ.
@@ -4648,165 +4776,6 @@ class Doctor:
                  else "ни одного: гейт без снимка красный на первом коммите, "
                       "и его снимают")
 
-    # --- E. канарейки: главное ----------------------------------------------
-    def _rules_of(self, script: Path) -> list[str]:
-        """Список правил берётся У СКРИПТА (`--list-rules`), не дублируется тут."""
-        cmd = ["python3", str(script)] if script.suffix == ".py" else ["bash", str(script)]
-        code, out = run(cmd + ["--list-rules"], self.root)
-        if code != 0:
-            return []
-        return [l.strip() for l in out.splitlines() if l.strip() and " " not in l.strip()]
-
-    # --- Видит ли подключённый гейт код ЭТОГО проекта (cqg@1.69) --------------
-    # Вторая половина вопроса «а судит ли вписанное». Первая — «умеет ли гейт
-    # краснеть» — закрыта канарейкой. Эта — «нацелен ли он на код», и до сих пор
-    # её не задавал никто:
-    #
-    #   gate-coverage  — вписан ли скрипт в конфиг. ТЕКСТОВЫЙ вопрос: хук с
-    #                    неверной маской вписан и проходит;
-    #   канарейка      — умеет ли гейт краснеть. Проба СВОЯ, поэтому слепой гейт
-    #                    ловит канарейку прекрасно и остаётся слепым к проекту;
-    #   сьют канона    — ловит ли правило нарушение. Стенд синтетический: тест
-    #                    сам пишет файлы, которые потом проверяет, поэтому
-    #                    расхождение маски с расширениями проекта там невыразимо
-    #                    ПО ПОСТРОЕНИЮ.
-    #
-    # Замер, из которого правило родилось (Astro/TS, четыре гейта разом):
-    # `file-length` с дефолтной маской `*.py *.ts *.tsx` не видел `.astro` —
-    # файл на 900 строк давал «OK — просмотрено 1 файл(ов)», exit 0; eslint,
-    # его ратчет и prettier стояли с шаблонной маской `^frontend/src/`, каталога
-    # такого нет — три `Skipped (no files to check)`. Мета-гейт при этом зелёный,
-    # доктор `DEAD 0`. Роль объявлена закрытой в карте ролей, гейт смотрит в
-    # пустоту, и молчание выглядит как успех.
-    #
-    # Гоняются ТОЛЬКО гейты, вписанные в `.pre-commit-config.yaml`, и это не
-    # осторожность, а точный признак дешевизны: §8.6 держит бюджет коммита в 5
-    # секунд, значит всё, что там стоит, дёшево ПО ПОСТРОЕНИЮ. Сетевые и
-    # минутные (`deps-audit`, `mutation`, `diff-coverage`) живут в CI и сюда не
-    # попадают — их и не запустим.
-    # ⚠ ДВЕ формулировки, и порядок слов в них РАЗНЫЙ: успех печатает
-    # «просмотрено N файл(ов)», а ноль — «0 файлов просмотрено — проверь LINT_…».
-    # Первая редакция знала только первую форму, и слепой гейт попадал в SKIP
-    # вместо DEAD — то есть проверка на «зелёный на непроверенном» сама молчала
-    # ровно на том случае, ради которого написана. Поймано третьим прогоном на
-    # живом проекте (`check_grep_gate.sh` с дефолтным `LINT_PY_SRC`).
-    SCANNED_RE = re.compile(r"просмотрено\s+(\d+)|(\d+)\s+файл\w*\s+просмотрено")
-
-    def _hook_env(self, text: str, name: str) -> dict:
-        """`LINT_*` из строк `entry:`, где зовётся этот скрипт.
-
-        Значения живут в `entry:` (§6), и гонять гейт без них значило бы мерить
-        не тот путь — то есть выдать ложную слепоту. Заодно это проверка самой
-        §6: переменной нет в entry — гейт и на коммите работает по дефолту.
-        """
-        env = {}
-        for line in text.splitlines():
-            # ⚠ КОММЕНТАРИИ пропускаются, и это не микрооптимизация. Шапка
-            # поставляемого `.pre-commit-config.yaml` объясняет, как задавать
-            # переменные, ПРИМЕРОМ: `… LINT_PY_SRC=backend/app bash …`. Первая
-            # редакция читала его как настоящую настройку и объявляла гейт
-            # «настроенным на несуществующий путь» — то есть проверка против
-            # ложного зелёного сама давала ложное красное, прочитав пояснение к
-            # себе же. Четвёртый рецидив класса, ради которого в сьюте канона
-            # живёт `extract.code_only()` (cqg@1.59).
-            if line.lstrip().startswith("#") or name not in line:
-                continue
-            for m in re.finditer(r"\b(LINT_[A-Z_]+)=(\"[^\"]*\"|'[^']*'|\S+)", line):
-                env[m.group(1)] = m.group(2).strip("\"'")
-        return env
-
-    #: Расширения, по которым видно, что в репозитории вообще есть исходники.
-    SOURCE_EXT = (".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".astro",
-                  ".vue", ".svelte", ".swift", ".go", ".rs", ".java", ".kt",
-                  ".rb", ".php", ".cs", ".c", ".cc", ".cpp", ".m", ".mm")
-
-    def check_gates_see_code(self) -> None:
-        d = self.root / "scripts" / "lint"
-        cfg = self.root / ".pre-commit-config.yaml"
-        if not d.is_dir() or not cfg.is_file():
-            return
-        raw = cfg.read_text(encoding="utf-8", errors="replace")
-        # ⚠ Конфиг читается БЕЗ комментариев. Шапка поставляемого файла объясняет
-        # настройку ПРИМЕРОМ («… bash scripts/lint/check_grep_gate.sh --rule …»),
-        # и проверка «вписан ли гейт» ловила этот пример как проводку: доктор
-        # гонял гейт, снятый с коммита, и честно объявлял его слепым. Пятый
-        # рецидив класса, ради которого в сьюте живёт `extract.code_only()`, —
-        # и второй за одну правку: читалку env чинили тем же способом абзацем ниже.
-        text = "\n".join(l for l in raw.splitlines() if not l.lstrip().startswith("#"))
-
-        # ⚠ Судить слепоту можно ТОЛЬКО там, где есть чему быть увиденным.
-        # На bootstrap-развёртывании (контур поставлен, кода ещё нет) ноль
-        # просмотренных — честная бедность, а не ложь, и красный доктор на таком
-        # стенде снимут первым: §4.3b, и ровно об этом предупреждает собственный
-        # тест процедуры («доктор, красный на неполном стенде, снимают первым»).
-        # Поймано этим тестом, а не полем.
-        code, listing = run(["git", "ls-files"], self.root)
-        files = [l for l in listing.splitlines()
-                 if l.endswith(self.SOURCE_EXT) and not l.startswith("scripts/lint/")]
-        if code != 0 or not files:
-            self.add(SKIP, "область гейтов",
-                     "в репозитории нет исходников вне scripts/lint — слепоту "
-                     "судить не на чем (bootstrap: контур есть, кода ещё нет)")
-            return
-        for script in sorted(d.glob("check_*")):
-            name = script.name
-            if not script.is_file() or name in NOT_GATES:
-                continue
-            if name not in text:                      # не на коммите — не наш случай
-                continue
-            point = f"область {name}"
-            cmd = (["python3"] if script.suffix == ".py" else ["bash"]) + [str(script)]
-            # Многоправильный гейт без `--rule` падает с usage. Область у правил
-            # одного скрипта общая, поэтому довольно первого вписанного.
-            body = script.read_text(encoding="utf-8", errors="replace")
-            if "--list-rules" in body:
-                wired = re.findall(rf"{re.escape(name)}\s+--rule\s+([A-Za-z0-9_-]+)", text)
-                if not wired:
-                    continue
-                cmd += ["--rule", wired[0]]
-            env = self._hook_env(text, name)
-            code, out = run(cmd, self.root, env=env)
-            m = self.SCANNED_RE.search(out)
-            if not m:
-                # Гейт не отчитывается числом — либо не сканирующий, либо красный
-                # по делу. Молча зачесть за успех нельзя, но и ронять не за что.
-                self.add(SKIP, point, "гейт не печатает «просмотрено N» — "
-                                      "сканирующий ли он, отсюда не видно")
-                continue
-            n = int(m.group(1) or m.group(2))
-            if n:
-                self.add(AUTO, point, f"просмотрено {n} файл(ов)")
-                continue
-
-            # Ноль бывает ДВУХ природ, и путать их нельзя.
-            #
-            # ① Гейт настроен на НЕСУЩЕСТВУЮЩИЙ путь — это ложь всегда: роль
-            #    объявлена закрытой, а смотреть физически некуда.
-            # ② У правила свой FILTER (`service-no-web` смотрит только в
-            #    `/services/`), и ноль честно значит «предмета здесь нет».
-            #
-            # Первая редакция звала DEAD в обоих случаях и обвинила
-            # `check_grep_gate.sh` на стенде, где каталог был на месте, а у
-            # правила просто не было предмета. Ложное срабатывание — дефект
-            # проверки (§4.3b), и такой доктор снимают раньше, чем он окупится.
-            # Поймано собственным тестом процедуры, а не полем.
-            roots = [v for k, v in env.items() if k.endswith("_SRC") or k.endswith("_DIR")]
-            missing = [r for r in roots if r and not (self.root / r).is_dir()]
-            if missing:
-                self.add(DEAD, point,
-                         "настроен на НЕСУЩЕСТВУЮЩИЙ путь "
-                         f"({', '.join(missing)}) — смотреть некуда, а роль "
-                         "объявлена закрытой (§6: значения живут в `entry:`)")
-            elif "--list-rules" in body:
-                self.add(WEAK, point,
-                         "просмотрено 0 файлов. У правила свой FILTER, поэтому "
-                         "ноль может честно значить «предмета нет» — но может и "
-                         "«маска шаблонная». Отсюда не различить: сверь §6")
-            else:
-                self.add(DEAD, point,
-                         "подключён и смотрит в ПУСТОТУ: просмотрено 0 файлов. "
-                         "Роль объявлена закрытой, а гейт не видит кода — маска "
-                         "или путь остались шаблонными (§6: значения в `entry:`)")
 
     # --- Что в контуре разошлось с каноном и почему (cqg@1.71) ----------------
     # Обновление контура было археологией: §5 описывает развёртывание на
@@ -4873,6 +4842,650 @@ class Doctor:
                          f"под стек (объяви в {self.ADAPTED} с причиной) — "
                          "иначе обновление начнётся с раскопок и затрёт правку")
 
+```
+
+### `scripts/lint/doctor_hooks.py`
+
+```python
+#!/usr/bin/env python3
+"""Чтение `.pre-commit-config.yaml`: чем гейт настроен и когда запускается.
+
+Часть доктора (`cqg@1.88`, вход — `contour_doctor.py`). Выделено из
+`doctor_layout.py`, когда тот перевалил за планку 300 строк — journal веса поймал
+это в том же прогоне, где строки добавились (§9.1a п.5).
+
+Здесь три вопроса к конфигу, и все три — про НАСТРОЙКУ, а не про суждение:
+значения `LINT_*` из `entry:`, объявленная область `files:` и стадии `stages:`.
+"""
+
+from __future__ import annotations
+
+import re
+
+
+class HookReaders:
+    def _hook_env(self, text: str, name: str) -> dict:
+        """`LINT_*` из строк `entry:`, где зовётся этот скрипт.
+
+        Значения живут в `entry:` (§6), и гонять гейт без них значило бы мерить
+        не тот путь — то есть выдать ложную слепоту. Заодно это проверка самой
+        §6: переменной нет в entry — гейт и на коммите работает по дефолту.
+        """
+        env = {}
+        for line in text.splitlines():
+            # ⚠ КОММЕНТАРИИ пропускаются, и это не микрооптимизация. Шапка
+            # поставляемого `.pre-commit-config.yaml` объясняет, как задавать
+            # переменные, ПРИМЕРОМ: `… LINT_PY_SRC=backend/app bash …`. Первая
+            # редакция читала его как настоящую настройку и объявляла гейт
+            # «настроенным на несуществующий путь» — то есть проверка против
+            # ложного зелёного сама давала ложное красное, прочитав пояснение к
+            # себе же. Четвёртый рецидив класса, ради которого в сьюте канона
+            # живёт `extract.code_only()` (cqg@1.59).
+            if line.lstrip().startswith("#") or name not in line:
+                continue
+            for m in re.finditer(r"\b(LINT_[A-Z_]+)=(\"[^\"]*\"|'[^']*'|\S+)", line):
+                env[m.group(1)] = m.group(2).strip("\"'")
+        return env
+
+    #: Расширения, по которым видно, что в репозитории вообще есть исходники.
+    SOURCE_EXT = (".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".astro",
+                  ".vue", ".svelte", ".swift", ".go", ".rs", ".java", ".kt",
+                  ".rb", ".php", ".cs", ".c", ".cc", ".cpp", ".m", ".mm")
+
+    #: Механика контура из дерева исключается ТЕМ ЖЕ правилом, каким её исключает
+    #: сам гейт длины (`exclude_contour`, §9.1a: размер скриптов контура мерится
+    #: отдельно). Без этого знаменатель раздували бы скрипты канона, «частичная
+    #: область» печаталась бы на КАЖДОМ правильно развёрнутом проекте — а шумную
+    #: проверку снимают за неделю (§4.3b), и тогда она не защищает никого.
+    CONTOUR_RE = re.compile(r"^(scripts/lint/|scripts/delivery_(check|metrics)\.py$"
+                            r"|scripts/okf_[a-z_]+\.py$|scripts/merge_guard\.sh$"
+                            r"|delivery/|knowledge/|docs/canon/)")
+
+
+    def _hook_stages(self, text: str, name: str) -> list[str]:
+        """Стадии хука: на чём он реально запускается (`cqg@1.88`).
+
+        Признак дешевизны, на котором стоит вся проверка областей, — «вписан в
+        pre-commit, значит дёшев по построению: §8.6 держит бюджет коммита в 5
+        секунд». Для `stages: [manual]` он НЕВЕРЕН: такой хук на коммите не
+        запускается, и бюджет к нему не относится. Замер восьмого развёртывания:
+        доктор гонял так вписанный `deps-audit`, а тот ходит в СЕТЬ — 24.5 с
+        против обещанных «числа за две секунды». То есть инструмент врал о себе
+        ровно тем же способом, который ищет.
+
+        Пусто = стадия не названа, то есть дефолт: хук на коммите.
+        """
+        for chunk in re.split(r"^\s*-\s+id:", text, flags=re.M)[1:]:
+            if name not in chunk:
+                continue
+            m = re.search(r"^\s*stages:\s*\[?([^\]\n]*)\]?", chunk, re.M)
+            if not m:
+                return []
+            return [s.strip().strip("'\"") for s in m.group(1).split(",") if s.strip()]
+        return []
+
+    def _hook_files_re(self, text: str, name: str):
+        """`files:` хука — область, ОБЪЯВЛЕННАЯ проектом, и доктор её уважает.
+
+        Знаменатель без этого несправедлив: хук `eslint-warning-ratchet` объявлен
+        как `^src/.*\\.(ts|tsx|astro)$`, и мерить его по всему дереву значило бы
+        считать слепотой конфиги в корне. Расхождение доктор ищет между
+        ЗАЯВЛЕНИЕМ и деревом, а не между двумя заявлениями проекта.
+
+        Отсюда и предел, который надо знать: если и `files:`, и маска гейта
+        одинаково узки, доктор молчит — сузили осознанно, и это решение проекта
+        (§6). Ловится случай, которым класс и открылся: маска уже дерева, а
+        объявления, что так задумано, нет.
+        """
+        for chunk in re.split(r"^\s*-\s+id:", text, flags=re.M)[1:]:
+            if name not in chunk:
+                continue
+            m = re.search(r"^\s*files:\s*(\S.*?)\s*$", chunk, re.M)
+            if not m:
+                return None
+            try:
+                return re.compile(m.group(1).strip("'\""))
+            except re.error:      # битую регулярку чинит pre-commit, не доктор
+                return None
+        return None
+
+
+```
+
+### `scripts/lint/doctor_areas.py`
+
+```python
+#!/usr/bin/env python3
+"""Видит ли подключённый гейт код ЭТОГО проекта (`cqg@1.69`; сверка с деревом 1.80).
+
+Часть доктора (`cqg@1.82`, вход — `contour_doctor.py`). Вторая половина вопроса
+«а судит ли вписанное»: первая — «умеет ли гейт краснеть» — закрыта канарейкой
+(`doctor_probes.py`), эта — «нацелен ли он на код». Значения `LINT_*` и `files:`
+хука читает `doctor_layout.py`: это раскладка, а суждение здесь.
+"""
+
+from __future__ import annotations
+
+import fnmatch
+import re
+
+from doctor_core import AUTO, DEAD, NOT_GATES, SKIP, SKIP_WORDS, SUCCESS_WORDS, WEAK, run
+
+
+def _covers(token: str, path: str) -> bool:
+    """Покрывает ли токен маски этот путь.
+
+    Три формы, все встречаются в payload'е: `*.py` (расширение где угодно),
+    `dir/**` (поддерево) и `dir/**/*.py` (то и другое). Голый `fnmatch` не
+    годится: `*.py` в нём не совпадает с `pkg/mod.py`, а `**` он не знает вовсе.
+    """
+    if token.endswith("/**"):
+        return path.startswith(token[:-2])
+    if "/**/" in token:
+        head, tail = token.split("/**/", 1)
+        return path.startswith(head + "/") and fnmatch.fnmatch(
+            path.rsplit("/", 1)[-1], tail)
+    if "/" in token:
+        return fnmatch.fnmatch(path, token)
+    return fnmatch.fnmatch(path.rsplit("/", 1)[-1], token)
+
+
+class AreaChecks:
+    # --- Видит ли подключённый гейт код ЭТОГО проекта (cqg@1.69) --------------
+    # Вторая половина вопроса «а судит ли вписанное». Первая — «умеет ли гейт
+    # краснеть» — закрыта канарейкой. Эта — «нацелен ли он на код», и до сих пор
+    # её не задавал никто:
+    #
+    #   gate-coverage  — вписан ли скрипт в конфиг. ТЕКСТОВЫЙ вопрос: хук с
+    #                    неверной маской вписан и проходит;
+    #   канарейка      — умеет ли гейт краснеть. Проба СВОЯ, поэтому слепой гейт
+    #                    ловит канарейку прекрасно и остаётся слепым к проекту;
+    #   сьют канона    — ловит ли правило нарушение. Стенд синтетический: тест
+    #                    сам пишет файлы, которые потом проверяет, поэтому
+    #                    расхождение маски с расширениями проекта там невыразимо
+    #                    ПО ПОСТРОЕНИЮ.
+    #
+    # Замер, из которого правило родилось (Astro/TS, четыре гейта разом):
+    # `file-length` с дефолтной маской `*.py *.ts *.tsx` не видел `.astro` —
+    # файл на 900 строк давал «OK — просмотрено 1 файл(ов)», exit 0; eslint,
+    # его ратчет и prettier стояли с шаблонной маской `^frontend/src/`, каталога
+    # такого нет — три `Skipped (no files to check)`. Мета-гейт при этом зелёный,
+    # доктор `DEAD 0`. Роль объявлена закрытой в карте ролей, гейт смотрит в
+    # пустоту, и молчание выглядит как успех.
+    #
+    # Гоняются ТОЛЬКО гейты, вписанные в `.pre-commit-config.yaml`, и это не
+    # осторожность, а точный признак дешевизны: §8.6 держит бюджет коммита в 5
+    # секунд, значит всё, что там стоит, дёшево ПО ПОСТРОЕНИЮ. Сетевые и
+    # минутные (`deps-audit`, `mutation`, `diff-coverage`) живут в CI и сюда не
+    # попадают — их и не запустим.
+    # ⚠ ДВЕ формулировки, и порядок слов в них РАЗНЫЙ: успех печатает
+    # «просмотрено N файл(ов)», а ноль — «0 файлов просмотрено — проверь LINT_…».
+    # Первая редакция знала только первую форму, и слепой гейт попадал в SKIP
+    # вместо DEAD — то есть проверка на «зелёный на непроверенном» сама молчала
+    # ровно на том случае, ради которого написана. Поймано третьим прогоном на
+    # живом проекте (`check_grep_gate.sh` с дефолтным `LINT_PY_SRC`).
+    #
+    # ЕДИНИЦА захватывается вместе с числом, и это несущая часть (`cqg@1.80`):
+    # гейты считают разное — «файл(ов)», «манифест(ов)» (deps-audit),
+    # «модул(ей)» (слои ts). Сверять число манифестов с числом файлов дерева
+    # значило бы выдумать расхождение там, где сравнивают несравнимое.
+    #: Маска, которую гейт называет сам (`cqg@1.88`): «по маске: *.py src/**».
+    MASK_RE = re.compile(r"по маске:\s*(.+?)\s*$", re.M)
+
+    SCANNED_RE = re.compile(r"просмотрено\s+(\d+)\s*([А-Яа-яЁё]*)"
+                            r"|(\d+)\s+([А-Яа-яЁё]+)\s+просмотрено")
+
+    def check_gates_see_code(self) -> None:
+        d = self.root / "scripts" / "lint"
+        cfg = self.root / ".pre-commit-config.yaml"
+        if not d.is_dir() or not cfg.is_file():
+            return
+        raw = cfg.read_text(encoding="utf-8", errors="replace")
+        # ⚠ Конфиг читается БЕЗ комментариев. Шапка поставляемого файла объясняет
+        # настройку ПРИМЕРОМ («… bash scripts/lint/check_grep_gate.sh --rule …»),
+        # и проверка «вписан ли гейт» ловила этот пример как проводку: доктор
+        # гонял гейт, снятый с коммита, и честно объявлял его слепым. Пятый
+        # рецидив класса, ради которого в сьюте живёт `extract.code_only()`, —
+        # и второй за одну правку: читалку env чинили тем же способом абзацем ниже.
+        text = "\n".join(l for l in raw.splitlines() if not l.lstrip().startswith("#"))
+
+        # ⚠ Судить слепоту можно ТОЛЬКО там, где есть чему быть увиденным.
+        # На bootstrap-развёртывании (контур поставлен, кода ещё нет) ноль
+        # просмотренных — честная бедность, а не ложь, и красный доктор на таком
+        # стенде снимут первым: §4.3b, и ровно об этом предупреждает собственный
+        # тест процедуры («доктор, красный на неполном стенде, снимают первым»).
+        # Поймано этим тестом, а не полем.
+        code, listing = run(["git", "ls-files"], self.root)
+        files = [l for l in listing.splitlines()
+                 if l.endswith(self.SOURCE_EXT) and not self.CONTOUR_RE.match(l)]
+        if code != 0 or not files:
+            self.add(SKIP, "область гейтов",
+                     "в репозитории нет исходников вне scripts/lint — слепоту "
+                     "судить не на чем (bootstrap: контур есть, кода ещё нет)")
+            return
+        off_commit: list[str] = []
+        for script in sorted(d.glob("check_*")):
+            name = script.name
+            if not script.is_file() or name in NOT_GATES:
+                continue
+            if name not in text:                      # не вписан — не наш случай
+                continue
+            # Вписан, но не на коммите: `stages: [manual]` / `[push]`. Гонять его
+            # здесь нельзя — §8.6 не покрывает эти стадии, а `deps-audit` оттуда
+            # ходит в сеть. Пропускаем МОЛЧА по одному, а списком — вслух ниже:
+            # молчаливый пропуск всех гейтов разом дал бы «лжи нет» на проекте,
+            # где на коммите не проверяется ничего.
+            stages = self._hook_stages(text, name)
+            if stages and not any(s.startswith("commit") or s == "pre-commit"
+                                  for s in stages):
+                off_commit.append(f"{name} ({', '.join(stages)})")
+                continue
+            point = f"область {name}"
+            cmd = (["python3"] if script.suffix == ".py" else ["bash"]) + [str(script)]
+            # Многоправильный гейт без `--rule` падает с usage. Область у правил
+            # одного скрипта общая, поэтому довольно первого вписанного.
+            body = script.read_text(encoding="utf-8", errors="replace")
+            if "--list-rules" in body:
+                wired = re.findall(rf"{re.escape(name)}\s+--rule\s+([A-Za-z0-9_-]+)", text)
+                if not wired:
+                    continue
+                cmd += ["--rule", wired[0]]
+            env = self._hook_env(text, name)
+            code, out = run(cmd, self.root, env=env)
+            m = self.SCANNED_RE.search(out)
+            if not m:
+                # Гейт не отчитывается числом — либо не сканирующий, либо красный
+                # по делу. Молча зачесть за успех нельзя, но и ронять не за что.
+                self.add(SKIP, point, "гейт не печатает «просмотрено N» — "
+                                      "сканирующий ли он, отсюда не видно")
+                continue
+            n = int(m.group(1) or m.group(3))
+            if n:
+                mask_m = self.MASK_RE.search(out)
+                self._judge_area(point, n, (m.group(2) or m.group(4) or "").lower(),
+                                 files, env, multi_rule="--list-rules" in body,
+                                 files_re=self._hook_files_re(text, name),
+                                 mask=(mask_m.group(1).split() if mask_m else []))
+                continue
+
+            # ⚠ Ноль при НАЗВАННОМ пропуске — бедность, а не ложь, и этот случай
+            # обнажила сама правка 1.80. `check_deps_audit.sh` печатает
+            # «○ пропущено: npm audit» и `WARNING — просмотрено 0 манифест(ов)»;
+            # до 1.80 он проваливался в `SKIP` лишь потому, что регулярка не знала
+            # слова «манифест», а как только число стало читаться, честный пропуск
+            # стал бы `DEAD` — то есть проверка на ложь обвинила бы гейт за
+            # бедность окружения (§4.3b). Правило 1.61 сохранено: заявленный успех
+            # БЬЁТ названный пропуск (гейт может шепнуть «пропущено» в теле и
+            # напечатать «: OK» в итоге, а читают итог — это форма F10 и она DEAD).
+            named = next((w for w in SKIP_WORDS if w in out), None)
+            if named and not any(w in out for w in SUCCESS_WORDS):
+                self.add(WEAK, point, f"просмотрено 0 — но пропуск НАЗВАН самим "
+                                      f"гейтом ({named}): бедность окружения, не ложь")
+                continue
+
+            # Ноль бывает ДВУХ природ, и путать их нельзя.
+            #
+            # ① Гейт настроен на НЕСУЩЕСТВУЮЩИЙ путь — это ложь всегда: роль
+            #    объявлена закрытой, а смотреть физически некуда.
+            # ② У правила свой FILTER (`service-no-web` смотрит только в
+            #    `/services/`), и ноль честно значит «предмета здесь нет».
+            #
+            # Первая редакция звала DEAD в обоих случаях и обвинила
+            # `check_grep_gate.sh` на стенде, где каталог был на месте, а у
+            # правила просто не было предмета. Ложное срабатывание — дефект
+            # проверки (§4.3b), и такой доктор снимают раньше, чем он окупится.
+            # Поймано собственным тестом процедуры, а не полем.
+            roots = [v for k, v in env.items() if k.endswith("_SRC") or k.endswith("_DIR")]
+            missing = [r for r in roots if r and not (self.root / r).is_dir()]
+            if missing:
+                self.add(DEAD, point,
+                         "настроен на НЕСУЩЕСТВУЮЩИЙ путь "
+                         f"({', '.join(missing)}) — смотреть некуда, а роль "
+                         "объявлена закрытой (§6: значения живут в `entry:`)")
+            elif "--list-rules" in body:
+                self.add(WEAK, point,
+                         "просмотрено 0 файлов. У правила свой FILTER, поэтому "
+                         "ноль может честно значить «предмета нет» — но может и "
+                         "«маска шаблонная». Отсюда не различить: сверь §6")
+            else:
+                self.add(DEAD, point,
+                         "подключён и смотрит в ПУСТОТУ: просмотрено 0 файлов. "
+                         "Роль объявлена закрытой, а гейт не видит кода — маска "
+                         "или путь остались шаблонными (§6: значения в `entry:`)")
+
+        if off_commit:
+            self.add(WEAK, "область: не на коммите",
+                     f"{len(off_commit)} гейт(ов) вписаны мимо коммит-стадии и "
+                     f"областью НЕ пробованы: {', '.join(off_commit)}. §8.6 их "
+                     "не покрывает (сеть/минуты), поэтому доктор их не запускает")
+
+    def _judge_area(self, point: str, n: int, unit: str, files: list[str],
+                    env: dict, *, multi_rule: bool, files_re, mask: list[str]) -> None:
+        """Число просмотренного сверяется с ДЕРЕВОМ (`cqg@1.80`).
+
+        Единственным порогом был НОЛЬ (`if n: AUTO`), а дыра, из которой родилась
+        сама проверка, была ЕДИНИЦЕЙ: `file-length` с дефолтной маской
+        `*.py *.ts *.tsx` на Astro-проекте печатал `OK — просмотрено 1 файл(ов)`
+        при четырёх файлах кода — `.ts` виден, `.astro` невидим. То есть
+        предохранитель, построенный по находке, саму находку бы не поймал: полную
+        слепоту он ловит, а на смешанном стеке опасна ровно ЧАСТИЧНАЯ, и она
+        читается как успех. Обе половины наблюдались в одном отчёте, это замер, а
+        не гипотеза.
+
+        **Знаменатель — дерево под КОРНЯМИ гейта, но не под его маской
+        расширений.** Корень (`LINT_*_SRC`/`_DIR` из `entry:`) отвечает «где», и
+        сузить его — законное решение проекта. Маска отвечает «на каком языке», и
+        сверять её с самой собой значило бы объявить зелёным ровно тот случай,
+        ради которого проверка написана.
+
+        Вердикт частичной области — `WEAK`, не `DEAD`, и это не мягкость.
+        Приписать гейту весь язык доктор не может: единственное, что он видит, —
+        два числа, а какие именно файлы гейт смотрел, знает только сам гейт.
+        `WEAK` печатает числа и состав дерева, то есть отдаёт человеку ровно ту
+        улику, по которой находка №1 и была найдена глазами.
+        """
+        # `LINT_FE_DIR=.` — штатная запись npm-проекта без каталога frontend, и
+        # означает она ВЕСЬ репозиторий. Первая редакция считала её корнем с
+        # именем «.», под который не подходит ни один путь из `git ls-files`:
+        # область выходила пустой, сверять становилось не с чем, и проверка
+        # молчала ровно там, где стек смешанный. Поймано полевым прогоном на
+        # portfolio-site, а не чтением.
+        roots = []
+        for k, v in env.items():
+            if not (k.endswith("_SRC") or k.endswith("_DIR")):
+                continue
+            r = v.strip().rstrip("/")
+            r = r[2:] if r.startswith("./") else r
+            if r and r != ".":
+                roots.append(r)
+        area = [f for f in files
+                if (not roots or any(f == r or f.startswith(r + "/") for r in roots))
+                and (files_re is None or files_re.search(f))]
+        # Сравнивать не с чем — два разных случая, и оба остаются прежним AUTO:
+        # единица не файлы (манифесты, модули) либо в области нет ни одного
+        # известного доктору исходника.
+        if not unit.startswith("файл"):
+            self.add(AUTO, point,
+                     f"просмотрено {n} — сверить с деревом нечем (единица: {unit})")
+            return
+        if not area:
+            self.add(AUTO, point, f"просмотрено {n} файл(ов)")
+            return
+        # ⚠ Маска, если гейт её НАЗВАЛ, превращает подозрение в счёт (`cqg@1.88`).
+        # Без неё «просмотрено 1 из 4» одинаково выглядит при узкой маске и при
+        # законном сужении области — доктор мог только спросить (`WEAK`). Теперь
+        # он вычитает: файлы области, которых маска не покрывает, гейт не увидит
+        # НИКОГДА, и это уже не вопрос, а ложь объявленной роли.
+        if mask:
+            blind = [f for f in area if not any(_covers(tok, f) for tok in mask)]
+            if blind:
+                self.add(DEAD, point,
+                         f"маска гейта не покрывает {len(blind)} файл(ов) области: "
+                         f"{', '.join(blind[:3])}{' …' if len(blind) > 3 else ''}. "
+                         f"Маска — «{' '.join(mask)}»; эти файлы гейт не увидит "
+                         "никогда, а роль объявлена закрытой (§6)")
+                return
+        if n >= len(area):
+            self.add(AUTO, point, f"просмотрено {n} из {len(area)} файл(ов) области"
+                                  + (", маска покрывает область" if mask else ""))
+            return
+        hist: dict[str, int] = {}
+        for f in area:
+            ext = "." + f.rsplit(".", 1)[-1]
+            hist[ext] = hist.get(ext, 0) + 1
+        top = ", ".join(f"{e} ×{c}" for e, c in
+                        sorted(hist.items(), key=lambda kv: -kv[1])[:4])
+        if multi_rule:
+            self.add(AUTO, point, f"просмотрено {n} из {len(area)} — у правила свой "
+                                  f"FILTER, частичная область законна ({top})")
+            return
+        self.add(WEAK, point,
+                 f"просмотрено {n} из {len(area)} файл(ов) области: {len(area) - n} "
+                 f"мимо гейта (в дереве {top}) — так выглядела находка №1, где "
+                 "«просмотрено 1» при четырёх файлах читалось как успех. Сверь маску (§6)")
+
+```
+
+### `scripts/lint/doctor_canaries.py`
+
+```python
+#!/usr/bin/env python3
+"""Канарейки: чем пробуется каждый гейт и что объявил проект.
+
+Часть доктора (`cqg@1.82`, вход — `contour_doctor.py`). Здесь ДАННЫЕ проб и
+чтение объявлений проекта; сами пробы — в `doctor_probes.py`. Разделено не по
+красоте, а по планке 300 строк (§9.1a п.5): вместе это 400+.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from doctor_core import SKIP, run
+
+CANARIES: dict[str, tuple[str, str]] = {
+    # grep-правила
+    "config-access": ("canary.py", "import os\nX = os.getenv('SECRET')\n"),
+    "di-indirection": ("canary.py", "from importlib import import_module\n"
+                                    "m = import_module('pkg.sub')\n"),
+    "service-no-web": ("service.py", "from fastapi import APIRouter\nr = APIRouter()\n"),
+    "no-grab-bag-module": ("utils.py", "def helper():\n    return 1\n"),
+    "blind-error": ("canary.py", 'def f():\n    raise Exception("bad")\n'),
+    "unstructured-log": ("canary.py", "import logging\n"
+                                      "logger = logging.getLogger(__name__)\n"
+                                      "def f(url):\n"
+                                      '    logger.info(f"fetch {url}")\n'),
+    # ast-правила
+    "silent-except": ("canary.py", "def f():\n    try:\n        pass\n"
+                                   "    except Exception:\n        pass\n"),
+    "inline-prompt": ("canary.py", 'P = """ты — помощник\n' + "строка\n" * 8 + '"""\n'),
+    "cpu-in-async": ("canary.py", "import json\n"
+                                  "async def f(rows):\n"
+                                  "    for r in rows:\n"
+                                  "        json.loads(r)\n"),
+    # Односложные гейты: ключ — имя скрипта, у них нет `--list-rules`.
+    "check_file_length.sh": ("huge.py", "x = 1\n" * 700),
+    "check_complexity_gate.sh": ("complex.py",
+        "def f(a):\n" + "".join(f"    if a == {i}:\n        return {i}\n"
+                                for i in range(14))),
+    "unbounded-list": ("canary.py", "from fastapi import APIRouter\n"
+                                    "router = APIRouter()\n\n\n"
+                                    '@router.get("/all")\n'
+                                    "async def all_items() -> list[dict]:\n"
+                                    "    return await repo.everything()\n"),
+}
+
+
+# Не гейты: измерительные инструменты и сам доктор. Канарейку им подсовывать
+# бессмысленно — они ничего не запрещают. Раньше они попадали в SKIP и раздували
+
+TOOL_DEPENDENT = {
+    "check_jscpd_gate.sh": "jscpd",
+    "check_deps_audit.sh": "pip-audit / npm",
+    "check_mutation_gate.sh": "mutmut",
+    "check_eslint_warnings.sh": "eslint / npm",
+    "check_diff_coverage.sh": "pytest-cov",
+    "check_ci_status.sh": "gh",
+    "check_complexity_gate.sh": "ruff",
+    "check_layers_gate.sh": "lint-imports / depcruise",
+}
+
+# `PATH` без homebrew и venv: coreutils и git на месте, а jscpd/mutmut/gh/ruff —
+# нет. Та же раскладка, что в сьюте канона (`tests/`), и она не выдумана: гейты
+# ищут инструмент через `command -v`, а живут эти инструменты вне /usr/bin.
+BARE_PATH = "/usr/bin:/bin"
+
+# Гейты, которых канон НЕ поставляет, — свои у проекта (`check_canon_vendor.sh` в
+# первом настоящем развёртывании, находка 7). Канарейку для них доктор выдумать не
+# может: класс нарушения знает только автор гейта. Но проект может её ОБЪЯВИТЬ —
+# файлом ниже, — и тогда чужой гейт проверяется исполнением, как свои. Без этого
+# «свой гейт» навсегда оставался SKIP, то есть областью, где ЛОЖЬ невидима, а
+# именно чужие гейты никто больше и не проверяет.
+#
+# Формат — {имя скрипта: {"path": путь от корня репо, "content": текст}}:
+#   {"check_canon_vendor.sh": {"path": "docs/canon/AGENT_STACK.md",
+#                              "content": "подменённая копия канона\n"}}
+OWN_CANARIES = "scripts/lint/canaries.json"
+
+
+def _setup_gate_coverage(lab: Path) -> tuple[list[str], dict]:
+    """Скрипт лежит в `scripts/lint`, но в конфиге его нет → мета-гейт краснеет.
+
+    Именно этот случай и породил мета-гейт: jscpd был извлечён, адаптирован и не
+    вписан, а приёмка показала 7/7 зелёных.
+    """
+    (lab / ".pre-commit-config.yaml").write_text(
+        "repos:\n  - repo: local\n    hooks:\n      - id: nothing\n"
+        "        name: ничего не подключает\n        entry: true\n"
+        "        language: system\n", encoding="utf-8")
+    (lab / "scripts" / "lint" / "check_orphan_gate.sh").write_text(
+        "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    return [], {}
+
+
+def _setup_new_dependency(lab: Path) -> tuple[list[str], dict]:
+    """Пакет добавлен в манифест и НЕ объявлен в STATUS → гейт краснеет."""
+    (lab / "backend").mkdir(exist_ok=True)
+    man = lab / "backend" / "pyproject.toml"
+    man.write_text('[project]\nname = "app"\ndependencies = ["pydantic>=2.0"]\n',
+                   encoding="utf-8")
+    (lab / "delivery" / "active").mkdir(parents=True, exist_ok=True)
+    (lab / "delivery" / "active" / "STATUS.md").write_text(
+        "# STATUS\n\n- class: S\n", encoding="utf-8")
+    run(["git", "add", "-A"], lab)
+    run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
+         "commit", "-qm", "manifest"], lab)
+    run(["git", "branch", "-f", "b0"], lab)
+    man.write_text('[project]\nname = "app"\n'
+                   'dependencies = ["pydantic>=2.0", "httpx>=0.27"]\n', encoding="utf-8")
+    run(["git", "add", "-A"], lab)
+    run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
+         "commit", "-qm", "add dep"], lab)
+    return [], {"BASE": "b0"}
+
+
+def _setup_baseline_ratchet(lab: Path) -> tuple[list[str], dict]:
+    """Снимок переснят ВВЕРХ → легализация свежих нарушений, гейт краснеет."""
+    base = lab / "scripts" / "lint" / "file_length_baseline.txt"
+    base.write_text("# снимок\n[baseline]\n120:backend/features/a.py\n", encoding="utf-8")
+    run(["git", "add", "-A"], lab)
+    run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
+         "commit", "-qm", "baseline"], lab)
+    run(["git", "branch", "-f", "b0"], lab)
+    base.write_text("# снимок\n[baseline]\n400:backend/features/a.py\n", encoding="utf-8")
+    run(["git", "add", "-A"], lab)
+    run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
+         "commit", "-qm", "raise snapshot"], lab)
+    return [], {"BASE": "b0"}
+
+
+# Гейты со своей постановкой: канарейка тут — не файл с нарушением, а СОСТОЯНИЕ
+# репозитория (несвязанный скрипт, необъявленная зависимость, поднятый снимок).
+DIRECT_SETUP = {
+    "check_gate_coverage.sh": _setup_gate_coverage,
+    "check_new_dependency.py": _setup_new_dependency,
+    "check_baseline_ratchet.sh": _setup_baseline_ratchet,
+}
+
+
+
+
+class CanaryData:
+    def _read_own_canaries(self) -> dict[str, list[tuple[str | None, str, str]]]:
+        """Канарейки, объявленные проектом. Битый файл — НАЗВАТЬ, а не пропустить.
+
+        Молчаливое «не разобрал → канареек нет» вернуло бы ровно тот класс, за
+        которым доктор и придуман: объявление есть, проверки нет, и об этом никто
+        не сказал.
+
+        Ключ — `<скрипт>` **или** `<скрипт>:<правило>`, как в
+        `not-applicable.json`. Форма с правилом обязательна, и это не симметрия
+        ради симметрии: многоправильный гейт БЕЗ `--rule` падает с usage, а
+        доктор принимал это за «гейт красный и без канарейки — судить нечем».
+        Замерено на первом же применении: два адаптированных гейта Swift-проекта
+        (`check_grep_gate.sh`, `check_ast_gate.py`) уходили в SKIP, то есть
+        объявление снова принималось и не исполнялось — тот самый класс, ради
+        которого этот механизм и чинили.
+        """
+        f = self.root / OWN_CANARIES
+        if not f.is_file():
+            return {}
+        try:
+            raw = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            self.add(SKIP, OWN_CANARIES, f"не разобран ({exc}) — свои гейты НЕ "
+                                         "проверены, хотя канарейки объявлены")
+            return {}
+        out: dict[str, list[tuple[str | None, str, str]]] = {}
+        for key, spec in (raw or {}).items():
+            if not (isinstance(spec, dict) and spec.get("path") and spec.get("content")):
+                self.add(SKIP, f"канарейка {key}",
+                         f"объявление без path/content в {OWN_CANARIES}")
+                continue
+            name, _, rule = str(key).partition(":")
+            out.setdefault(name, []).append(
+                (rule or None, str(spec["path"]), str(spec["content"])))
+        return out
+
+
+    # --- E. канарейки: главное ----------------------------------------------
+    def _rules_of(self, script: Path) -> list[str]:
+        """Список правил берётся У СКРИПТА (`--list-rules`), не дублируется тут."""
+        cmd = ["python3", str(script)] if script.suffix == ".py" else ["bash", str(script)]
+        code, out = run(cmd + ["--list-rules"], self.root)
+        if code != 0:
+            return []
+        return [l.strip() for l in out.splitlines() if l.strip() and " " not in l.strip()]
+
+```
+
+### `scripts/lint/doctor_probes.py`
+
+```python
+#!/usr/bin/env python3
+"""Пробы исполнением: гейт обязан покраснеть на нарушении своего класса.
+
+Часть доктора (`cqg@1.82`, вход — `contour_doctor.py`). Принцип — пробовать
+ИСПОЛНЕНИЕМ, а не чтением: каждому гейту подсовывается канарейка (данные —
+`doctor_canaries.py`), и молчание на своём же нарушении объявляется `DEAD`.
+"""
+
+from __future__ import annotations
+
+import shutil
+import tempfile
+from pathlib import Path
+
+from doctor_canaries import (BARE_PATH, CANARIES, DIRECT_SETUP, OWN_CANARIES,
+                             TOOL_DEPENDENT)
+from doctor_core import (ABSENT, AUTO, DEAD, NOT_GATES, SKIP, SKIP_WORDS,
+                         SUCCESS_WORDS, TOOL, WEAK, run)
+
+
+def copy_with_parts(script: Path, dst_dir: Path) -> None:
+    """Скопировать гейт В КОМПЛЕКТЕ с его модулями (`cqg@1.83`).
+
+    С `cqg@1.82` payload режется по планке 300 строк, и «скопировать один файл»
+    перестало работать: `check_ast_gate.py` без `ast_rules.py` падает на импорте.
+    Проба, копирующая вход в одиночку, получила бы ненулевой код возврата и
+    зачла его за «канарейка поймана» — то есть объявила бы работающим гейт,
+    который вообще не запустился. Поймано собственным тестом сьюта, не полем.
+
+    Модули отличаются от гейтов по имени: гейт — `check_*`, всё остальное `.py`
+    и `.sh` рядом — части (bash режется тем же приёмом, только через `source`). Признак тот же, по которому их не считает мета-гейт, поэтому
+    второго источника истины не возникает. Снимки (`*_baseline.txt`) НЕ копируются
+    сознательно: канарейка, легализованная чужим снимком, не покраснеет.
+    """
+    shutil.copy(script, dst_dir / script.name)
+    for part in sorted(script.parent.iterdir()):
+        if part.suffix not in (".py", ".sh") or part.name == script.name:
+            continue
+        if not part.name.startswith("check_"):
+            shutil.copy(part, dst_dir / part.name)
+
+
+class ProbeChecks:
     def check_canaries(self) -> None:
         d = self.root / "scripts" / "lint"
         if not d.is_dir():
@@ -4923,7 +5536,7 @@ class Doctor:
             (lab / "scripts" / "lint").mkdir(parents=True)
             (lab / "backend" / "features").mkdir(parents=True)
             (lab / "backend" / "features" / "a.py").write_text("x = 1\n", encoding="utf-8")
-            shutil.copy(script, lab / "scripts" / "lint" / script.name)
+            copy_with_parts(script, lab / "scripts" / "lint")
             run(["git", "init", "-q", "."], lab)
             run(["git", "add", "-A"], lab)
             run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
@@ -4961,7 +5574,7 @@ class Doctor:
             lab = Path(tmp)
             (lab / "backend" / "features").mkdir(parents=True)
             (lab / "scripts" / "lint").mkdir(parents=True)
-            shutil.copy(script, lab / "scripts" / "lint" / script.name)
+            copy_with_parts(script, lab / "scripts" / "lint")
             run(["git", "init", "-q", "."], lab)
             run(["git", "add", "-A"], lab)
             run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
@@ -5101,7 +5714,7 @@ class Doctor:
             src.mkdir(parents=True)
             (src / fname).write_text(body, encoding="utf-8")
             (lab / "scripts" / "lint").mkdir(parents=True)
-            shutil.copy(script, lab / "scripts" / "lint" / script.name)
+            copy_with_parts(script, lab / "scripts" / "lint")
             run(["git", "init", "-q", "."], lab)
             run(["git", "add", "-A"], lab)
             run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
@@ -5121,65 +5734,6 @@ class Doctor:
                 self.add(DEAD, point,
                          f"МОЛЧИТ на своём же нарушении (exit 0): {out.strip()[:70]!r}")
 
-    # --- вывод ---------------------------------------------------------------
-    def report(self, as_json: bool) -> int:
-        dead = [r for r in self.rows if r[0] == DEAD]
-        if as_json:
-            print(json.dumps({
-                "verdicts": [{"verdict": v, "point": p, "detail": d}
-                             for v, p, d in self.rows],
-                "counts": {k: sum(1 for r in self.rows if r[0] == k) for k in ORDER},
-                "dead": len(dead),
-            }, ensure_ascii=False, indent=2))
-            return 1 if dead else 0
-
-        for verdict, point, detail in sorted(self.rows, key=lambda r: (ORDER[r[0]], r[1])):
-            print(f"{COLOR[verdict]}{verdict:6}{RESET} {point:44} {detail}")
-
-        counts = {k: sum(1 for r in self.rows if r[0] == k) for k in ORDER}
-        print(f"\ncontour-doctor: AUTO {counts[AUTO]} · WEAK {counts[WEAK]} · "
-              f"ABSENT {counts[ABSENT]} · TOOL {counts[TOOL]} · "
-              f"SKIP {counts[SKIP]} · DEAD {counts[DEAD]}")
-        # Примечание про SKIP печатается ТОЛЬКО когда они есть. Иначе доктор
-        # объявлял бы слепоту, которой у него нет, — а преувеличенная скромность
-        # так же уводит от правды, как преувеличенная уверенность.
-        if counts[SKIP]:
-            print("SKIP — область, которую доктор не пробовал: это его собственная "
-                  "непокрытость,\nи она названа, а не спрятана.")
-        if dead:
-            print(f"\n\033[31mERROR{RESET}: {len(dead)} проверк(и) объявлены и МОЛЧАТ "
-                  "на своём же нарушении.")
-            print("Это не бедность (ABSENT/WEAK честны и не роняют доктора), а ложь: "
-                  "контур\nсообщает о защите, которой нет.")
-            return 1
-        print("\nЛжи нет: всё объявленное либо судит, либо честно названо непокрытым.")
-        return 0
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser(description="диагностика развёрнутого контура")
-    ap.add_argument("--json", action="store_true", help="машинно-читаемый вывод")
-    ap.add_argument("--root", default=None, help="корень проекта (по умолчанию — git-root)")
-    args = ap.parse_args()
-
-    root = Path(args.root) if args.root else None
-    if root is None:
-        code, out = run(["git", "rev-parse", "--show-toplevel"], Path.cwd())
-        root = Path(out.strip()) if code == 0 and out.strip() else Path.cwd()
-
-    doc = Doctor(root.resolve())
-    doc.check_canons()
-    doc.check_enforcement()
-    doc.check_tools()
-    doc.check_snapshots()
-    doc.check_canaries()
-    doc.check_gates_see_code()
-    doc.check_divergence_from_canon()
-    return doc.report(args.json)
-
-
-if __name__ == "__main__":
-    sys.exit(main())
 ```
 
 ### `scripts/lint/assert_digest.sh`
@@ -5386,6 +5940,50 @@ red=$(printf '\033[31m'); yellow=$(printf '\033[33m'); green=$(printf '\033[32m'
 # Брат `check_complexity_gate.sh` на том же входе честен («нет каталога … —
 # гейт пропущен, настрой LINT_PY_SRC»); класс F15 — расхождение между братьями.
 
+
+# Части гейта лежат рядом (`cqg@1.86`, планка 300 строк §9.1a п.5). SCRIPT_DIR
+# резолвится ДО `cd` в корень репозитория: `BASH_SOURCE` относителен каталога
+# вызова, и после `cd` путь к соседям уже не найти.
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=/dev/null
+. "$SCRIPT_DIR/mutation_ts.sh"
+
+if [[ ! -d "$REPO_ROOT/$PY_SRC" ]]; then
+  # Python-каталога нет — но это ещё не значит «смотреть не на что». Прежде чем
+  # печатать пропуск, пробуем TS-половину: ровно на этом месте второе развёртывание
+  # (Astro/TS) оставалось без единственного оракула «тесты утверждают».
+  if [[ -d "$REPO_ROOT/$TS_SRC" ]]; then
+    TIMEOUT_BIN=$(command -v timeout 2>/dev/null || command -v gtimeout 2>/dev/null || true)
+    ts_mutation
+    exit $?
+  fi
+  printf '%s⚠ mutation: нет ни %s, ни %s — мутационный гейт пропущен (§6).\n' \
+    "$yellow" "$PY_SRC" "$TS_SRC"
+  printf 'Это НЕ «изменений нет»: гейт не смотрел никуда. Пакет проекта редко зовётся\n'
+  printf '`features` — задай LINT_PY_SRC/LINT_TS_SRC во ВСЕХ местах вызова, не только в CI.%s\n' "$reset"
+  exit 0
+fi
+
+# shellcheck source=/dev/null
+. "$SCRIPT_DIR/mutation_py.sh"
+# shellcheck source=/dev/null
+. "$SCRIPT_DIR/mutation_verdict.sh"
+```
+
+### `scripts/lint/mutation_ts.sh`
+
+```bash
+#!/usr/bin/env bash
+# TS-половина мутационного гейта: Stryker вместо mutmut, вопрос тот же.
+#
+# Часть `check_mutation_gate.sh` (`cqg@1.86`) — гейт разрезан по планке 300 строк
+# (Delivery §9.1a п.5). Половина вынесена целиком, потому что это ПОДСТАНОВКА
+# инструмента в ту же строку каталога §3: своего снимка и порога у неё нет, и
+# бюджет §9.1a она не трогает.
+#
+# Подключается через `source`; `FE_DIR`, `TS_SRC`, `MIN_KILLED`, `TIMEOUT_BIN` и
+# палитру задаёт вход. Самостоятельно не запускается — гейт это `check_*`.
+
 # --- TS-половина: тот же вопрос, другой инструмент ---------------------------
 # Роль «тесты хоть что-то утверждают» на TS закрывает Stryker. Это ПОДСТАНОВКА
 # инструмента в существующую строку каталога §3, а не новый гейт: снимка у роли
@@ -5523,22 +6121,22 @@ sys.stdout.write("%d %d %d" % (det, total, 100 * det // total))
   printf '%smutation/ts: OK%s\n' "$green" "$reset"
   return 0
 }
+```
 
-if [[ ! -d "$REPO_ROOT/$PY_SRC" ]]; then
-  # Python-каталога нет — но это ещё не значит «смотреть не на что». Прежде чем
-  # печатать пропуск, пробуем TS-половину: ровно на этом месте второе развёртывание
-  # (Astro/TS) оставалось без единственного оракула «тесты утверждают».
-  if [[ -d "$REPO_ROOT/$TS_SRC" ]]; then
-    TIMEOUT_BIN=$(command -v timeout 2>/dev/null || command -v gtimeout 2>/dev/null || true)
-    ts_mutation
-    exit $?
-  fi
-  printf '%s⚠ mutation: нет ни %s, ни %s — мутационный гейт пропущен (§6).\n' \
-    "$yellow" "$PY_SRC" "$TS_SRC"
-  printf 'Это НЕ «изменений нет»: гейт не смотрел никуда. Пакет проекта редко зовётся\n'
-  printf '`features` — задай LINT_PY_SRC/LINT_TS_SRC во ВСЕХ местах вызова, не только в CI.%s\n' "$reset"
-  exit 0
-fi
+### `scripts/lint/mutation_py.sh`
+
+```bash
+#!/usr/bin/env bash
+# Python-половина мутационного гейта: подготовка и запуск mutmut.
+#
+# Часть `check_mutation_gate.sh` (`cqg@1.86`). Здесь всё, что надо решить ДО
+# суждения: есть ли инструмент и база, что изменилось, откуда запускать (корень
+# импортов), какими глобами сузить население мутантов и в каком бюджете.
+# Вердикт — в `mutation_verdict.sh`, и это не косметика: цена ошибки в области
+# (судить автора за чужое легаси) и цена ошибки в пороге — разные разговоры.
+#
+# Подключается через `source` ПОСЛЕ настройки переменных и выполняется линейно,
+# в том же процессе: `exit` внутри роняет гейт, как и раньше.
 
 # Обе половины сразу гейт НЕ считает, и это названный предел, а не недосмотр:
 # `MIN_KILLED` — одна доля убитых, а два населения мутантов в одну долю не
@@ -5724,6 +6322,19 @@ fi
 # `backend/` первый источник не находился бы никогда.
 killed=""; survived=""
 stats="$REPO_ROOT/$MUT_CWD/mutants/mutmut-cicd-stats.json"
+```
+
+### `scripts/lint/mutation_verdict.sh`
+
+```bash
+#!/usr/bin/env bash
+# Вердикт мутационного гейта: что считать доказательством и когда краснеть.
+#
+# Часть `check_mutation_gate.sh` (`cqg@1.86`). Отделено от запуска сознательно:
+# главный урок этого гейта — код возврата инструмента вердиктом НЕ является, и
+# судить можно только по счётчикам. Держать это рядом с логикой запуска значило
+# смешивать «что мы сделали» с «что это доказывает».
+
 if ( cd "$REPO_ROOT/$MUT_CWD" && "$MUTMUT" export-cicd-stats >/dev/null 2>&1 ) && [[ -f "$stats" ]]; then
   killed=$(grep -oE '"killed"[[:space:]]*:[[:space:]]*[0-9]+' "$stats" | grep -oE '[0-9]+$' | head -1)
   survived=$(grep -oE '"survived"[[:space:]]*:[[:space:]]*[0-9]+' "$stats" | grep -oE '[0-9]+$' | head -1)
@@ -5825,6 +6436,7 @@ printf 'Починка: добавить утверждения на выжив�
 [[ "$STRICT" == "0" ]] && { printf '%sWARNING (STRICT=0)%s\n' "$yellow" "$reset" >&2; exit 0; }
 exit 1
 ```
+
 
 ### `scripts/lint/check_deps_audit.sh`
 
@@ -6086,11 +6698,152 @@ exit 1
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import subprocess
 import sys
+
+
+from dependency_manifests import extractor_for
+
+def git(*args: str) -> str:
+    """git с подавлением ошибок: пустая строка = не смог (файла нет в ревизии)."""
+    try:
+        out = subprocess.run(["git", *args], capture_output=True, text=True, check=False)
+    except FileNotFoundError:
+        return ""
+    return out.stdout if out.returncode == 0 else ""
+
+
+
+def declared(status: str) -> tuple[set[str], list[str]]:
+    """(корректно объявленные имена, строки без reason=/by=)."""
+    ok: set[str] = set()
+    malformed: list[str] = []
+    # `:\**` после имени обязателен: в STATUS поле пишут как `- **new_dependency:** x`,
+    # то есть закрывающие звёздочки стоят ПОСЛЕ двоеточия. Без них в захват попадало
+    # `** httpx …`, именем становилось `**`, и гейт был красным на верно оформленном
+    # объявлении — то есть мёртвым (Delivery §4.3b). Форма скопирована с field()
+    # в delivery_check.py, где она уже проверена.
+    pattern = r"(?im)^[ \t]*[-*]?[ \t]*\**new_dependency\**[ \t]*:\**[ \t]*(.+)$"
+    for m in re.finditer(pattern, status):
+        val = re.sub(r"<!--.*?-->", "", m.group(1)).strip()
+        if not val or val.startswith("<") or val.lower() in {"none", "n/a", "-", "…"}:
+            continue
+        low = val.lower()
+        if "reason=" not in low or "by=" not in low:
+            malformed.append(val[:70])
+            continue
+        ok.add(val.split()[0].strip("`\"',").lower())
+    return ok, malformed
+
+
+
+def scan_manifests(merge_base: str) -> tuple[list[str], int]:
+    """→ (что появилось нового, сколько манифестов проверено).
+
+    Манифест, которого в базе НЕ БЫЛО, даёт одну находку — путь целиком, а не по
+    пакету на строку: появление файла это ОДНО решение, иначе первый коммит с
+    тридцатью зависимостями требовал бы тридцати строк в STATUS.
+    """
+    findings: list[str] = []
+    checked = 0
+    for path in git("ls-files").splitlines():
+        fn = extractor_for(path)
+        if fn is None:
+            continue
+        checked += 1
+        head_text = git("show", f"HEAD:{path}")
+        base_text = git("show", f"{merge_base}:{path}")
+        if not base_text.strip():
+            if head_text.strip():
+                findings.append(path.lower())
+            continue
+        findings.extend(sorted(fn(head_text) - fn(base_text)))
+    return findings, checked
+
+
+def report(findings: list[str], strict: bool) -> int:
+    """Сверка находок с объявлениями в STATUS и починка словами."""
+    status = ""
+    try:
+        with open("delivery/active/STATUS.md", encoding="utf-8") as fh:
+            status = fh.read()
+    except OSError:
+        pass
+    ok, malformed = declared(status)
+
+    for bad in malformed:
+        print(
+            f"ERROR: new_dependency без reason= и/или by=: {bad!r} — упоминание "
+            "пакета решением не является",
+            file=sys.stderr,
+        )
+    undeclared = [f for f in findings if f not in ok]
+    for name in undeclared:
+        print(f"ERROR: новая зависимость не объявлена: {name}", file=sys.stderr)
+
+    if not undeclared and not malformed:
+        print(f"new-dependency: объявлено в STATUS — {', '.join(sorted(ok))}")
+        return 0
+
+    print(
+        "\nПочинка: строка в delivery/active/STATUS.md на каждую новую зависимость:\n"
+        "  new_dependency: <pkg> reason=<зачем; что рассмотрели вместо> by=<human:NAME>\n"
+        "Это самое долгоживущее решение поставки — оно обязано быть видно в PR\n"
+        "(Delivery §4.3a). Не нужна — удали из манифеста, это дешевле, чем потом.",
+        file=sys.stderr,
+    )
+    if not strict:
+        print("WARNING (STRICT=0)", file=sys.stderr)
+        return 0
+    return 1
+
+
+def main() -> int:
+    base = os.environ.get("BASE", "origin/main")
+    strict = os.environ.get("STRICT", "1") != "0"
+    root = git("rev-parse", "--show-toplevel").strip()
+    if root:
+        os.chdir(root)
+
+    if not git("rev-parse", "--verify", "--quiet", base).strip():
+        # Честный WARNING, а не тишина: тот же приём, что в check_ci_status.sh.
+        print(f"WARNING: new-dependency: ref '{base}' недоступен — гейт пропущен")
+        return 0
+
+    merge_base = git("merge-base", base, "HEAD").strip() or base
+    findings, checked = scan_manifests(merge_base)
+    print(f"new-dependency: манифестов проверено {checked}, база {merge_base}")
+    if not findings:
+        print("new-dependency: OK — новых прямых зависимостей нет")
+        return 0
+    return report(findings, strict)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+### `scripts/lint/dependency_manifests.py`
+
+```python
+#!/usr/bin/env python3
+"""Разбор манифестов: какие ПРЯМЫЕ зависимости объявлены в файле.
+
+Часть `check_new_dependency.py` (`cqg@1.83`) — гейт разрезан по планке 300 строк
+(Delivery §9.1a п.5). Здесь только чтение форматов: по одной функции на экосистему
+плюс выбор нужной по имени файла. Гейт (что считать новым и как об этом отчитаться)
+остался во входном скрипте.
+
+Лок-файлы сознательно не разбираются: они перечисляют ТРАНЗИТИВНЫЕ пакеты, и
+решение «взяли новую зависимость» там утонет в шуме обновлений.
+"""
+
+from __future__ import annotations
+
+import json
+import re
 
 LOCKFILES = (
     "poetry.lock",
@@ -6101,15 +6854,6 @@ LOCKFILES = (
     "Gemfile.lock",
     "uv.lock",
 )
-
-
-def git(*args: str) -> str:
-    """git с подавлением ошибок: пустая строка = не смог (файла нет в ревизии)."""
-    try:
-        out = subprocess.run(["git", *args], capture_output=True, text=True, check=False)
-    except FileNotFoundError:
-        return ""
-    return out.stdout if out.returncode == 0 else ""
 
 
 def _toml(text: str):
@@ -6164,26 +6908,51 @@ def _toml_dep_names_fallback(text: str) -> set[str]:
     return out
 
 
+
+
+def _names_from_specs(specs) -> set[str]:
+    """`["httpx>=0.27", …]` → `{"httpx", …}`. `None` и пустое — пустое множество."""
+    return {_req_name(str(spec)) for spec in (specs or [])}
+
+
+def _table_names(table) -> set[str]:
+    """Имена КЛЮЧЕЙ таблицы зависимостей (форма poetry). `None` — пустое."""
+    return {name.lower() for name in (table or {})}
+
+
+def _pep621_names(data: dict) -> set[str]:
+    """PEP 621: `[project]` + optional-dependencies + PEP 735 dependency-groups."""
+    proj = data.get("project") or {}
+    out = _names_from_specs(proj.get("dependencies"))
+    for group in (proj.get("optional-dependencies") or {}).values():
+        out |= _names_from_specs(group)
+    for group in (data.get("dependency-groups") or {}).values():
+        # PEP 735 разрешает в группе не только строки, но и `{include-group: …}`:
+        # это ссылка на другую группу, а не зависимость, и имени в ней нет.
+        out |= _names_from_specs(s for s in (group or []) if isinstance(s, str))
+    return out
+
+
+def _poetry_names(data: dict) -> set[str]:
+    """`[tool.poetry]`: dependencies, dev-dependencies и именованные группы."""
+    poetry = (data.get("tool") or {}).get("poetry") or {}
+    out = _table_names(poetry.get("dependencies")) | _table_names(poetry.get("dev-dependencies"))
+    for group in (poetry.get("group") or {}).values():
+        out |= _table_names((group or {}).get("dependencies"))
+    return out
+
+
 def names_pyproject(text: str) -> set[str]:
+    """Обе раскладки разом: PEP 621 и poetry живут в одном файле и обе законны.
+
+    Разобрано на две функции (`cqg@1.83`): вместе это была самая ветвистая функция
+    контура при двадцати двух строках — читать её приходилось целиком, чтобы
+    понять, какая половина форматов сейчас важна.
+    """
     data = _toml(text)
     if data is None:
         return _toml_dep_names_fallback(text)
-    out: set[str] = set()
-    proj = data.get("project") or {}
-    for spec in proj.get("dependencies") or []:
-        out.add(_req_name(str(spec)))
-    for group in (proj.get("optional-dependencies") or {}).values():
-        for spec in group or []:
-            out.add(_req_name(str(spec)))
-    for group in (data.get("dependency-groups") or {}).values():
-        for spec in group or []:
-            if isinstance(spec, str):
-                out.add(_req_name(spec))
-    poetry = (data.get("tool") or {}).get("poetry") or {}
-    for key in ("dependencies", "dev-dependencies"):
-        out.update(n.lower() for n in (poetry.get(key) or {}))
-    for group in (poetry.get("group") or {}).values():
-        out.update(n.lower() for n in ((group or {}).get("dependencies") or {}))
+    out = _pep621_names(data) | _poetry_names(data)
     out.discard("python")  # требование к рантайму, а не зависимость
     return {n for n in out if n}
 
@@ -6285,104 +7054,8 @@ def extractor_for(path: str):
         return names_requirements
     return None
 
-
-def declared(status: str) -> tuple[set[str], list[str]]:
-    """(корректно объявленные имена, строки без reason=/by=)."""
-    ok: set[str] = set()
-    malformed: list[str] = []
-    # `:\**` после имени обязателен: в STATUS поле пишут как `- **new_dependency:** x`,
-    # то есть закрывающие звёздочки стоят ПОСЛЕ двоеточия. Без них в захват попадало
-    # `** httpx …`, именем становилось `**`, и гейт был красным на верно оформленном
-    # объявлении — то есть мёртвым (Delivery §4.3b). Форма скопирована с field()
-    # в delivery_check.py, где она уже проверена.
-    pattern = r"(?im)^[ \t]*[-*]?[ \t]*\**new_dependency\**[ \t]*:\**[ \t]*(.+)$"
-    for m in re.finditer(pattern, status):
-        val = re.sub(r"<!--.*?-->", "", m.group(1)).strip()
-        if not val or val.startswith("<") or val.lower() in {"none", "n/a", "-", "…"}:
-            continue
-        low = val.lower()
-        if "reason=" not in low or "by=" not in low:
-            malformed.append(val[:70])
-            continue
-        ok.add(val.split()[0].strip("`\"',").lower())
-    return ok, malformed
-
-
-def main() -> int:
-    base = os.environ.get("BASE", "origin/main")
-    strict = os.environ.get("STRICT", "1") != "0"
-    root = git("rev-parse", "--show-toplevel").strip()
-    if root:
-        os.chdir(root)
-
-    if not git("rev-parse", "--verify", "--quiet", base).strip():
-        # Честный WARNING, а не тишина: тот же приём, что в check_ci_status.sh.
-        print(f"WARNING: new-dependency: ref '{base}' недоступен — гейт пропущен")
-        return 0
-
-    merge_base = git("merge-base", base, "HEAD").strip() or base
-    findings: list[str] = []
-    checked = 0
-
-    for path in git("ls-files").splitlines():
-        fn = extractor_for(path)
-        if fn is None:
-            continue
-        checked += 1
-        head_text = git("show", f"HEAD:{path}")
-        base_text = git("show", f"{merge_base}:{path}")
-        if not base_text.strip():
-            # Манифеста не было: это ОДНО решение, а не N. Иначе первый коммит с
-            # тридцатью зависимостями требовал бы тридцати строк в STATUS.
-            if head_text.strip():
-                findings.append(path.lower())
-            continue
-        for name in sorted(fn(head_text) - fn(base_text)):
-            findings.append(name)
-
-    print(f"new-dependency: манифестов проверено {checked}, база {merge_base}")
-    if not findings:
-        print("new-dependency: OK — новых прямых зависимостей нет")
-        return 0
-
-    status = ""
-    try:
-        with open("delivery/active/STATUS.md", encoding="utf-8") as fh:
-            status = fh.read()
-    except OSError:
-        pass
-    ok, malformed = declared(status)
-
-    for bad in malformed:
-        print(
-            f"ERROR: new_dependency без reason= и/или by=: {bad!r} — упоминание "
-            "пакета решением не является",
-            file=sys.stderr,
-        )
-    undeclared = [f for f in findings if f not in ok]
-    for name in undeclared:
-        print(f"ERROR: новая зависимость не объявлена: {name}", file=sys.stderr)
-
-    if not undeclared and not malformed:
-        print(f"new-dependency: объявлено в STATUS — {', '.join(sorted(ok))}")
-        return 0
-
-    print(
-        "\nПочинка: строка в delivery/active/STATUS.md на каждую новую зависимость:\n"
-        "  new_dependency: <pkg> reason=<зачем; что рассмотрели вместо> by=<human:NAME>\n"
-        "Это самое долгоживущее решение поставки — оно обязано быть видно в PR\n"
-        "(Delivery §4.3a). Не нужна — удали из манифеста, это дешевле, чем потом.",
-        file=sys.stderr,
-    )
-    if not strict:
-        print("WARNING (STRICT=0)", file=sys.stderr)
-        return 0
-    return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
 ```
+
 
 ### `scripts/lint/check_complexity_gate.sh`
 
@@ -6505,6 +7178,133 @@ halves=""
 # Пока stderr глотался, ошибка выглядела как «нарушений нет»: пустой снимок
 # легализует любую сложность, и он ещё и КОММИТИТСЯ. Теперь причина названа
 # словами ruff, а снимок не пишется вовсе.
+
+# Половины живут в соседнем файле — подключаем ПОСЛЕ настройки переменных, чтобы
+# читалось сверху вниз: сначала «чем меряем», потом «чем считаем».
+# shellcheck source=/dev/null
+. "$SCRIPT_DIR/complexity_halves.sh"
+
+tmp=$(mktemp); errf=$(mktemp); tmp2=$(mktemp)
+trap 'rm -f "$tmp" "$errf" "$tmp2"' EXIT
+current_counts >"$tmp" || exit 1
+
+if [[ "$MODE" == "--generate" ]]; then
+  # ⚠ ДВА прогона и сверка — вторая половина находки 8. Снимок это КОММИТИМЫЙ
+  # артефакт: неверный легализует нарушения молча и надолго, поэтому цена второго
+  # прогона (секунда на ручном шаге) меньше цены одной молчаливой ошибки. Если
+  # прогоны разошлись — писать нечего: выбирать между двумя ответами значит
+  # угадывать, а гейт не угадывает.
+  current_counts >"$tmp2" || exit 1
+  if ! diff -q "$tmp" "$tmp2" >/dev/null; then
+    printf '%sERROR%s: два прогона ruff на одном дереве дали РАЗНОЕ — снимок не снят.\n' \
+      "$red" "$reset" >&2
+    printf 'Это ровно находка 8 (непостоянный результат), и теперь она видна, а не\n' >&2
+    printf 'записана в снимок. Разница:\n' >&2
+    diff "$tmp" "$tmp2" >&2 || true
+    exit 1
+  fi
+  {
+    echo "# complexity_baseline.txt — снимок нарушений сложности ФУНКЦИЙ по файлам."
+    echo "# Формат: <число нарушений>:<путь>. Половины, снявшие снимок: $halves"
+    (( py_live )) && echo "# python: ruff $RULES; пороги — в pyproject ([tool.ruff.lint.mccabe] / [.pylint])."
+    (( ts_live )) && echo "# ts: eslint $TS_RULES (порог у гейта, env LINT_TS_COMPLEXITY_RULES)."
+    echo "# Снимок только ТАЕТ: тронул файл — раздели функцию и пере-сними вниз."
+    cat "$tmp"
+  } >"$BASELINE"
+  # Просмотренное и «с находками» — РАЗНЫЕ числа, и печатать надо оба (F6).
+  # `grep -cv '^#'` считает файлы С НАРУШЕНИЯМИ; на чистом проекте это «0», что
+  # неотличимо от «ruff смотрел не туда». Тот же класс L2, что уже правился в
+  # check-режиме этого же гейта, — в ветке `--generate` остался.
+  n_seen=$(count_seen)
+  printf '%sbaseline пересобран:%s %s — просмотрено %s файл(ов), с находками %d\n' \
+    "$green" "$reset" "$BASELINE" "$n_seen" "$(grep -cv '^#' "$BASELINE")"
+  if [[ "$n_seen" == "0" ]]; then
+    printf '%s⚠ просмотрено 0 файлов — проверь LINT_PY_SRC/LINT_TS_SRC (§6): пустой\n' "$yellow"
+    printf 'снимок на непустом проекте значит «гейт смотрел не туда».%s\n' "$reset"
+  fi
+  exit 0
+fi
+
+if [[ "$MODE" == "--report" ]]; then
+  if (( py_live )); then
+    printf 'Нарушения сложности по файлам, python (правила %s):\n' "$RULES"
+    "$RUFF" check --no-cache --quiet --output-format=concise \
+      --select "$RULES" --config 'lint.ignore=[]' -- "$PY_SRC" 2>/dev/null
+  fi
+  if (( ts_live )); then
+    printf 'Нарушения сложности по файлам, ts (правила %s):\n' "$TS_RULES"
+    "$ESLINT" "$TS_SRC" --no-color --rule "$TS_RULES" 2>/dev/null
+  fi
+  exit 0
+fi
+
+violations=0
+# `scanned` — число ПРОСМОТРЕННЫХ файлов, а не файлов с находками. Первая версия
+# счётчика (cqg@1.20) считала итерации цикла ниже, а цикл идёт по НАХОДКАМ ruff:
+# на чистом проекте выходило «просмотрено 0 файл(ов)», что по смыслу §6 читается
+# как «гейт ничего не видел». Хуже — одна и та же фраза в двух гейтах канона
+# значила разное. Найдено независимым развёртыванием (lab-4).
+scanned=$(count_seen)
+scanned=${scanned:-0}
+flagged=0
+while IFS=: read -r count path; do
+  [[ -n "$path" ]] || continue
+  allowed=0
+  if [[ -f "$BASELINE" ]]; then
+    allowed=$(awk -F: -v p="$path" '!/^#/ && $2 == p { print $1; exit }' "$BASELINE")
+    allowed=${allowed:-0}
+  fi
+  flagged=$((flagged + 1))
+  if (( count > allowed )); then
+    printf '%s  ✗  %s: %d нарушений сложности (разрешено %d)%s\n' \
+      "$red" "$path" "$count" "$allowed" "$reset"
+    violations=$((violations + 1))
+  fi
+done <"$tmp"
+
+# «OK» на fullstack-репо с мёртвой половиной выглядит ровно как честное «OK» по
+# обеим — поэтому пропуск называется вслух и здесь, а не только когда мертвы обе.
+if (( ${#skipped[@]} )); then
+  printf '%s⚠ половина(ы) НЕ проверены:%s\n' "$yellow" "$reset"
+  printf '  · %s\n' "${skipped[@]}"
+fi
+
+if (( violations == 0 )); then
+  # Число просмотренного — обязательная часть вывода (приёмка §6), иначе «OK»
+  # неотличимо от «нечего было смотреть».
+  if (( scanned == 0 )); then
+    printf '%scomplexity: 0 файлов просмотрено%s — проверь LINT_PY_SRC/LINT_TS_SRC (§6)\n' \
+      "$yellow" "$reset"
+    exit 0
+  fi
+  printf '%scomplexity: OK%s (%s) — просмотрено %d файл(ов), с находками %d, по маске: %s\n' \
+    "$green" "$reset" "$halves" "$scanned" "$flagged" "$PY_SRC/** $TS_SRC/**"
+  exit 0
+fi
+
+printf '\n%sERROR%s: %d файл(ов) превышают снимок сложности.\n' "$red" "$reset" "$violations" >&2
+printf 'Дели функцию (§2.1: thin orchestrator + phase-helpers), не поднимай порог.\n' >&2
+printf 'Что именно длинное/ветвистое: %s --report\n' "$0" >&2
+printf 'Легаси-файл впервые попал под гейт? --generate (снимок только вниз).\n' >&2
+[[ "$STRICT" == "0" ]] && { printf '%sWARNING (STRICT=0)%s\n' "$yellow" "$reset" >&2; exit 0; }
+exit 1
+```
+
+### `scripts/lint/complexity_halves.sh`
+
+```bash
+#!/usr/bin/env bash
+# Измеряющие половины гейта сложности: python (ruff) и ts (eslint).
+#
+# Часть `check_complexity_gate.sh` (`cqg@1.85`) — гейт разрезан по планке 300
+# строк (Delivery §9.1a п.5). Здесь только СЧЁТ: сколько функций нарушают пороги
+# и сколько файлов при этом просмотрено. Пороги, снимок, вердикт и печать
+# остались во входном скрипте — резать надо по вопросу, а не по размеру.
+#
+# Подключается через `source`; переменные (`PY_SRC`, `TS_SRC`, `RUFF`, `ESLINT`,
+# `py_live`, `ts_live`, `RULES`, `TS_RULES`) задаёт вход до вызова функций.
+# Самостоятельно файл не запускается: гейт — это `check_*`, а это его часть.
+
 # Просмотренное считается по ОБЕИМ живым половинам. «Просмотрено N» — это
 # доказательство §6, и на fullstack-репо оно обязано складываться: иначе число
 # врёт в меньшую сторону ровно там, где вторая половина как раз работает.
@@ -6620,112 +7420,8 @@ current_counts() {
   [[ -n "$acc" ]] && printf '%s\n' "$acc" | sort -t: -k2
   return 0
 }
-
-tmp=$(mktemp); errf=$(mktemp); tmp2=$(mktemp)
-trap 'rm -f "$tmp" "$errf" "$tmp2"' EXIT
-current_counts >"$tmp" || exit 1
-
-if [[ "$MODE" == "--generate" ]]; then
-  # ⚠ ДВА прогона и сверка — вторая половина находки 8. Снимок это КОММИТИМЫЙ
-  # артефакт: неверный легализует нарушения молча и надолго, поэтому цена второго
-  # прогона (секунда на ручном шаге) меньше цены одной молчаливой ошибки. Если
-  # прогоны разошлись — писать нечего: выбирать между двумя ответами значит
-  # угадывать, а гейт не угадывает.
-  current_counts >"$tmp2" || exit 1
-  if ! diff -q "$tmp" "$tmp2" >/dev/null; then
-    printf '%sERROR%s: два прогона ruff на одном дереве дали РАЗНОЕ — снимок не снят.\n' \
-      "$red" "$reset" >&2
-    printf 'Это ровно находка 8 (непостоянный результат), и теперь она видна, а не\n' >&2
-    printf 'записана в снимок. Разница:\n' >&2
-    diff "$tmp" "$tmp2" >&2 || true
-    exit 1
-  fi
-  {
-    echo "# complexity_baseline.txt — снимок нарушений сложности ФУНКЦИЙ по файлам."
-    echo "# Формат: <число нарушений>:<путь>. Половины, снявшие снимок: $halves"
-    (( py_live )) && echo "# python: ruff $RULES; пороги — в pyproject ([tool.ruff.lint.mccabe] / [.pylint])."
-    (( ts_live )) && echo "# ts: eslint $TS_RULES (порог у гейта, env LINT_TS_COMPLEXITY_RULES)."
-    echo "# Снимок только ТАЕТ: тронул файл — раздели функцию и пере-сними вниз."
-    cat "$tmp"
-  } >"$BASELINE"
-  # Просмотренное и «с находками» — РАЗНЫЕ числа, и печатать надо оба (F6).
-  # `grep -cv '^#'` считает файлы С НАРУШЕНИЯМИ; на чистом проекте это «0», что
-  # неотличимо от «ruff смотрел не туда». Тот же класс L2, что уже правился в
-  # check-режиме этого же гейта, — в ветке `--generate` остался.
-  n_seen=$(count_seen)
-  printf '%sbaseline пересобран:%s %s — просмотрено %s файл(ов), с находками %d\n' \
-    "$green" "$reset" "$BASELINE" "$n_seen" "$(grep -cv '^#' "$BASELINE")"
-  if [[ "$n_seen" == "0" ]]; then
-    printf '%s⚠ просмотрено 0 файлов — проверь LINT_PY_SRC/LINT_TS_SRC (§6): пустой\n' "$yellow"
-    printf 'снимок на непустом проекте значит «гейт смотрел не туда».%s\n' "$reset"
-  fi
-  exit 0
-fi
-
-if [[ "$MODE" == "--report" ]]; then
-  if (( py_live )); then
-    printf 'Нарушения сложности по файлам, python (правила %s):\n' "$RULES"
-    "$RUFF" check --no-cache --quiet --output-format=concise \
-      --select "$RULES" --config 'lint.ignore=[]' -- "$PY_SRC" 2>/dev/null
-  fi
-  if (( ts_live )); then
-    printf 'Нарушения сложности по файлам, ts (правила %s):\n' "$TS_RULES"
-    "$ESLINT" "$TS_SRC" --no-color --rule "$TS_RULES" 2>/dev/null
-  fi
-  exit 0
-fi
-
-violations=0
-# `scanned` — число ПРОСМОТРЕННЫХ файлов, а не файлов с находками. Первая версия
-# счётчика (cqg@1.20) считала итерации цикла ниже, а цикл идёт по НАХОДКАМ ruff:
-# на чистом проекте выходило «просмотрено 0 файл(ов)», что по смыслу §6 читается
-# как «гейт ничего не видел». Хуже — одна и та же фраза в двух гейтах канона
-# значила разное. Найдено независимым развёртыванием (lab-4).
-scanned=$(count_seen)
-scanned=${scanned:-0}
-flagged=0
-while IFS=: read -r count path; do
-  [[ -n "$path" ]] || continue
-  allowed=0
-  if [[ -f "$BASELINE" ]]; then
-    allowed=$(awk -F: -v p="$path" '!/^#/ && $2 == p { print $1; exit }' "$BASELINE")
-    allowed=${allowed:-0}
-  fi
-  flagged=$((flagged + 1))
-  if (( count > allowed )); then
-    printf '%s  ✗  %s: %d нарушений сложности (разрешено %d)%s\n' \
-      "$red" "$path" "$count" "$allowed" "$reset"
-    violations=$((violations + 1))
-  fi
-done <"$tmp"
-
-# «OK» на fullstack-репо с мёртвой половиной выглядит ровно как честное «OK» по
-# обеим — поэтому пропуск называется вслух и здесь, а не только когда мертвы обе.
-if (( ${#skipped[@]} )); then
-  printf '%s⚠ половина(ы) НЕ проверены:%s\n' "$yellow" "$reset"
-  printf '  · %s\n' "${skipped[@]}"
-fi
-
-if (( violations == 0 )); then
-  # Число просмотренного — обязательная часть вывода (приёмка §6), иначе «OK»
-  # неотличимо от «нечего было смотреть».
-  if (( scanned == 0 )); then
-    printf '%scomplexity: 0 файлов просмотрено%s — проверь LINT_PY_SRC/LINT_TS_SRC (§6)\n' \
-      "$yellow" "$reset"
-    exit 0
-  fi
-  printf '%scomplexity: OK%s (%s) — просмотрено %d файл(ов), с находками %d\n' \
-    "$green" "$reset" "$halves" "$scanned" "$flagged"
-  exit 0
-fi
-
-printf '\n%sERROR%s: %d файл(ов) превышают снимок сложности.\n' "$red" "$reset" "$violations" >&2
-printf 'Дели функцию (§2.1: thin orchestrator + phase-helpers), не поднимай порог.\n' >&2
-printf 'Что именно длинное/ветвистое: %s --report\n' "$0" >&2
-printf 'Легаси-файл впервые попал под гейт? --generate (снимок только вниз).\n' >&2
-[[ "$STRICT" == "0" ]] && { printf '%sWARNING (STRICT=0)%s\n' "$yellow" "$reset" >&2; exit 0; }
-exit 1
 ```
+
 
 ### `scripts/lint/check_layers_gate.sh`
 
@@ -6953,7 +7649,16 @@ red=$(printf '\033[31m'); yellow=$(printf '\033[33m'); green=$(printf '\033[32m'
 no_ci_evidence() { # $1 = причина, которую увидел гейт
   local st=delivery/active/STATUS.md val
   [[ -f "$st" ]] || return 0
-  val=$(sed -n 's/^[[:space:]]*[-*]\{0,1\}[[:space:]]*\**ci-oracles\**[[:space:]]*:[[:space:]]*\([a-z]*\).*/\1/p' \
+  # ⚠ `\**` ПОСЛЕ двоеточия обязательна: в STATUS поле пишут как
+  # `- **ci-oracles:** deployed`, то есть закрывающие звёздочки стоят за
+  # двоеточием, а не перед ним. Без этого регулярка читала ПУСТО из штатной
+  # строки, `val` выходил пустым, гейт возвращал 0 — и ветка «в STATUS deployed,
+  # а CI не подтверждён» не срабатывала НИ РАЗУ. Единственная проверка против
+  # самозаявленного `ci-oracles` была мертва для канонического формата.
+  # ТРЕТИЙ рецидив класса: то же чинили в `check_new_dependency.py` (`:\**`) и
+  # в `delivery_check.field()`. Нашло первое живое применение гейта мержа —
+  # он печатал «⚠ gh не авторизован» и следом «OK».
+  val=$(sed -n 's/^[[:space:]]*[-*]\{0,1\}[[:space:]]*\**ci-oracles\**[[:space:]]*:\**[[:space:]]*\([a-z]*\).*/\1/p' \
         "$st" | head -1)
   # Строки нет вовсе — это отдельный дефект, его ловит delivery_check, не этот гейт.
   [[ -n "$val" ]] || return 0
@@ -6987,10 +7692,22 @@ if ! command -v gh >/dev/null 2>&1; then
   no_ci_evidence "нет gh" || exit 1
   exit 0
 fi
-if ! gh auth status >/dev/null 2>&1; then
-  printf '%s⚠ ci-status: gh не авторизован (`gh auth login`) — статус CI не проверен%s\n' \
+# ⚠ Авторизация проверяется `gh auth token`, а НЕ `gh auth status`. Второй ходит
+# В СЕТЬ валидировать токен и на порванном канале выходит ненулём — гейт печатал
+# «gh не авторизован» и отправлял чинить `gh auth login` там, где авторизация в
+# порядке, а лежала сеть. Диагноз по симптому — тот же класс, что «реестр
+# недоступен» у npm. `gh auth token` читает сохранённые учётки ЛОКАЛЬНО, поэтому
+# различает «учёток нет» и «не дозвонились»: второе всплывёт ниже, на реальном
+# вызове API, и уже со своим текстом.
+#
+# Найдено полем (portfolio-site, 2026-08-07) — и это лучше первой канонной
+# правки, которая осталась на `gh auth status` и лишь разбирала текст ошибки.
+# Разбор оставлен ниже, для СЕТЕВЫХ отказов самого вызова: там причина
+# по-прежнему бывает неотличима, и тогда её называют неизвестной.
+if ! gh auth token >/dev/null 2>&1; then
+  printf '%s⚠ ci-status: gh без сохранённых учёток (`gh auth login`) — статус CI не проверен%s\n' \
     "$yellow" "$reset" >&2
-  no_ci_evidence "gh не авторизован" || exit 1
+  no_ci_evidence "gh без учёток" || exit 1
   exit 0
 fi
 
@@ -7078,6 +7795,10 @@ set -uo pipefail
 
 STRICT=${STRICT:-1}
 LINT_DIR=${LINT_DIR:-scripts/lint}
+
+# SCRIPT_DIR — ДО `cd` в корень репозитория: `BASH_SOURCE` относителен каталога
+# вызова, и после `cd` путь к соседним частям уже не найти (`cqg@1.86`).
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$REPO_ROOT" || exit 1
@@ -7242,6 +7963,28 @@ if (( ${#gates[@]} == 0 )); then
   printf 'Только что создал? `git add %s` — untracked не считается.\n' "$LINT_DIR" >&2
   exit 1
 fi
+
+# Части лежат рядом (`cqg@1.86`, планка 300 строк §9.1a п.5). SCRIPT_DIR
+# резолвится ДО `cd` в корень: `BASH_SOURCE` относителен каталога вызова.
+# shellcheck source=/dev/null
+. "$SCRIPT_DIR/gate_coverage_roles.sh"
+# shellcheck source=/dev/null
+. "$SCRIPT_DIR/gate_coverage_template.sh"
+```
+
+### `scripts/lint/gate_coverage_roles.sh`
+
+```bash
+#!/usr/bin/env bash
+# Мета-гейт, часть вторая: карта ролей обязана совпадать с деревом.
+#
+# Часть `check_gate_coverage.sh` (`cqg@1.86`) — разрезан по планке 300 строк
+# (Delivery §9.1a п.5). Здесь вопрос «что проект о себе ЗАЯВИЛ»: карта ролей
+# `delivery/STACK-ACCEPTANCE.md`, объявления `not-applicable.json` и обратная
+# сверка «конфиг ссылается на файл, которого нет». Перечисление гейтов и решение
+# «подключён ли» остались во входном скрипте.
+#
+# Подключается через `source` и выполняется линейно, в том же процессе.
 
 # --- Карта ролей обязана совпадать с деревом (cqg@1.70) -----------------------
 # `delivery/STACK-ACCEPTANCE.md` — то, чем проект ОТВЕЧАЕТ на вопрос «что здесь
@@ -7461,6 +8204,22 @@ while IFS= read -r ref; do
   missing+=("$ref")
 done < <(grep -ohsE 'scripts/[A-Za-z0-9_/.-]+\.(sh|py)' "${CONFIGS[@]}" | sort -u)
 
+```
+
+### `scripts/lint/gate_coverage_template.sh`
+
+```bash
+#!/usr/bin/env bash
+# Мета-гейт, часть третья: незаполненный шаблон в конфиге контура.
+#
+# Часть `check_gate_coverage.sh` (`cqg@1.86`). Отдельно от карты ролей потому,
+# что это другой вопрос: там «заявление против дерева», здесь «доехал ли до
+# проекта плейсхолдер». Класс замерен: `<pkg>` из шаблона `.importlinter` дожил
+# до падения ЧУЖИМИ СЛОВАМИ («Could not find package '<pkg>'»), из которых
+# шаблонная дыра не видна.
+#
+# Подключается через `source` и выполняется линейно, в том же процессе.
+
 # --- Незаполненный шаблон в КОНФИГЕ контура ---------------------------------
 # Для полей STATUS канон это проверяет (`is_placeholder` в delivery_check), а для
 # извлечённых конфигов не проверял ничего — и плейсхолдер доезжал до падения
@@ -7578,6 +8337,7 @@ printf 'или в CI-шаг, либо объяви исключение с пр�
 printf 'Сверься с таблицей §3 построчно — не собирай конфиг «по смыслу».\n' >&2
 exit 1
 ```
+
 
 # Приложение B — конфиги
 
@@ -8388,6 +9148,16 @@ import-linter>=2.0
 | 2026-07-28 | **1.12** | `check_diff_coverage.sh`: файл вне измеряемого пакета больше не считается «0% покрытия» — это две разные причины отсутствия в `coverage.json`, и путать их значит делать гейт стабильно красным на harness-скриптах (триггер: `LINT_PY_SRC` шире `LINT_COV_PKG`). Пропуски печатаются списком. Предупреждение про inline-комментарии в `.gitignore` (не поддерживаются, паттерн портится молча) + проверка `git check-ignore -v`. Новый паттерн в §2.1: `Protocol` вместо импорта наверх ради направления слоёв |
 | 2026-07-28 | **1.13** | Целевая доработка под три цели (не писать плохой код / не плодить баги / быстро локализовать). Новые гейты: `complexity` (сложность **функции** с ратчетом — раньше правила были в конфиге, но на легаси их отключали целиком, и функция на 400 строк внутри файла на 480 проходила), `deps-audit` (pip-audit/npm audit, новые critical/high снимком не легализуются), `blind-error` (сообщение об ошибке без контекста), `mutation` (выживший мутант = поведение, которое тесты не проверяют — то, чего diff-coverage не мерит). PLR0913 возвращён из ignore. Новый §2.4a диагностируемость, §8.8 bisect-able история (`MERGE_MODE=squash` по умолчанию — прежний `--no-ff` подрывал цель локализации), строгий рантайм в тестах (`filterwarnings=error`, `PYTHONDEVMODE`) |
 | 2026-07-28 | **1.15** | `assert_digest.sh` стал пропорциональным (Delivery §3.1d уровень 3, бэклог №5): классифицирует **каждое** утверждение по тест-блоку — привязано к примеру спеки или нет — и печатает машинно-читаемую строку `asserts_without_example: N`, по которой `delivery_check` решает, заслужен ли `asserts_reviewed_by: n/a`. Привязка считается по блоку, а не по строке assert: id живёт в имени/комментарии теста, и построчная классификация давала бы «непривязано» на каждом честном тесте (Delivery §4.3b). Границы id — `[^A-Za-z0-9_]` вместо `\b`, потому что классификация переехала в **awk**, а там `\b` не word-boundary вообще (проверено: `match($0,/\b[A-Z][0-9]+\b/)` не находит `A1`). Побочно ручные границы отсекают `MD5`/`UTF8` от ложного распознавания как id. Гейтов по-прежнему 18: инструмент не гейт, exit 0 всегда |
+| 2026-08-07 | **1.89** | **Поле поправило канон обратно: авторизация `gh` проверяется ЛОКАЛЬНО.** Правка 1.87 оставила `gh auth status` и лишь разбирала текст ошибки — а `auth status` ходит в СЕТЬ валидировать токен, то есть на порванном канале гейт по-прежнему мог назвать отсутствие логина. Развёртывание portfolio-site 2026-08-07 сделало это лучше и раньше: `gh auth token` читает сохранённые учётки локально и потому РАЗЛИЧАЕТ «учёток нет» и «не дозвонились»; второе всплывает ниже, на реальном вызове API, уже со своим текстом (stderr там не глушится с 1.29). Канон принял их форму в обоих местах — `check_ci_status.sh` и `check_gate_value.sh`. Это ровно тот обмен, ради которого полевые отчёты и читаются: правка канона проверяется полем, а не наоборот. Оракул приведён к свойству — «авторизация не проверяется сетью», а не «текст ошибки разобран». **вес: +2 строки** |
+| 2026-08-07 | **1.88** | **Закрыты обе непокрытости, названные правкой 1.80: гейт называет свою маску, а доктор больше не гоняет то, что не на коммите.** ① **«Просмотрено 1 из 4» перестало быть вопросом.** Пять сканирующих гейтов (`file-length`, grep, ast, jscpd, complexity) печатают на успешном пути `по маске: …`, и доктор ВЫЧИТАЕТ: файлы области, которых маска не покрывает, гейт не увидит НИКОГДА — это `DEAD` с именами файлов, а не `WEAK` с подозрением. Маска приходит от самого гейта, второго источника истины не возникает (класс 1.87 — три разбора одного STATUS — только что стоил ревизии). Гейт маску не назвал — прежнее поведение сохраняется: выдумывать её за гейт нельзя. ② **`stages: [manual]` больше не запускается областью.** Признак дешевизны, на котором стоит вся проверка («вписан в pre-commit → §8.6 держит 5 секунд»), для таких хуков неверен: на коммите они не запускаются вовсе. Замер восьмого развёртывания: доктор гонял так вписанный `deps-audit`, а тот ходит в СЕТЬ (24.5 с) — инструмент, обещающий «числа за две секунды», врал о себе тем же способом, который ищет. Пропуск одного хука молчаливый, но СПИСКОМ печатается вслух: иначе проект, где все хуки `manual`, получил бы «лжи нет», не проверив ничего. Проверено на копии живого дерева: `deps-audit` названа строкой, остальные области считаются как раньше. **Журнал веса поймал правку в том же прогоне:** `doctor_layout.py` перевалил за 300 строк, и читалки конфига хуков (`_hook_env`, `_hook_files_re`, `_hook_stages`) выделены в `doctor_hooks.py` — не по красоте, а по планке. Шесть прогонов: три на маску (не покрывает → DEAD; покрывает → AUTO; маски нет → прежний вопрос), три на стадии (manual не пробуется; пропуск назван вслух; обычный хук пробуется как прежде). **вес: +106 строк, за печать масок и чтение стадий** (§9.1a п.5); контур — 47 скриптов, 8713 строк, свыше 300 ни одного. Сьют: **574 теста** |
+| 2026-08-07 | **1.87** | **Приёмка восьмого развёртывания: единственная проверка против самозаявленного `ci-oracles` была МЕРТВА для канонического формата.** `check_ci_status.sh` читал поле регуляркой, ожидавшей `**ci-oracles**: value`, а STATUS пишут `- **ci-oracles:** value` — закрывающие звёздочки стоят ПОСЛЕ двоеточия. Значение выходило пустым, гейт возвращал 0, и ветка «в STATUS `deployed`, а CI не подтверждён — красней» не срабатывала ни разу. Поле увидело это так: гейт мержа напечатал «⚠ gh не авторизован» и следом «OK» — то есть пропустил бы мерж, не проверив главного. **ТРЕТИЙ рецидив одного класса** (то же чинили в `check_new_dependency.py`, и то же изначально верно в `delivery_check.field()`): над одним `STATUS.md` жили три разбора, и согласия между ними не проверял никто. Закрыто не случаем, а инвариантом: `tests/test_status_parsers_agree.py` требует, чтобы КАЖДЫЙ разбор поля в payload'е терпел звёздочки после двоеточия, плюс поведение гейта проверяется исполнением на каноническом STATUS. Инвариант тут же уточнён третьим прогоном дважды: `[[:space:]]` СОДЕРЖИТ двоеточия (оракул объявлял верную форму сломанной), а `.*` сразу за двоеточием звёздочки съедает сам — требовать там `\**` значило бы обвинять работающий `check_deps_audit.sh`. **Второе: `gh auth status` ХОДИТ В СЕТЬ**, и на рвущемся канале печатает то же, что при отсутствии логина — исполнитель полчаса чинил авторизацию вместо канала. Тот же класс, что «реестр недоступен» у npm. Причина теперь называется по тексту ошибки, а неизвестное — неизвестным («причина неясна: …»): выдуманная уверенность отправляет чинить не то. **Третье: `pre-commit` без `--verbose` глотает stdout прошедших хуков** — строка приёмки §6 «каждый гейт показал непустое число просмотренных» была проверяема локально и НЕПРОВЕРЯЕМА в CI, то есть ровно там, где по §10.4 живёт истина. Флаг добавлен в шаблон §8.3, §6 дополнена. Три обратных прогона: вернул старую регулярку — упали три теста; снял `--verbose` — упал свой; убрал разбор сетевой ошибки — упал свой. **вес: +21 строк, за разбор причин отказа gh и комментарий про форму** (§9.1a п.5). Сьют: **568 тестов** |
+| 2026-08-07 | **1.86** | **Разрезаны три последних bash-скрипта — планка 300 взята везде, кроме `delivery_check.py`.** В bash модулей нет, поэтому приём другой: сосед подключается `source`'ом по `SCRIPT_DIR`, который резолвится ДО `cd` в корень (`BASH_SOURCE` относителен каталога вызова — после `cd` соседа уже не найти; двум гейтам эту строку пришлось добавить). Части выполняются в ТОМ ЖЕ процессе, поэтому линейный код и `exit` внутри работают как раньше — это и позволило резать скрипты, у которых нет функций. **Раскладка по вопросам, а не по размеру:** `check_complexity_gate.sh` → `complexity_halves.sh` (чем меряем py/ts) + вход (пороги, снимок, вердикт); `check_mutation_gate.sh` → `mutation_ts.sh` (Stryker), `mutation_py.sh` (подготовка и запуск mutmut), `mutation_verdict.sh` (что считать доказательством) + вход; `check_gate_coverage.sh` → `gate_coverage_roles.sh` (карта ролей против дерева), `gate_coverage_template.sh` (незаполненный шаблон в конфиге) + вход. **Сверка вывода на стендах, а не чтение:** гейт сложности — три режима (`check`, `--generate`, повторный `check`); мутационный — три окружения, включая TS-ветку без Stryker; мета-гейт — на дереве с настоящим контуром. Везде байт-в-байт. **Два оракула пришлось научить читать гейт ЦЕЛИКОМ** (`extract.whole`): свойства «зовёт mutmut из корня импортов» и «не использует кириллический диапазон» принадлежат гейту, а не входному файлу, и после разреза они проходили бы «потому что код переехал» — класс 1.61, уже ловившийся на докторе. Инвентарь §5.0: шесть строк, «меньше 32 файлов», правило про комплект уточнено числами. **вес: +90 строк, за три разреза** (§9.1a п.5); свыше 300 остался ОДИН файл — `delivery_check.py` (1969, его `main` 986 строк и cx=212). Сьют: **555 тестов** |
+| 2026-08-07 | **1.85** | **Шаблон CI нёс питоновское допущение и ронял всю джобу гейтов — восьмой рецидив класса, и самый дорогой.** Живой прогон Actions на Astro/TS: `actions/setup-python@v5` падает с `No file matched to [**/requirements.txt or **/pyproject.toml]`, потому что `cache: pip` требует python-манифеста, которого на этом стеке нет и не будет. **Цена выше самого падения:** из-за упавшего шага не выполнился `pre-commit (all files, STRICT=1)`, а соседние гейты с `if: always()` отчитались ЗЕЛЁНЫМ — каждый честно сказал «инструмента нет → пропуск». То есть в CI воспроизвелась форма F10: названный пропуск читается как успех, только теперь на уровне workflow, где его читают по галочкам. **Три правки, и последняя — несущая.** ① `cache:` у python и npm вычисляется через `hashFiles(...)`, пустая строка = кэш выключен; ② путь к lock-файлу фронта задан паттерном `**/package-lock.json`, а `npm ci --prefix frontend` заменён на выбор по факту (фронт бывает и в корне — там, где он и есть весь проект, жёсткий путь ронял действие); ③ **между установкой и гейтами встал шаг «Инструменты гейтов на месте»**, который роняет джобу с `::error::`, если `ruff`/`mypy`/`detect-secrets` не поставились. Локально пропуск честен (стенд беден), в CI — нет: инструменты ставятся шагом выше, и их отсутствие значит, что шаг упал. Шаг стоит ДО гейтов сознательно: причина обязана быть в логе раньше их зелёных галок. Оракул — `tests/test_ci_template_is_stack_neutral.py`, проверяет свойства шаблона, а не текст; обратные прогоны вернули `cache: pip` и сняли проверку инструментов, каждый уронил свой тест. **вес: +23 строки, за развязку `--require-ci` и проверку инструментов** (§9.1a п.5). Сьют: **555 тестов** (+9) |
+| 2026-08-07 | **1.84** | **Ратчет веса зашит: правило, которое переснимается одной командой, держит ровно до первого раза, когда мешает.** До этой ревизии `--generate` легализовал что угодно — и планку 300 для нового скрипта, и любой прирост. Четыре механики закрывают это. ① **Снимок стал ЖУРНАЛОМ:** число обязано совпадать с деревом точно, красное и на рост, и на ужатие без пересъёма — потолок выше живого размера это молчаливый запас, в который скрипт отрастает обратно (тот же дефект, ради которого у гейта длины есть `--tighten`). ② **Планка нового судится по ИСТОРИИ** — снимок из `HEAD`, а не рабочий файл, который правит тот же коммит. ③ **Число в записи сверяется с фактом:** прирост требует строки «вес: +N строк, за что» с настоящей дельтой, и первым, кого поймала сверка, был абзац журнала о ней же — стояло +113 при фактических +119. ④ **Новых монолитов не заводим совсем:** функция сверх §2.1, которой не было в истории, — красный без обхода. **Перенос монолитом не считается** (совпали имя и обе величины), а выросшая при переезде — считается: рост прячут именно так. Ветку про перенос потребовал первый же прогон — оракул обвинил разрез AST-гейта, то есть ровно ту работу, ради которой написан. **И тут же нашлись две мои собственные функции сверх порога** (`_pep621_names` 13, `_poetry_names` 11 при восьми строках): разобраны на `_names_from_specs` и `_table_names`, гейт зависимостей дал идентичный вывод. Обратные прогоны: рост без записи → красный; запас в снимке → красный. Сьют: **546 тестов** (+14), функций сверх §2.1 — 18 из 146 |
+| 2026-08-07 | **1.83** | **Разрезаны два python-гейта, и разрез вскрыл дыру в самой процедуре проб.** `check_ast_gate.py` 460 → три файла: `ast_rules.py` (правила про тело функции — молчащий except, вшитый промпт), `ast_web_rules.py` (правила про контракт функции — безграничный список, CPU в event loop) и вход со снимком и обходом. `check_new_dependency.py` 333 → два: `dependency_manifests.py` (по функции на экосистему) и гейт. **Монолиты разобраны заодно, а не «когда-нибудь»:** `main` AST-гейта (83 строки, cx=17) разложен на `scan` / `write_baseline` / `judge`, `main` гейта зависимостей (72, cx=17) — на `scan_manifests` / `report`, а самая ветвистая функция контура `names_pyproject` (22 строки при cx=25) разделена по форматам: `_pep621_names` и `_poetry_names` — читать её приходилось целиком, чтобы понять, какая половина форматов сейчас важна. **Дыра, которую нашёл разрез:** проба доктора копировала гейт в ОДИНОЧКУ во временный репозиторий, а гейт без своей части падает на импорте — ненулевой код возврата проба зачла бы за «канарейка поймана», то есть объявила бы работающим гейт, который не запустился. Закрыто `copy_with_parts()`: вход копируется с модулями, признак тот же, по которому их не считает мета-гейт (гейт — `check_*`, части — нет), снимки НЕ копируются сознательно (канарейка, легализованная чужим снимком, не покраснеет). Обратный прогон: вернул одиночное копирование — сломанное правило снова читается как пойманная канарейка. **Полигон сьюта тоже учится комплекту:** `extract.PARTS` + `harness.Lab` разворачивают вход в набор, поэтому следующий разрез не потребует править тесты, а забытый модуль не даст падения импорта вместо проверяемого свойства. **Сверка поведения до/после — на обоих гейтах:** все четыре AST-правила и гейт зависимостей дали идентичный вывод и коды возврата. §5.0: три строки инвентаря, «меньше 26 файлов», и правило сформулировано классом — скрипт может быть КОМПЛЕКТОМ, а не файлом. **вес: +119 строк, за два разреза и разбор пяти монолитов** (§9.1a п.5); свыше 300 осталось четыре файла, функций сверх §2.1 — **18 из 146** (было 21). Число в записи сверяется с фактом механикой `cqg@1.84`, и первым, кого она поймала, был этот самый абзац: стояло +113 при фактических +119. Сьют: **532 теста** |
+| 2026-08-07 | **1.82** | **Доктор разрезан на шесть файлов — планка 300 применена к самому крупному долгу проверяющего слоя.** 1082 строки и девять функций сверх §2.1 из двадцати одной: слой, который судит, рос быстрее судимого — это назвал полевой отчёт, а ратчет веса (1.81) подтвердил числом. Раскладка: `contour_doctor.py` (вход и сборка), `doctor_core.py` (вердикты, палитра, запуск подпроцесса — соседей не знает, поэтому цикла нет по построению), `doctor_layout.py` (каноны, принуждение, инструменты, снимки, чтение `.pre-commit-config.yaml`), `doctor_areas.py` (видит ли гейт код проекта), `doctor_canaries.py` (данные проб и объявления проекта), `doctor_probes.py` (пробы исполнением). Части собираются классом-наследником, каждая под планкой. **Проверено не чтением, а СВЕРКОЙ ВЫВОДА:** прогон на копии живого развёртывания до и после разреза дал байт-в-байт одинаковый отчёт (`AUTO 33 · WEAK 10 · ABSENT 3 · TOOL 3 · SKIP 0 · DEAD 0`). **Три дефекта разреза, и ни одного не нашли глазами:** ① `_rules_of` попал в два модуля разом — копия это второй источник истины, ровно то, за что доктор краснеет у других; ② ruff `F821/F401` показал шесть неверных импортов после переноса; ③ **импорты насорили `__pycache__` в чужом рабочем дереве** — доктор работает В ДЕРЕВЕ проекта, и `git status` после диагностики показывал мусор, которого не просили. Закрыто `sys.dont_write_bytecode = True` ДО импорта частей; поймал это собственный тест «проба оставила дерево как было», написанный когда-то про канареек. **Оракулы поправлены так, чтобы не ослабнуть:** `_src()` читает доктора ЦЕЛИКОМ (свойство одно, файлов шесть — иначе оракул проходил бы «потому что код переехал»); полигоны получают весь комплект через `extract.DOCTOR`, список берётся из payload'а, а не переписывается в тесте; исключение потребителей `LINT_PY_SRC` переехало вместе с кодом в `doctor_probes.py`, а не расширилось. §5.0: пять строк инвентаря, «меньше 23 файлов — обход неполон» и предупреждение, что доктор это шесть файлов и копировать надо все — без любого он не стартует вовсе, и это лучше, чем стартовать без части проверок. **вес: +111 строк, за разрез самого крупного модуля контура под планку** (§9.1a п.5). Сьют: **532 теста** |
+| 2026-08-07 | **1.81** | **Обещание из комментария `check_file_length.sh` стало механикой.** Строка «размер скриптов контура мерится отдельно — метрика контура (§9.1a)» стоит с 1.20 и указывала в ПУСТОТУ: такого замера не существовало ни в сьюте, ни в `delivery_metrics.py`, ни в докторе — контур исключил себя из гейта длины и не завёл замену, то есть сделал ровно то, за что краснеет чужой код. Теперь строка называет адрес, а правило живёт в Delivery §9.1a п.5: снимок `tests/contour_size_baseline.txt`, потолок на скрипт только вниз, планка нового скрипта — 300 строк. **Оракул `tests/test_contour_size.py` держит четыре свойства:** ратчет на каждый скрипт; планку для тех, кого в снимке нет; призрака (скрипт удалён — строка в снимке осталась, и вес контура снова стал бы неизмеряемым); сверку шапки снимка с телом — снимок не свидетельствует сам о себе (класс 1.78). **Свойства проверяются на выдуманных числах, а живой payload — одним утверждением «нарушений нет»:** сегодня он чист, поэтому проверять там же поведение правил значило бы принимать зелёное по неверной причине (класс 1.61). Замер печатается на каждом прогоне, иначе «стало лучше» осталось бы заявлением: `contour-weight: 8023 строк(и) в 22 скриптах, свыше 300: 7 (рекорд — scripts/delivery_check.py: 1948)`. Слота бюджета не занимает — это не запрет на коммите, а свойство канона; в развёрнутом проекте эти файлы не меняются, а если меняются, это адаптация и её объявляет `adapted.json` (§5.5). Обратный прогон на настоящем росте: +40 строк в `check_ci_status.sh` роняют сьют с адресом и дельтой. **Второй оракул — по функциям** (`tests/test_contour_functions.py`): длина и сложность с hard-порогами §2.1 (80/10), «только вниз» по обеим величинам, потому что ратчет на файл без этого покупается перекладыванием. Замер: 136 функций, **21 сверх порога**, рекорд `delivery_check.py::main` — 965 строк и cx=211, девять из двадцати одной — в `contour_doctor.py`, то есть в проверяющем слое. Сложность — ПРОКСИ на stdlib-ast, и названа прокси: оракул, молча не запускающийся без ruff, был бы тем самым классом, ради которого он написан. Сьют: **532 теста** (+21) |
+| 2026-08-07 | **1.80** | **Предохранитель, построенный по находке, саму находку бы не поймал.** Проверка областей (1.69) знала единственный порог — НОЛЬ (`if n: AUTO`), а дыра, из которой она родилась, была ЕДИНИЦЕЙ: `file-length` с дефолтной маской `*.py *.ts *.tsx` печатал `OK — просмотрено 1 файл(ов)` при четырёх файлах кода — `.ts` в маску попадал, три `.astro` нет. Полную слепоту проверка ловит, а на смешанном стеке опасна ровно ЧАСТИЧНАЯ: она не молчит, она **читается как успех**. Замер, а не гипотеза — обе половины наблюдались в одном отчёте на живом развёртывании, и увидел это снова человек, читая отчёт доктора. Теперь число сверяется с деревом: `просмотрено 1 из 4 файл(ов) области` + `WEAK` с составом дерева (`.astro ×3, .ts ×1`), то есть механика отдаёт ту самую улику, по которой находку нашли глазами. **Знаменатель — дерево под КОРНЯМИ гейта (`LINT_*_SRC`/`_DIR` из `entry:`), но НЕ под его маской расширений**, и это несущее различение: корень отвечает «где» и сузить его — законное решение проекта (§6), маска отвечает «на каком языке», и сверять её с самой собой значило бы объявить зелёным ровно тот случай, ради которого проверка написана. **Вердикт `WEAK`, а не `DEAD`, и это не мягкость:** доктор видит два числа, а какие именно файлы гейт смотрел, знает только сам гейт — приписать ему целый язык не на чем, поэтому названо, но не роняет. **Три защиты от ложного срабатывания, каждая своим прогоном (§4.3b: выдуманное расхождение — тот же дефект, что пропущенное):** ① ЕДИНИЦА захватывается вместе с числом — `deps-audit` считает «манифест(ов)», ts-половина слоёв «модул(ей)», и сравнивать их с числом файлов дерева нельзя; ② механика контура исключена из знаменателя тем же правилом, каким её исключает сам гейт длины (`exclude_contour`, §9.1a — размер скриптов контура мерится отдельно), иначе «частичная область» печаталась бы на КАЖДОМ правильно развёрнутом проекте, где лежат `delivery_check.py` и `merge_guard.sh`, то есть на всех; ③ многоправильный гейт (`--list-rules`) остаётся `AUTO` с числами: у правила свой FILTER (`service-no-web` смотрит только в `/services/`), частичная область там законна. **Обратными прогонами проверены все шесть веток:** порог возвращён на «не ноль» — упал тест частичной слепоты; снята проверка единицы — упал тест манифестов; контур возвращён в знаменатель — упал тест шума; и то же по трём правкам ниже. Каждый ронял РОВНО свой тест, то есть тесты проверяют свойство, а не имя. **Три дефекта самой правки нашёл полевой прогон на копии живого проекта, а не чтение** — тот же вывод, что в 1.69: ① `LINT_FE_DIR=.` (штатная запись npm-проекта без каталога `frontend`) считалась каталогом с именем «.», под который не подходит ни один путь из `git ls-files` — область выходила ПУСТОЙ, и сверка молчала ровно на смешанном стеке, ради которого написана; ② знаменатель не читал `files:` хука, то есть область, ОБЪЯВЛЕННУЮ проектом, и звал слепотой корневые конфиги — расхождение надо искать между заявлением и деревом, а не между двумя заявлениями проекта; ③ как только число стало читаться у гейтов, считающих не файлы, честный пропуск `check_deps_audit.sh` («○ пропущено: npm audit» + `WARNING — просмотрено 0 манифест(ов)`) превратился в `DEAD` — новая читалка обвинила во лжи бедность окружения, и до 1.80 случай спасало лишь то, что регулярка не знала слова «манифест». Ноль при НАЗВАННОМ пропуске теперь `WEAK`, правило 1.61 сохранено (заявленный успех БЬЁТ названный пропуск: гейт может шепнуть «пропущено» в теле и напечатать «: OK» в итоге, а читают итог). **И находка на самом проекте, добытая механикой, а не глазами:** `eslint-warning-ratchet` объявлен как `files: ^src/.*\.(ts\|tsx\|astro)$`, а `eslint.config.js` покрывает только `**/*.{ts,mts,js,mjs}` — `.astro` не линтится ничем, и доктор печатает `просмотрено 1 из 2 файл(ов) области`. Это тот же класс, что находка №1, на дереве, которое трижды аудировали руками. Итог на живом развёртывании: `AUTO 33 · WEAK 10 · ABSENT 3 · TOOL 3 · SKIP 0 · DEAD 0`. **Что НЕ закрыто и названо:** доктор не знает, какие именно файлы гейт смотрел (отсюда `WEAK`, а не `DEAD`); если `files:` и маска гейта одинаково узки — молчит, сузили осознанно; полное закрытие класса требует, чтобы гейт печатал свою маску, — этого нет. §6 исправлена там же: строка приёмки «непустое число просмотренных» была ВЫПОЛНИМА при одном файле из четырёх, то есть находка обошла её по букве. Сьют: **511 тестов** (+9) |
 | 2026-08-06 | **1.79** | **Доктор противоречил сам себе — в одном отчёте, с разницей в четыре строки.** `ABSENT инструмент jscpd — нет → DRY-гейт не работает` и `AUTO область check_jscpd_gate.sh — просмотрено 2 файл(ов)`. Причина: `check_tools` искал бинари в `.venv/bin`, `backend/.venv/bin` и `PATH`, а локальная devDependency npm-проекта живёт ТОЛЬКО в `node_modules/.bin`. Тот же класс, что чинили весь день, — заявление разошлось с деревом, — и увидел его человек, а не механика: проверка областей окружение хука уже воспроизводила, а проба инструментов нет. Отчёт со взаимоисключающими строками о собственном гейте обесценивает подпись «лжи нет» в подвале, а она и есть продукт доктора. **Плюс закрыт последний `SKIP`:** `check_deps_audit.sh` печатает «просмотрено N манифест(ов)» — и в успешной ветке, и в «проверено НЕ ВСЁ», которая на чужом стеке как раз самая частая (одна половина всегда чужая). Здесь «просмотренное» — манифесты, а не файлы кода, и это не натяжка: гейт судит зависимости, значит его «что я смотрел» — это `requirements/pyproject` и `package-lock`; ноль проверенных манифестов при нулях уязвимостей выглядит ровно как чистый проект. На живом развёртывании: `SKIP 3 → 0`, `DEAD 0` — у доктора не осталось непокрытых мест, о которых он сам говорил «отсюда не видно». Сьют: **502 тестов** |
 | 2026-08-06 | **1.78** | **Снимок канонов был единственным источником правды о самом себе.** Доктор читал версию из шапки `docs/canon/` и считал её истиной; что проект тем временем развернул более новый payload, не проверял никто. Замер на живом проекте, и нашёлся он вопросом «а ты вообще закинул новую версию?»: скрипты `cqg@1.77` (все 20 байт-в-байт), снимок `cqg@1.75`, STATUS `cqg@1.77` — три источника, два расходятся, ни один механизм не сказал ни слова. Теперь версия снимка сверяется с ЗАЯВЛЕННОЙ в `stack:` STATUS: расходятся — одно из двух врёт, и молчать нельзя. **Побочно это чинит ДИАГНОЗ сверки расхождений (1.71):** она видела, что тела скриптов отличаются от снимка, и советовала «обнови скрипт из payload'а» — вредный совет ровно в том случае, когда отстал снимок, а не скрипт. Третий случай («снимок позади») в её словарь не входил, и теперь он называется отдельно. Молчание при отсутствии STATUS оставлено честным: CQG разворачивается и без Delivery, заявления там не существует, а выдумывать его нельзя. Сьют: **502 тестов** (+3) |
 | 2026-08-06 | **1.77** | **Структурная дыра проверки 1.69 закрыта с той стороны, с которой её и надо было закрывать — со стороны гейтов.** Доктор спрашивал «видит ли гейт код», читая напечатанное им число, и гейт БЕЗ счётчика уходил в `SKIP` — то есть проверка на слепоту структурно не покрывала ровно тех, кто был слеп. Чинить это в докторе нельзя (он не знает, сканирующий ли гейт), поэтому счётчик добавлен самим гейтам: `check_eslint_warnings.sh` печатает «просмотрено N файл(ов)» и на нуле предупреждает — «warnings 0» доказывает вердикт, но не доказывает, что смотрели, а ноль предупреждений на ноле файлов выглядит точно так же. Оба (`jscpd` с 1.76 и ратчет) внесены в `MUST_REPORT_SCANNED` классового оракула, так что следующий гейт без счётчика уронит сьют, а не проживёт до полевого аудита. **Инвариант при этом уточнён, и это не поблажка:** число требуется, только ЕСЛИ гейт отработал; честный пропуск («инструмента нет») числа не имеет и иметь не должен — требовать его значило бы краснеть на стенде без npm, то есть обвинять гейт за бедность окружения (§4.3b). Первая редакция списка этого не различала и уронила два теста. **Плюс формулировка, вводившая в заблуждение:** проба «честный пропуск» идёт с голым PATH и без переменных хука — это её замысел, но вердикт `нет каталога фронта (frontend)` читался как диагноз ПРОЕКТУ, хотя под pre-commit тот же гейт работает. Теперь в названии точки сказано, чьё окружение проверяется: зонд, не воспроизводящий окружение хука, обязан хотя бы не выдавать себя за него. Сьют: **499 тестов** |

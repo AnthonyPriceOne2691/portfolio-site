@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+"""Раскладка контура: каноны, принуждение, инструменты, снимки, чтение хуков.
+
+Часть доктора (`cqg@1.82`, вход — `contour_doctor.py`). Здесь вопросы «что
+развёрнуто и как настроено»: они дёшевы, ничего не запускают и отвечаются до
+любых проб. Сюда же чтение `.pre-commit-config.yaml` (`_hook_env`,
+`_hook_files_re`) — это тоже раскладка, а не суждение о гейте.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+
+from doctor_core import ABSENT, AUTO, DEAD, SKIP, WEAK, _block_after
+
+CANONS = ("AGENT_STACK.md", "AGENT_DELIVERY_HARNESS.md",
+          "CODE_QUALITY_GATES.md", "OKF_KNOWLEDGE_BUNDLE.md")
+
+# Инструменты, на которых стоят гейты. `timeout` отдельно: он GNU coreutils и на
+
+TOOLS = {
+    "ruff": "гейт сложности, основной линт",
+    "mypy": "типы",
+    # `pragma` — не украшение и не подавление находки. Имя инструмента содержит
+    # слово из denylist'а его же KeywordDetector'а, а дальше по строке идут
+    # двоеточие и значение в кавычках — та самая форма, которую он считает
+    # секретом. Первое развёртывание намерило это находкой: канон поставлял
+    # payload, который метит его же гейт. Форма подавления взята у самого
+    # инструмента, чтобы след был читаемым, а не спрятанным в baseline проекта.
+    # Регрессия — `tests/test_payload_clean_for_scanners.py`.
+    "detect-secrets": "secrets-гейт (§2.7)",  # pragma: allowlist secret
+    "pip-audit": "deps-audit, python-половина",
+    "mutmut": "mutation — «тесты утверждают» (§3.7)",
+    "jscpd": "DRY-гейт",
+    "npm": "deps-audit, js-половина; eslint-ратчет",
+    "timeout": "бюджет мутационного гейта (macOS: brew install coreutils)",
+}
+
+# Канарейка = «файл с нарушением ровно этого класса». Ключ — имя правила из
+# `--list-rules`, чтобы список правил брался у СКРИПТА, а не дублировался здесь:
+
+
+class LayoutChecks:
+    # --- A. каноны -----------------------------------------------------------
+    def _declared_version(self, prefix: str) -> str:
+        """Версия слоя из строки `stack:` в STATUS — то, что проект ЗАЯВИЛ.
+
+        Заявление и снимок обязаны совпадать: расходятся — одно из двух врёт, и
+        какое именно, отсюда не видно, но молчать нельзя.
+        """
+        if not prefix:
+            return ""
+        st = self.root / "delivery" / "active" / "STATUS.md"
+        if not st.is_file():
+            return ""
+        m = re.search(rf"\b({re.escape(prefix)}@[0-9][0-9.]*)",
+                      st.read_text("utf-8", errors="replace"))
+        return m.group(1) if m else ""
+
+    def check_canons(self) -> None:
+        # Каноны лежат ЛИБО в корне, ЛИБО в снимке `docs/canon/` — и второе не
+        # экзотика, а дефолт: §5 шаг 11 велит агенту выбирать вариант C, не
+        # спрашивая. Первая редакция смотрела только в корень и на правильно
+        # развёрнутом проекте печатала «файла нет — слой не развёрнут» по всем
+        # четырём. ABSENT не роняет прогон, поэтому ошибка тихая: доктор говорил
+        # «бедность» там, где всё на месте, и приёмка §6 читалась бы по нему.
+        for name in CANONS:
+            p = self.root / name
+            if not p.is_file():
+                p = self.root / "docs" / "canon" / name
+            if not p.is_file():
+                self.add(ABSENT, f"канон {name}", "файла нет — слой не развёрнут")
+                continue
+            m = re.search(r"\*\*Canon version:\*\*\s*`([^`]+)`", p.read_text("utf-8")) \
+                or re.search(r"\*\*Эта карта:\*\*\s*`([^`]+)`", p.read_text("utf-8"))
+            where = "" if p.parent == self.root else f" ({p.parent.relative_to(self.root)})"
+            # Снимок сверяется с ЗАЯВЛЕННОЙ версией из STATUS. Иначе он —
+            # единственный источник правды о самом себе: доктор читал шапку
+            # снимка и считал её истиной, а проект тем временем развернул более
+            # новый payload. Замер на живом проекте: скрипты 1.77, снимок 1.75,
+            # STATUS 1.77 — и никто не сказал ни слова.
+            #
+            # Это делает честным и диагноз расхождения скриптов: без такой
+            # проверки совет «обнови скрипт из payload'а» вреден, когда на самом
+            # деле отстал снимок, а не скрипт.
+            declared = self._declared_version(m.group(1).split("@")[0] if m else "")
+            drift = ""
+            if m and declared and declared != m.group(1):
+                drift = (f" — STATUS заявляет {declared}: снимок ОТСТАЛ от "
+                         "развёрнутого payload, обнови docs/canon (§5 шаг 11)")
+            self.add(AUTO if (m and not drift) else WEAK, f"канон {name}",
+                     (f"версия {m.group(1)}" if m else "версия в шапке не читается")
+                     + where + drift)
+
+    # --- B. места принуждения ------------------------------------------------
+    def check_enforcement(self) -> None:
+        cfg = self.root / ".pre-commit-config.yaml"
+        self.add(AUTO if cfg.is_file() else ABSENT, "конфиг pre-commit",
+                 "есть" if cfg.is_file() else "нет — коммит-гейтов не существует")
+
+        # Установлен ли хук ФАКТИЧЕСКИ. Конфиг без `pre-commit install` — это
+        # список пожеланий: ни один хук не запустится, и об этом ничто не скажет.
+        for hook in ("pre-commit", "pre-push"):
+            h = self.root / ".git" / "hooks" / hook
+            if h.is_file() and "pre-commit" in h.read_text("utf-8", errors="ignore"):
+                self.add(AUTO, f"хук {hook} установлен", str(h.relative_to(self.root)))
+            else:
+                self.add(DEAD if cfg.is_file() else ABSENT, f"хук {hook} установлен",
+                         "конфиг есть, а хук НЕ установлен: `pre-commit install"
+                         f"{' --hook-type pre-push' if hook == 'pre-push' else ''}`"
+                         if cfg.is_file() else "нет")
+
+        wf = sorted((self.root / ".github" / "workflows").glob("*.y*ml")) \
+            if (self.root / ".github" / "workflows").is_dir() else []
+        self.add(AUTO if wf else ABSENT, "CI workflow",
+                 ", ".join(p.name for p in wf) if wf else "нет — §10.4 закроет как weak")
+
+        mg = self.root / "scripts" / "merge_guard.sh"
+        self.add(AUTO if mg.is_file() else ABSENT, "гейт мержа merge_guard.sh",
+                 "есть" if mg.is_file() else "нет — мерж не проверяет слитое состояние")
+
+    # --- C. инструменты ------------------------------------------------------
+    def check_tools(self) -> None:
+        # ⚠ `node_modules/.bin` в списке ОБЯЗАТЕЛЕН, и это не удобство. Локальная
+        # devDependency npm-проекта живёт только там: без этого каталога доктор
+        # печатал `ABSENT инструмент jscpd — нет → DRY-гейт не работает` и
+        # четырьмя строками ниже `AUTO область check_jscpd_gate.sh — просмотрено
+        # 2 файл(ов)`. Отчёт, содержащий взаимоисключающие строки о собственном
+        # гейте, обесценивает подпись «лжи нет» в подвале — а она и есть продукт
+        # доктора. Тот же класс, что чинили весь день: заявление разошлось с
+        # деревом, и увидел это человек, а не механика.
+        #
+        # Проверка областей окружение хука уже воспроизводит (тянет `LINT_*` из
+        # `entry:`), а проба инструментов — нет. Здесь минимум: каталоги, куда
+        # инструмент кладут менеджеры пакетов обоих экосистем.
+        fe = os.environ.get("LINT_FE_DIR", "frontend")
+        venvs = [self.root / ".venv" / "bin", self.root / "backend" / ".venv" / "bin",
+                 self.root / "node_modules" / ".bin", self.root / fe / "node_modules" / ".bin"]
+        for tool, why in TOOLS.items():
+            found = next((str(v / tool) for v in venvs
+                          if (v / tool).is_file() or (v / tool).is_symlink()), None) \
+                or shutil.which(tool) \
+                or (shutil.which("gtimeout") if tool == "timeout" else None)
+            self.add(AUTO if found else ABSENT, f"инструмент {tool}",
+                     found if found else f"нет → {why} не работает")
+
+    # --- D. снимки -----------------------------------------------------------
+    def check_snapshots(self) -> None:
+        d = self.root / "scripts" / "lint"
+        if not d.is_dir():
+            self.add(ABSENT, "снимки гейтов", "нет scripts/lint — контур не развёрнут")
+            return
+        found = sorted(p.name for p in d.glob("*baseline*.txt"))
+        self.add(AUTO if found else WEAK, "снимки (baseline)",
+                 f"{len(found)} шт: {', '.join(found)}" if found
+                 else "ни одного: гейт без снимка красный на первом коммите, "
+                      "и его снимают")
+
+
+    # --- Что в контуре разошлось с каноном и почему (cqg@1.71) ----------------
+    # Обновление контура было археологией: §5 описывает развёртывание на
+    # greenfield, а что делать со СТАРЫМ проектом, часть скриптов которого
+    # адаптирована под стек, не сказано нигде. Слепое копирование payload'а
+    # адаптацию уничтожает — замерено на Swift-проекте: канонная python-версия
+    # затёрла `check_grep_gate.sh` с тремя своими правилами (`force-unwrap`,
+    # `hardcoded-network`), и спасло только чистое дерево и `git checkout`.
+    #
+    # Различать «адаптирован» и «просто устарел» приходилось глазами, и признак
+    # неочевиден: из шести разошедшихся скриптов два оказались НЕ адаптированными
+    # (ноль упоминаний своего стека в теле), один — настоящей адаптацией, а
+    # ещё один нёс адаптацию ЛИШНЮЮ: маска Swift была зашита в тело, хотя
+    # канонная версия давно принимает её через `LINT_LENGTH_GLOBS`.
+    #
+    # Отсюда `scripts/lint/adapted.json`: проект объявляет, что и почему изменено
+    # против канона. Расхождение без объявления — не ложь (быть на версию позади
+    # нормально), но и не молчание: печатается списком, чтобы обновление
+    # начиналось с готового ответа, а не с раскопок.
+    ADAPTED = "scripts/lint/adapted.json"
+
+    def check_divergence_from_canon(self) -> None:
+        snap = self.root / "docs" / "canon" / "CODE_QUALITY_GATES.md"
+        d = self.root / "scripts" / "lint"
+        if not snap.is_file() or not d.is_dir():
+            return                       # снимка канона нет — сверять не с чем
+        text = snap.read_text(encoding="utf-8", errors="replace")
+
+        declared = {}
+        f = self.root / self.ADAPTED
+        if f.is_file():
+            try:
+                declared = json.loads(f.read_text(encoding="utf-8")) or {}
+            except (OSError, ValueError) as exc:
+                self.add(SKIP, self.ADAPTED, f"не разобран ({exc}) — адаптации "
+                                             "объявлены и не прочитаны")
+        for script in sorted(d.glob("*")):
+            if not script.is_file() or script.suffix not in (".sh", ".py"):
+                continue
+            marker = f"### `scripts/lint/{script.name}`"
+            if marker not in text:
+                continue                 # свой гейт проекта — не наше дело
+            lang = "python" if script.suffix == ".py" else "bash"
+            body = _block_after(text, marker, lang)
+            if body is None:
+                continue
+            same = body.strip() == script.read_text(
+                encoding="utf-8", errors="replace").strip()
+            spec = declared.get(script.name)
+            point = f"расхождение с каноном {script.name}"
+            if same:
+                if spec:
+                    self.add(WEAK, point, "объявлен адаптированным, а тело "
+                                          "СОВПАДАЕТ с каноном — объявление "
+                                          "устарело и мешает обновлению")
+                continue
+            if isinstance(spec, dict) and str(spec.get("reason", "")).strip():
+                self.add(WEAK, point, "адаптирован намеренно: "
+                                      + str(spec["reason"])[:90])
+            else:
+                self.add(WEAK, point,
+                         "тело отличается от снимка канона, а объявления нет. "
+                         "Либо устарел (обнови из payload'а), либо адаптирован "
+                         f"под стек (объяви в {self.ADAPTED} с причиной) — "
+                         "иначе обновление начнётся с раскопок и затрёт правку")
+
