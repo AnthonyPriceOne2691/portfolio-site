@@ -1,6 +1,6 @@
 # Active delivery status
 
-- **slug:** mvp-shell-home
+- **slug:** mvp-foundation
 - **stack:** delivery@1.54, cqg@1.91, okf@absent
 - **class:** M
 - **kind:** feature
@@ -28,7 +28,10 @@
 - **stack-selftest:** ci (vendored)
 - **blockers:** none
 - **waivers:** none
-- **new_dependency:** none (пока; `@astrojs/sitemap` — кандидат, решение в T7)
+- **new_dependency:** @astrojs/sitemap reason=sitemap на двух языковых ветках с hreflang обязан перечислять каждую страницу обоих языков; рукописный список расходится с коллекцией молча — сборка зелёная, страницы не в индексе by=agent:claude-code
+- **new_dependency:** playwright reason=headless-браузер для примеров B6 и B7 (reduced-motion/reduced-transparency, отсутствие горизонтального скролла на 360/390/414, бургер с клавиатуры); одобрен владельцем 07.08 — без него раскладку не судит ничто by=human:anthony
+- **new_dependency:** prettier reason=гейт формата уже стоит на нём, но пакет приезжает ТРАНЗИТИВНО — исчезнет у апстрима, и хук умрёт молча (найдено 07.08 при накате cqg@1.91) by=agent:claude-code
+- **new_dependency:** eslint-plugin-astro + prettier-plugin-astro reason=весь код проекта в .astro, и сейчас его не судит ни линтер, ни форматтер — долг прошлой поставки, назван в её verify-report by=agent:claude-code
 - **artifact_oracle:** n/a reason=скрипта ещё нет, и это «не сделано», а не
   «нечем»: продуктовый код не начат (поставка на stop-gate T0), а сам оракул —
   разбор собранного `dist/` — дешёвый и запланирован задачей T7a этой же
