@@ -39,12 +39,12 @@ Team+, приватный репо — Pro+), поэтому гейт мержа
 
 | # | Файл | Версия | Отвечает на | Не делает |
 |---|---|---|---|---|
-| ① | [AGENT_DELIVERY_HARNESS.md](AGENT_DELIVERY_HARNESS.md) | `delivery@1.50` | Что строить, в каком порядке, когда «готово»; evals; hooks; CI-контракт; права на действия; журналы поведения; метрики | Не задаёт ruff/eslint; не формат OKF |
-| ② | [CODE_QUALITY_GATES.md](CODE_QUALITY_GATES.md) | `cqg@1.79` | Форма кода, commit-гейты, CI-workflow, secrets в git | Не ведёт поставку фичи; не knowledge wiki |
+| ① | [AGENT_DELIVERY_HARNESS.md](AGENT_DELIVERY_HARNESS.md) | `delivery@1.54` | Что строить, в каком порядке, когда «готово»; evals; hooks; CI-контракт; права на действия; журналы поведения; метрики | Не задаёт ruff/eslint; не формат OKF |
+| ② | [CODE_QUALITY_GATES.md](CODE_QUALITY_GATES.md) | `cqg@1.91` | Форма кода, commit-гейты, CI-workflow, secrets в git | Не ведёт поставку фичи; не knowledge wiki |
 | ③ | [OKF_KNOWLEDGE_BUNDLE.md](OKF_KNOWLEDGE_BUNDLE.md) | `okf@1.12` | Канон смысла (политики, ADR, метрики) | Не фазы delivery; не lint-пороги; не тела skills |
 
 Версии — из шапок соответствующих файлов. При развёртывании они пишутся в проект
-одной строкой (`stack: delivery@1.50, cqg@1.79, okf@absent`) в
+одной строкой (`stack: delivery@1.54, cqg@1.91, okf@absent`) в
 `delivery/CONSTITUTION.md` и `delivery/active/STATUS.md`: без этого нельзя сказать,
 какую ревизию канона репозиторий получил и что менялось с тех пор.
 
@@ -396,7 +396,7 @@ DRY_RUN=1 bash scripts/merge_guard.sh "$BRANCH"            # гейт мержа
 
 ## 7. Самопроверка канонов
 
-Каноны требуют oracles от чужого кода — а его собственный payload (22 скрипт и
+Каноны требуют oracles от чужого кода — а его собственный payload (48 скрипт и
 конфиги внутри markdown-фенсов) до этого не проверялся ничем. Скрипт ниже
 извлекает **все** код-блоки из четырёх канонов и проверяет их: python через
 `ast`, bash через `bash -n`, YAML — парсером (или tab-проверкой, если PyYAML нет).
@@ -850,7 +850,7 @@ python3 tests/run.py          # локально
 
 | Файл | Что держит |
 |---|---|
-| `tests/extract.py` | Извлечение payload'а **с учётом вложенных фенсов** + полный инвентарь: 22 скрипт, 15 шаблонов и 9 конфигов. Наивная регулярка теряла блок `agent-permissions` из A.1 |
+| `tests/extract.py` | Извлечение payload'а **с учётом вложенных фенсов** + полный инвентарь: 48 скрипт, 15 шаблонов и 9 конфигов. Наивная регулярка теряла блок `agent-permissions` из A.1 |
 | `tests/harness.py` | Одноразовый git-полигон: положить скрипты, собрать состояние, прогнать, сверить exit-код и подстроку |
 | `tests/test_delivery_check.py` | Фазовый гейт: idle-состояние, `deferred`, журналы §12, наблюдение §13, права §4.5/§4.6, индекс архива |
 | `tests/test_cqg_gates.py` | Ратчет и мета-гейты: снимок только вниз, подключение **правил**, новая зависимость, область и маска гейта длины |

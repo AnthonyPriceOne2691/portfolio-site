@@ -25,7 +25,9 @@ cd "$REPO_ROOT" || exit 1
 
 yellow=$(printf '\033[33m'); green=$(printf '\033[32m'); reset=$(printf '\033[0m')
 
-if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
+# `gh auth token` — локальная проверка учёток; `gh auth status` ходит в СЕТЬ и
+# на порванном канале объявляет отсутствие логина (`cqg@1.89`, пришло полем).
+if ! command -v gh >/dev/null 2>&1 || ! gh auth token >/dev/null 2>&1; then
   printf '%s⚠ gate-value: нужен авторизованный gh — без него данных о срабатываниях нет.%s\n' \
     "$yellow" "$reset" >&2
   printf 'Решение «убрать гейт» без данных принимать нельзя (§9.1a).\n' >&2

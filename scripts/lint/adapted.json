@@ -1,0 +1,11 @@
+{
+  "_комментарий": "Адаптации под стек (§5.5). Ключ — путь от корня репо или имя файла; reason обязателен, иначе доктор не примет объявление.",
+  ".pre-commit-config.yaml": {
+    "reason": "стек без python: маски и хуки под Astro/TS, фронт в корне (§6)",
+    "changed": "набор хуков и files-маски; python-половина не подключена"
+  },
+  ".github/workflows/quality.yml": {
+    "reason": "односоставный npm-проект без python: env под стек + шаг установки ставит только инструменты контура",
+    "changed": "блок env (LINT_TS_SRC=src, LINT_FE_DIR=.); шаг «Install backend deps» -> «Install contour deps» (канонный создавал backend/.venv, из-за чего python-половина deps-audit аудитила оснастку гейтов, py_total 6); список в шаге «Инструменты гейтов на месте» -> фронтовые + detect-secrets в PATH (канонный ждал ruff/mypy в venv, оба объявлены n/a). Остальное из канона"
+  }
+}

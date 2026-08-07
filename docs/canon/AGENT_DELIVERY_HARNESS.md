@@ -6,7 +6,7 @@
 > [OKF_KNOWLEDGE_BUNDLE.md](OKF_KNOWLEDGE_BUNDLE.md).  
 > Не разворачивай CQG/OKF раньше этого файла, если человек явно не сказал иначе.
 
-**Canon version:** `delivery@1.50` · 2026-08-06 (Changelog — в конце файла).
+**Canon version:** `delivery@1.54` · 2026-08-07 (Changelog — в конце файла).
 При развёртывании впиши версию в `delivery/CONSTITUTION.md` и `STATUS.md`
 (поле `stack:`) — иначе проект не знает, какую ревизию каркаса он получил.
 
@@ -1214,6 +1214,43 @@ coreutils — то есть слой 3 отсутствовал, и «есть �
 утверждений (§3.1d уровень 3), и оно дёшево — `assert_digest.sh` показывает только
 изменённые утверждения, 12 строк вместо 400.
 
+### 6.5a. Оракул на АРТЕФАКТ: между исходником и продуктом
+
+Каталог §3 CQG судит **форму исходника**: длину, сложность, направление
+импортов, дубли, ключи. Тесты судят **поведение**. А между ними у собирающего
+проекта лежит третье — **собранный артефакт**, и его до `delivery@1.54` не читал
+никто.
+
+**Замер приёмки восьмого развёртывания (Astro/TS).** Пятнадцать ролей CQG
+развёрнуты и зелены, CI зелёный, `astro check` проверяет типы, zod — frontmatter.
+`dist/` не читает ни одна проверка. Сборка останется зелёной при уехавшей
+раскладке, и «зелёный CI» читается как «продукт правилен» — хотя не проверялось
+ровно то, ради чего продукт существует.
+
+**Правило.** Проект объявляет шаг сборки (`scripts.build`, цель `build:`) →
+у артефакта обязан быть машинный инвариант, объявленный строкой
+`artifact_oracle:` в STATUS. Форма та же, что у `runtime_paths` и `repro_test`:
+объявление + проверка по ФАКТУ файла, потому что объявленный оракул без скрипта —
+снятая проверка с видом усиления (§4.6). `n/a reason=…` законно: «не делали» и
+«нечем» обязаны различаться в тексте. На `handoff` класса M/L отсутствие
+объявления — ошибка, до него — предупреждение.
+
+⚠ **«Не развёрнуто» и «непроверяемо» — разные вещи, и `weak` их смешивает.**
+Тот же замер: слой behavior пуст, но большая часть непокрытого проверяется
+**дёшево и без новых зависимостей** — разбор собранного html (мета, hreflang,
+JSON-LD), состав `dist/`, контраст как арифметика над токенами палитры,
+переключатель языков как функция пути. Дорого стоит только то, чему нужен
+layout engine. Поэтому `behavior-oracles: weak` обязан называть, что проверяемо
+машиной СЕГОДНЯ и не сделано: `weak — дёшево: <что именно>`. Правило то же, что
+§9.1a п.2 даёт гейтам («ни разу не сработал → удалить или написать, почему
+держим»): молчащая непокрытость либо закрывается, либо объясняется.
+
+**Чего сюда НЕ брать по умолчанию — визуальные снапшоты.** У них фирменный отказ
+ровно нашего класса: «зелёный, потому что снимок перезаписали». Если брать, то с
+дисциплиной журнала веса (§9.1a п.5): пересъём — решение с записью и точным
+числом, иначе снимок легализует что угодно.
+
+
 ---
 
 ## 7. Развёртывание
@@ -1469,6 +1506,68 @@ time-to-merge — из Git hosting / биллинга IDE.
 **Почему это не отговорка от новых гейтов:** правило требует не «не добавляй», а
 «знай цену». Гейт, который ловит реальные дефекты, проходит бюджет всегда.
 
+**5. Вес контура — тот же ратчет, что и на число.** Бюджет на количество гейтов
+не держит вес: число стоит на 22 с 2026-07-29, а механика всё это время росла
+внутри существующих файлов. Замер на 2026-08-07: **48 скрипт(ов), 8820 строк**,
+шесть свыше 300, рекорд — `delivery_check.py` (1948). Правило симметрично коду:
+
+- **потолок на скрипт = размер на день съёмки**, снимок только вниз;
+- **новый скрипт контура — не выше 300 строк**, то есть по §2.1, который контур
+  требует от чужого кода;
+- ужатие законно всегда и разрешения не требует;
+- **рост потолка — законный ход, но он обязан выглядеть как решение**: пересъём
+  виден диффом снимка и называется строкой changelog «вес: +N строк, за что» —
+  ровно как поднятие лимита гейтов в п.1. Найдено первым же применением правила:
+  оракул покраснел на правке, которая его и вводила (комментарий в
+  `check_file_length.sh` вырос на две строки), а что делать с законным ростом,
+  первая редакция не говорила — снимок «только вниз» без описанного хода вверх
+  либо остановит работу, либо будет переснят молча.
+
+⚠ **Правило зашито механикой, иначе оно покупается одной командой** (`cqg@1.84`).
+Ратчет, который переснимается `--generate`, держит ровно до первого раза, когда
+мешает. Поэтому:
+
+1. **Снимок — журнал, а не потолок.** Он обязан совпадать с деревом ТОЧНО: и
+   рост, и ужатие без пересъёма красные. Потолок выше живого размера — это
+   молчаливый запас, в который скрипт отрастает обратно, и никто не замечает.
+2. **Планка нового судится по ИСТОРИИ** (снимок из `HEAD`), а не по рабочему
+   файлу, который правит тот же коммит. Иначе новый скрипт на 400 строк
+   легализуется пересъёмом в ту же секунду, когда планку впервые применяют.
+3. **Число в записи сверяется с фактом.** Прирост против истории требует строки
+   «вес: +N строк, за что», где N — настоящая дельта: «немного подросли» прячет
+   цену так же, как отсутствие записи. Первым, кого поймала эта сверка, был абзац
+   журнала о ней же — стояло +113 при фактических +119.
+4. **Новых монолитов не заводим совсем.** Функция сверх §2.1, которой не было в
+   истории, — красный без обхода. Перенос при разрезе монолитом не считается,
+   если имя и обе величины не изменились; выросшая при переезде — считается,
+   потому что рост прячут именно так.
+
+**И вторая величина, без которой первая покупается перекладыванием: ФУНКЦИЯ.**
+§2.1 говорит прямо — файл на 300 строк из одной функции хуже файла на 500 из
+десяти, значит скрипт можно ужать, не тронув ни одного монолита. Поэтому второй
+снимок — по функциям, с hard-порогами §2.1 (длина 80, сложность 10) и той же
+дисциплиной «только вниз». Замер 2026-08-07: **136 функций, 21 сверх порога**;
+рекорд — `delivery_check.py::main`, **965 строк и cx=211**, то есть половина файла
+в одной функции. Девять из двадцати одной — в `contour_doctor.py`, и это опять
+проверяющий слой. Отсюда порядок резки: `main` режется по фазам, а не по размеру.
+Сложность считается прокси на stdlib-ast, а не ruff `C901` — оракул, который молча
+не запускается без внешнего инструмента, был бы ровно тем классом, который контур
+и ловит; равенства с `C901` числа не обещают, сравнимости между прогонами хватает.
+
+⚠ **Быстрее всего растёт проверяющий слой, и это надо знать, а не удивляться.**
+`contour_doctor.py` за одно развёртывание прошёл 591 → 940 → 1082 строки, три
+ревизии из тринадцати чинили самого доктора, и три дефекта правки `cqg@1.80` были
+дефектами проверки, а не проверяемого. Слой, который судит, имеет собственную
+частоту дефектов — ратчет веса на него распространяется в первую очередь.
+
+**Замер живёт в репозитории канона** (`tests/test_contour_size.py`, снимок
+`tests/contour_size_baseline.txt`), а не в развёрнутом проекте: размер payload —
+свойство канона, в проекте эти файлы не меняются, а если меняются — это адаптация,
+и её объявляет `adapted.json` (CQG §5.5). До этого правила `check_file_length.sh`
+исключал контур из гейта длины со ссылкой на «отдельный замер», которого не
+существовало нигде: обещание без механики — тот же класс, который контур ловит у
+чужого кода.
+
 ### 9.2. Ритуал
 
 1. На handoff — прогони `delivery_metrics.py --write`, дозаполни MANUAL-поля
@@ -1609,6 +1708,21 @@ Hooks и pre-commit живут **на машине агента** и обход�
 
 Строка в constitution после настройки:
 `ci: deployed (github-actions) merge-gate: server|tooling`.
+
+⚠ **Первый прогон: круг, который канон замыкал сам** (`delivery@1.52`). Правило
+выше велит писать `deployed` **по факту зелёного прогона**, а `delivery_check
+--require-ci` стоит внутри того самого прогона (§8.3, джоба `delivery`). Пока
+значение честное (`weak`), прогон красный; пока прогон красный, значение не может
+стать честным. Замерено на восьмом развёртывании: агент вышел из круга флипом в
+том же коммите — законно, но канон об этом молчал, и оба видимых выхода выглядели
+как обход собственного правила.
+
+**Развязка — по смыслу флага:** он защищает не «каждый прогон», а ЗАКРЫТИЕ
+поставки. До `handoff` `weak` при `--require-ci` даёт **warning** с единственным
+названным ходом: поставь `deployed` по факту ЭТОГО прогона, в том же коммите. На
+`handoff` это по-прежнему **ошибка** — иначе развязка была бы снятием требования.
+Реальность (прогон исполняется) старше записи, и спорить с ней значит требовать
+вранья в одну или другую сторону.
 
 ---
 
@@ -2167,7 +2281,8 @@ ask: WebFetch
        на handoff требуется именно `yes`. Занижать класс вместо этого ЗАПРЕЩЕНО. -->
 - **human_ok_plan:** no       <!-- yes (by=…, at=…) | n/a для класса S/M -->
 - **shape-oracles:** <weak|cqg-deployed>
-- **behavior-oracles:** <weak|tests-present>
+- **behavior-oracles:** <weak|tests-present>  <!-- weak — назови, что дёшево и не сделано (§6.5a) -->
+- **artifact_oracle:** <путь к проверке собранного|n/a reason=…>  <!-- §6.5a; только если проект собирает -->
 - **ci-oracles:** <weak|tooling|deployed>  <!-- §10.4; weak на классе L = нужен waiver -->
   <!-- tooling = CI есть, гейт мержа в репо (merge_guard.sh), серверного нет по тарифу -->
 - **worktree:** <../repo-wt-slug|none (S)>
@@ -2715,17 +2830,233 @@ Usage:
 Exit 0 = OK (warnings allowed). Exit 1 = errors.
 """
 
+
 from __future__ import annotations
 
 import argparse
-import fnmatch
-import functools
-import json
-import os
 import re
-import subprocess
 import sys
 from datetime import date
+
+from delivery_base import (ACTIVE, ARCHIVE, DELIVERY, ROOT,
+                           field,
+                           is_placeholder, read, read_json)
+from delivery_decisions import (permission_block)
+from delivery_evidence import check_evidence
+from delivery_journals import check_journals
+from delivery_limits import check_limits
+from delivery_status import check_status_shape
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--require-spec", action="store_true")
+    ap.add_argument("--require-verify", action="store_true")
+    ap.add_argument(
+        "--require-ci",
+        action="store_true",
+        help="fail unless ci-oracles: deployed (§10.4)",
+    )
+    ap.add_argument(
+        "--diff-base",
+        metavar="REF",
+        help="check circuit breakers §3.4 against REF (e.g. origin/main)",
+    )
+    args = ap.parse_args()
+
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not (DELIVERY / "CONSTITUTION.md").is_file():
+        errors.append("missing delivery/CONSTITUTION.md")
+    if not ACTIVE.is_dir():
+        errors.append("missing delivery/active/")
+        for w in warnings:
+            print(f"WARNING: {w}")
+        for e in errors:
+            print(f"ERROR: {e}", file=sys.stderr)
+        print(f"delivery_check: {len(errors)} error(s), {len(warnings)} warning(s)")
+        return 1
+
+    status = read(ACTIVE / "STATUS.md")
+    if not status:
+        # Пустой active/ — ШТАТНОЕ состояние (§2.3a): предыдущая поставка
+        # заархивирована, следующая не начата. Ошибкой это быть не может, иначе
+        # контур красный между поставками — причём §13.1 сам загоняет проект в
+        # это состояние, требуя архивации на handoff (полевая находка F12).
+        # Проверки уровня архива ниже продолжают работать: именно в idle всплывает
+        # просроченное наблюдение.
+        warnings.append(
+            "idle: нет delivery/active/STATUS.md — активной поставки нет (§2.3a). "
+            "Начинаешь работу? Создай STATUS по шаблону A.2"
+        )
+    else:
+        ctx = check_status_shape(status, args, errors, warnings)
+        check_evidence(status, args, errors, warnings, ctx)
+        check_journals(status, args, errors, warnings, ctx)
+        check_limits(status, args, errors, warnings, ctx)
+
+    # --- §2.2a: архив без индекса не читается, а отставший индекс врёт о полноте.
+    # Обе проверки не зависят от фазы и от наличия diff-base: они про сам архив.
+    if ARCHIVE.is_dir():
+        shipments = sorted(d.name for d in ARCHIVE.iterdir() if d.is_dir())
+        idx_text = read(ARCHIVE / "INDEX.md")
+        if shipments and not idx_text:
+            errors.append(
+                f"delivery/archive/ содержит {len(shipments)} поставок, а "
+                "INDEX.md нет (§2.2a / A.13) — неиндексированный архив никем "
+                "не читается"
+            )
+        elif idx_text:
+            unlisted = [s for s in shipments if s not in idx_text]
+            if unlisted:
+                errors.append(
+                    "archive/INDEX.md отстал от архива: не упомянуты "
+                    f"{', '.join(unlisted)} (§2.2a) — индекс, который врёт о "
+                    "своей полноте, хуже отсутствующего"
+                )
+
+        # --- §13.1: просроченное наблюдение. Лаг в одну поставку — проверка
+        # срабатывает тогда, когда человек всё равно смотрит в PR. Дыра названа
+        # в каноне: если следующей поставки не будет, никто не проверит; на это
+        # тот же периодический прогон, что okf_sync_gate --check-stale.
+        today = date.today().isoformat()
+        for name in shipments:
+            arch_status = read(ARCHIVE / name / "STATUS.md")
+            if not arch_status:
+                continue
+            until = field(arch_status, "observe_until")
+            if is_placeholder(until):
+                continue
+            due = re.match(r"(\d{4}-\d{2}-\d{2})", until)
+            if not due or due.group(1) > today:
+                continue
+            if not (ARCHIVE / name / "observed.md").is_file():
+                errors.append(
+                    f"наблюдение просрочено: {name} — observe_until={due.group(1)} "
+                    f"(сегодня {today}), а observed.md нет (§13.1 / A.17). "
+                    "Проверь сигнал в проде и закрой наблюдение, либо сдвинь срок "
+                    "с причиной"
+                )
+
+    if args.require_spec and not (ACTIVE / "spec.md").is_file():
+        errors.append("--require-spec: active/spec.md missing")
+    if args.require_verify and not (ACTIVE / "verify-report.md").is_file():
+        errors.append("--require-verify: verify-report.md missing")
+
+    # --- §4.5: права на действия. Объявлено (CONSTITUTION) ↔ подключено (настройки).
+    settings_path = ROOT / ".claude" / "settings.json"
+    declared = permission_block(read(DELIVERY / "CONSTITUTION.md"))
+    settings, s_err = read_json(settings_path)
+    if s_err:
+        errors.append(
+            f".claude/settings.json: не парсится ({s_err}) — права агента "
+            "не проверяемы (§4.5)"
+        )
+    perms = settings.get("permissions") or {}
+    wired = {k: list(perms.get(k) or []) for k in ("deny", "ask")}
+
+    if declared is None:
+        msg = (
+            "CONSTITUTION.md: нет блока `agent-permissions` (§4.5 / A.1) — контур "
+            "контролирует выход и молчит про действия агента"
+        )
+        if any(wired.values()):
+            errors.append(
+                msg + "; при этом deny/ask в настройках заданы, то есть границы "
+                "действий живут без ревью"
+            )
+        else:
+            warnings.append(msg)
+    elif not settings_path.is_file():
+        errors.append(
+            "CONSTITUTION.md объявляет agent-permissions, а .claude/settings.json "
+            "нет (§4.5) — объявленный неработающий запрет хуже отсутствующего: "
+            "он выглядит как контроль"
+        )
+    elif not s_err:
+        for bucket in ("deny", "ask"):
+            only_canon = [r for r in declared[bucket] if r not in wired[bucket]]
+            only_wired = [r for r in wired[bucket] if r not in declared[bucket]]
+            if only_canon:
+                errors.append(
+                    f"permissions.{bucket}: объявлено в CONSTITUTION, нет в "
+                    f".claude/settings.json: {', '.join(only_canon)} (§4.5)"
+                )
+            if only_wired:
+                errors.append(
+                    f"permissions.{bucket}: есть в .claude/settings.json, нет в "
+                    f"CONSTITUTION: {', '.join(only_wired)} (§4.5) — границу "
+                    "действий двигали молча"
+                )
+
+    # --- §4.6: перевод из HITL в автономию обязан назвать существующий оракул.
+    # Объявленная песочница без скрипта — снятая проверка с видом усиления;
+    # класс тот же, что «скрипт лежал в репозитории, никто не вызывал» (§3.1a).
+    for line in (declared or {}).get("sandbox", []):
+        m_or = re.search(r"oracle=([^\s]+)", line)
+        if not m_or:
+            errors.append(
+                f"sandbox без oracle=: {line[:60]} (§4.6) — перевод из HITL "
+                "в автономию обязан назвать оракул, заменивший человека"
+            )
+        elif not (ROOT / m_or.group(1)).exists():
+            errors.append(
+                f"sandbox: oracle={m_or.group(1)} не существует (§4.6) — "
+                "объявленная песочница без скрипта это снятая проверка "
+                "с видом усиления"
+            )
+
+    # Ратчет прав: длинный allow при пустом deny = права росли только вверх.
+    # Считаем и локальные настройки — именно там оседают клики «yes».
+    local, _ = read_json(ROOT / ".claude" / "settings.local.json")
+    n_allow = len(perms.get("allow") or []) + len(
+        (local.get("permissions") or {}).get("allow") or []
+    )
+    if n_allow >= 50 and not wired["deny"]:
+        warnings.append(
+            f"permissions: {n_allow} правил в allow и ни одного в deny (§4.5) — "
+            "права накапливались кликами «yes» и ни разу не сужались"
+        )
+
+    if (ROOT / "CODE_QUALITY_GATES.md").is_file():
+        cons = read(DELIVERY / "CONSTITUTION.md")
+        if "CODE_QUALITY_GATES" not in cons:
+            warnings.append("CQG present but CONSTITUTION.md has no pointer")
+    if (ROOT / "OKF_KNOWLEDGE_BUNDLE.md").is_file() or (ROOT / "knowledge").is_dir():
+        cons = read(DELIVERY / "CONSTITUTION.md")
+        if "OKF" not in cons and "knowledge/" not in cons:
+            warnings.append("OKF/knowledge present but CONSTITUTION.md has no pointer")
+
+    for w in warnings:
+        print(f"WARNING: {w}")
+    for e in errors:
+        print(f"ERROR: {e}", file=sys.stderr)
+    print(f"delivery_check: {len(errors)} error(s), {len(warnings)} warning(s)")
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+# Приложение B1 — `scripts/delivery_base.py`
+
+```python
+#!/usr/bin/env python3
+"""Общее для всех частей фазового гейта: пути, чтение, разбор полей STATUS.
+
+`delivery_check.py` разрезан на модули (`delivery@1.53`): 1969 строк при планке
+300 (§9.1a п.5), из них 986 — одна функция `main`. Здесь то, что нужно ВСЕМ
+частям, и только оно; соседей этот модуль не импортирует, поэтому цикла быть не
+может по построению.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -2811,129 +3142,6 @@ def git(*args: str) -> str:
     return out.stdout if out.returncode == 0 else ""
 
 
-def signature_verdict(name: str, raw: str, klass: str, phase: str) -> tuple[list[str], list[str]]:
-    """§2.2b для ЛЮБОГО поля-подписи: `yes` / `deferred (reason=…)` / нет.
-
-    Правило одно на класс полей, а не на одно имя. Дыру «человека нет, и канон про
-    это молчит» закрыли для `human_ok_spec` — и она вернулась в `human_ok_plan`,
-    потому что там стояла отдельная ветка с той же логикой минус `deferred`. Пока
-    смысл один, а кода два, третье поле повторит историю.
-
-    `deferred` не ослабляет проверку, а переносит её на мерж: до converge включительно
-    работа идёт под запись долга, на handoff требуется `yes`.
-    """
-    value = raw.lower()
-    errs: list[str] = []
-    warns: list[str] = []
-    if value.startswith("deferred"):
-        if phase == "handoff":
-            errs.append(
-                f"class {klass} at handoff: {name} всё ещё deferred (§2.2b) — долг по "
-                "подписи закрывается ДО мержа: покажи человеку и поставь yes (by=… at=…)"
-            )
-        elif "reason=" not in value:
-            errs.append(
-                f"{name}: deferred без reason= (§2.2b) — «человек недоступен» надо "
-                "назвать, иначе это тихий обход"
-            )
-        else:
-            warns.append(
-                f"class {klass}: {name} deferred — ещё никем не подписано (§2.2b); "
-                "долг закрывается до handoff"
-            )
-    elif not (value.startswith("yes") or "human:" in value):
-        # Подпись — это `yes (by=human:…)` ИЛИ прямое `human:<имя> at=…`: у полей
-        # разная форма (`human_ok_spec` против `asserts_reviewed_by`), а смысл один.
-        # Проверять только префикс `yes` значило бы краснеть на канонной форме
-        # второго поля — ложное срабатывание, которое §4.3b называет дефектом гейта.
-        errs.append(
-            f"class {klass} at phase={phase}: {name} без подписи человека "
-            "(stop-gate §3.3; `yes (by=human:…)` или `human:<имя> at=…`; "
-            "человека нет — deferred (reason=…), §2.2b)"
-        )
-    return errs, warns
-
-
-def diff_stats(base: str) -> tuple[int, int, int, int, list[str]] | None:
-    """(files, added, deleted, excluded, paths) для base..HEAD; None если ref недоступен.
-
-    `paths` — только код: процессные артефакты отфильтрованы тем же
-    BREAKER_EXCLUDE, потому что оба потребителя (breaker'ы §3.4 и сопоставление
-    уроков §2.2a) спрашивают про изменения в коде, а не в его описании.
-    """
-    if not git("rev-parse", "--verify", "--quiet", base).strip():
-        return None
-    merge_base = git("merge-base", base, "HEAD").strip() or base
-    files = added = deleted = excluded = 0
-    paths: list[str] = []
-    for line in git("diff", "--numstat", f"{merge_base}..HEAD").splitlines():
-        parts = line.split("\t")
-        if len(parts) != 3:
-            continue
-        a, d, path = parts
-        if path.startswith(BREAKER_EXCLUDE):
-            excluded += 1
-            continue
-        files += 1
-        paths.append(path)
-        added += int(a) if a.isdigit() else 0      # "-" у бинарников
-        deleted += int(d) if d.isdigit() else 0
-    return files, added, deleted, excluded, paths
-
-
-def archive_index_rows(text: str) -> list[tuple[list[str], list[str]]]:
-    """[(префиксы путей, id уроков)] из таблицы A.13.
-
-    Разбор построчный по markdown-таблице: строка шапки и разделитель отсеиваются
-    сами — в них нет backtick'ов, а значит и путей. Формат жёсток ровно в двух
-    колонках (пути в backticks, id вида L<N>), чтобы правило §2.2a было
-    исполнимым, а не пожеланием.
-    """
-    rows: list[tuple[list[str], list[str]]] = []
-    for line in text.splitlines():
-        if not line.lstrip().startswith("|"):
-            continue
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) < 4:
-            continue
-        prefixes = [p for p in re.findall(r"`([^`]+)`", cells[2]) if "/" in p]
-        if prefixes:
-            rows.append((prefixes, re.findall(r"\bL\d+\b", cells[3])))
-    return rows
-
-
-def applicable_lessons(index_text: str, changed: list[str]) -> list[str]:
-    """id уроков из строк, чьи пути пересекаются с диффом (порядок сохранён)."""
-    out: list[str] = []
-    for prefixes, ids in archive_index_rows(index_text):
-        if any(c.startswith(p) for p in prefixes for c in changed):
-            out.extend(ids)
-    return list(dict.fromkeys(out))
-
-
-def permission_block(constitution: str) -> dict[str, list[str]] | None:
-    """Блок `agent-permissions` из CONSTITUTION (§4.5); None = блока нет.
-
-    `allow` не разбираем сознательно: сверять накопительный список конкретных
-    команд = постоянное ложное срабатывание (§4.3b, случай 1). `sandbox` (§4.6) —
-    переводы из HITL в автономию, они не сверяются с настройками, а проверяются на
-    существование оракула.
-    """
-    m = re.search(r"```(?:text)?\n[ \t]*agent-permissions[ \t]*\n(.*?)```", constitution, re.S)
-    if not m:
-        return None
-    out: dict[str, list[str]] = {"deny": [], "ask": [], "sandbox": []}
-    for raw in m.group(1).splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        # partition по ПЕРВОМУ двоеточию: сами правила его содержат
-        # ("deny: Bash(git push --force:*)").
-        key, _, rule = line.partition(":")
-        if key.strip() in out and rule.strip():
-            out[key.strip()].append(rule.strip())
-    return out
-
 
 # Незаполненный шаблон не должен проходить проверку — тот же урок, что с STATUS
 # в v1.5 («class: <S|M|L>» читался как class=S). Плейсхолдер здесь — угловые
@@ -2969,109 +3177,6 @@ def list_entries(text: str) -> list[str]:
             entries[-1] += " " + line
     return entries
 
-
-def decision_lines(text: str) -> tuple[list[str], list[str]]:
-    """(валидные, битые) решения §12.2.
-
-    Кандидат — только list-item: проза и заголовки в файле не проверяются.
-    Валидная запись называет альтернативу И причину; без альтернативы это отчёт о
-    сделанном, по которому аудит провести нельзя. Записи шаблона не попадают ни в
-    один список: они не решения, но и ругаться на них как на битый формат нельзя.
-    """
-    ok: list[str] = []
-    bad: list[str] = []
-    for line in list_entries(text):
-        if unfilled(line):
-            continue
-        low = line.lower()
-        has_alt = "вместо" in low or "instead of" in low
-        has_why = "потому что" in low or "because" in low
-        (ok if (has_alt and has_why) else bad).append(line)
-    return ok, bad
-
-
-# Цена решения, а не предпочтение. «Выбрал A вместо B — потому что дешевле» формат
-# §12.2 проходит, но **неопровержимо**: проверить это нельзя ни человеком, ни машиной,
-# значит запись не даёт аудита, ради которого она и ведётся. «B потребовал бы миграции
-# 40k строк» человек проверяет за секунды.
-#
-# ⚠ Признак — НЕ список глаголов. Первая версия (delivery@1.38) держала список
-# «требует / ломает / зависит / переписать / миграц…», и он ошибался в обе стороны:
-# обходился дописыванием слова, а хорошую запись отвергал. На dogfooding'е (lab-10)
-# он пометил «без цены» решение, где следствие названо предельно конкретно — «длина
-# съедала легитимное `First one. Second one?`», — просто глагола «съедала» в списке
-# не было. Ложное срабатывание на своей же проверке в тот же день, когда она введена.
-#
-# Признак — СОЮЗ трёх, а не замена. Первая попытка правки была «только цитата из
-# диффа», и она неверна по построению: **дифф содержит то, что выбрали, а не то, что
-# отвергли**. Цена отвергнутого варианта естественно ссылается на то, чего в коде
-# НЕТ («B требует внешнего сервиса, которого у нас нет», «B потребовал бы миграции»),
-# и такая запись — образцовая, а проверка её отвергала. Поймал существующий тест.
-#
-# Поэтому: число ИЛИ цитата из диффа ИЛИ маркер следствия. Союз даёт наименьшую долю
-# ложных срабатываний, и «дешевле» им всё равно не удовлетворить. По нашему критерию
-# «кто здесь может поймать ложь» ответ — человек за секунды, значит задача проверки
-# не принуждать, а придать записи форму, в которой ложь видна. Отсюда предупреждение,
-# не ошибка, и широкий признак вместо узкого.
-COST_MARKERS = (
-    "требует", "требовал", "ломает", "сломал", "съедал", "съест", "зависит",
-    "недоступ", "не поддерж", "переписать", "миграц", "потерял", "нет доступа",
-    "запрещ", "нет в", "пришлось бы", "потребовал",
-)
-
-DECISION_STOPWORDS = frozenset(
-    "test tests main init app src lib code file data self none true false "
-    "type name path text line list dict json yaml toml".split()
-)
-
-
-def diff_identifiers(paths: list[str]) -> set[str]:
-    """Токены, которые есть в диффе: базовые имена файлов + идентификаторы кода.
-
-    Берём и пути, и содержимое изменённых строк: решение может ссылаться и на файл
-    («вынес в sentences.py»), и на функцию («`_cut_points` считает границы»).
-    """
-    ids: set[str] = set()
-    for path in paths:
-        for part in re.split(r"[/\\.]", path):
-            if len(part) >= 4 and part.lower() not in DECISION_STOPWORDS:
-                ids.add(part.lower())
-    body = git("diff", "--unified=0", "HEAD~1..HEAD", "--", *paths) if paths else ""
-    for tok in re.findall(r"[A-Za-z_][A-Za-z0-9_]{3,}", body):
-        low = tok.lower()
-        if low not in DECISION_STOPWORDS:
-            ids.add(low)
-    return ids
-
-
-def decisions_without_cost(text: str, diff_ids: set[str] | None = None) -> list[str]:
-    """Решения, где цена не названа ни числом, ни ссылкой в код.
-
-    `diff_ids=None` — дифф недоступен (нет ref'а, не git-репозиторий). Тогда
-    судить нечем, и проверка молчит: предупреждение по неверной причине хуже его
-    отсутствия — оно учит игнорировать этот гейт.
-    """
-    if diff_ids is None:
-        return []
-    out = []
-    for line in decision_lines(text)[0]:
-        # ⚠ Дата записи выкидывается ДО поиска числа. Формат §12.2 — «- <дата> ·
-        # решение», поэтому цифры есть в КАЖДОЙ валидной записи, и наивный поиск
-        # числа не срабатывал бы никогда. Третий случай этого класса за сессию:
-        # хвост версии читался как количество, а цифра из id примера `A1`
-        # закрывала проверку `observability: 2+`. Число надо искать там, где оно
-        # что-то значит.
-        body = re.sub(r"^\s*[-*]?\s*\d{4}-\d{2}-\d{2}\s*[·:—-]?\s*", "", line)
-        if re.search(r"(?<![A-Za-z])\d", body):
-            continue  # число — самая проверяемая форма цены
-        low = body.lower()
-        if any(m in low for m in COST_MARKERS):
-            continue  # названо следствие
-        words = {w.lower() for w in re.findall(r"[A-Za-zА-Яа-яЁё_][\w-]{3,}", body)}
-        if words & diff_ids:
-            continue  # цитирует код — такое не напишешь, не открыв дифф
-        out.append(line)
-    return out
 
 
 def read_json(path: Path) -> tuple[dict, str]:
@@ -3159,6 +3264,315 @@ def verdict_blocks(text: str) -> list[str]:
         blocks.append("\n".join(cur))
     return [b for b in blocks if VERDICT_RE.search(b) and not unfilled(b)]
 
+
+
+
+@dataclass(frozen=True)
+class ActiveCtx:
+    """Что первый раздел вычислил, а следующие читают (`delivery@1.53`).
+
+    Восемь значений — вся связь между разделами активной поставки; внутри `main`
+    их роль играли полсотни локальных переменных, и именно поэтому функция не
+    резалась. Список получен замером: пересечение «присвоено раньше — прочитано
+    позже» по AST, а не на глаз.
+    """
+
+    phase: str
+    klass: str
+    spec: Path
+    plan: Path
+    tasks: Path
+    verify: Path
+    eval_smoke: Path
+    implement_like: set[str]
+```
+
+# Приложение B2 — `scripts/delivery_diff.py`
+
+```python
+#!/usr/bin/env python3
+"""Что изменилось: дифф, идентификаторы правки, уроки из архива.
+
+Часть `delivery_check.py` (`delivery@1.53`). Ответ на вопрос «на что вообще
+смотреть»: объём диффа, какие имена в нём появились и какие строки архива к нему
+применимы. Суждения здесь нет — оно в разделах, которые этим пользуются.
+"""
+
+from __future__ import annotations
+
+import re
+
+from delivery_base import BREAKER_EXCLUDE, git
+from delivery_decisions import DECISION_STOPWORDS
+
+def diff_stats(base: str) -> tuple[int, int, int, int, list[str]] | None:
+    """(files, added, deleted, excluded, paths) для base..HEAD; None если ref недоступен.
+
+    `paths` — только код: процессные артефакты отфильтрованы тем же
+    BREAKER_EXCLUDE, потому что оба потребителя (breaker'ы §3.4 и сопоставление
+    уроков §2.2a) спрашивают про изменения в коде, а не в его описании.
+    """
+    if not git("rev-parse", "--verify", "--quiet", base).strip():
+        return None
+    merge_base = git("merge-base", base, "HEAD").strip() or base
+    files = added = deleted = excluded = 0
+    paths: list[str] = []
+    for line in git("diff", "--numstat", f"{merge_base}..HEAD").splitlines():
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        a, d, path = parts
+        if path.startswith(BREAKER_EXCLUDE):
+            excluded += 1
+            continue
+        files += 1
+        paths.append(path)
+        added += int(a) if a.isdigit() else 0      # "-" у бинарников
+        deleted += int(d) if d.isdigit() else 0
+    return files, added, deleted, excluded, paths
+
+
+def archive_index_rows(text: str) -> list[tuple[list[str], list[str]]]:
+    """[(префиксы путей, id уроков)] из таблицы A.13.
+
+    Разбор построчный по markdown-таблице: строка шапки и разделитель отсеиваются
+    сами — в них нет backtick'ов, а значит и путей. Формат жёсток ровно в двух
+    колонках (пути в backticks, id вида L<N>), чтобы правило §2.2a было
+    исполнимым, а не пожеланием.
+    """
+    rows: list[tuple[list[str], list[str]]] = []
+    for line in text.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 4:
+            continue
+        prefixes = [p for p in re.findall(r"`([^`]+)`", cells[2]) if "/" in p]
+        if prefixes:
+            rows.append((prefixes, re.findall(r"\bL\d+\b", cells[3])))
+    return rows
+
+
+def applicable_lessons(index_text: str, changed: list[str]) -> list[str]:
+    """id уроков из строк, чьи пути пересекаются с диффом (порядок сохранён)."""
+    out: list[str] = []
+    for prefixes, ids in archive_index_rows(index_text):
+        if any(c.startswith(p) for p in prefixes for c in changed):
+            out.extend(ids)
+    return list(dict.fromkeys(out))
+
+
+
+def diff_identifiers(paths: list[str]) -> set[str]:
+    """Токены, которые есть в диффе: базовые имена файлов + идентификаторы кода.
+
+    Берём и пути, и содержимое изменённых строк: решение может ссылаться и на файл
+    («вынес в sentences.py»), и на функцию («`_cut_points` считает границы»).
+    """
+    ids: set[str] = set()
+    for path in paths:
+        for part in re.split(r"[/\\.]", path):
+            if len(part) >= 4 and part.lower() not in DECISION_STOPWORDS:
+                ids.add(part.lower())
+    body = git("diff", "--unified=0", "HEAD~1..HEAD", "--", *paths) if paths else ""
+    for tok in re.findall(r"[A-Za-z_][A-Za-z0-9_]{3,}", body):
+        low = tok.lower()
+        if low not in DECISION_STOPWORDS:
+            ids.add(low)
+    return ids
+
+
+```
+
+# Приложение B3 — `scripts/delivery_decisions.py`
+
+```python
+#!/usr/bin/env python3
+"""Решения и подписи: кто подтвердил, чем заплатили, что объявлено в правах.
+
+Часть `delivery_check.py` (`delivery@1.53`). Собрано по вопросу «что человек
+решил и записал», а не по типу кода: подпись под спекой, блок прав в
+CONSTITUTION и строки `decisions.md` — одна тема, и правила у них общие
+(альтернатива и причина обязательны, шаблон решением не считается).
+"""
+
+from __future__ import annotations
+
+import re
+
+from delivery_base import list_entries, unfilled
+
+def signature_verdict(name: str, raw: str, klass: str, phase: str) -> tuple[list[str], list[str]]:
+    """§2.2b для ЛЮБОГО поля-подписи: `yes` / `deferred (reason=…)` / нет.
+
+    Правило одно на класс полей, а не на одно имя. Дыру «человека нет, и канон про
+    это молчит» закрыли для `human_ok_spec` — и она вернулась в `human_ok_plan`,
+    потому что там стояла отдельная ветка с той же логикой минус `deferred`. Пока
+    смысл один, а кода два, третье поле повторит историю.
+
+    `deferred` не ослабляет проверку, а переносит её на мерж: до converge включительно
+    работа идёт под запись долга, на handoff требуется `yes`.
+    """
+    value = raw.lower()
+    errs: list[str] = []
+    warns: list[str] = []
+    if value.startswith("deferred"):
+        if phase == "handoff":
+            errs.append(
+                f"class {klass} at handoff: {name} всё ещё deferred (§2.2b) — долг по "
+                "подписи закрывается ДО мержа: покажи человеку и поставь yes (by=… at=…)"
+            )
+        elif "reason=" not in value:
+            errs.append(
+                f"{name}: deferred без reason= (§2.2b) — «человек недоступен» надо "
+                "назвать, иначе это тихий обход"
+            )
+        else:
+            warns.append(
+                f"class {klass}: {name} deferred — ещё никем не подписано (§2.2b); "
+                "долг закрывается до handoff"
+            )
+    elif not (value.startswith("yes") or "human:" in value):
+        # Подпись — это `yes (by=human:…)` ИЛИ прямое `human:<имя> at=…`: у полей
+        # разная форма (`human_ok_spec` против `asserts_reviewed_by`), а смысл один.
+        # Проверять только префикс `yes` значило бы краснеть на канонной форме
+        # второго поля — ложное срабатывание, которое §4.3b называет дефектом гейта.
+        errs.append(
+            f"class {klass} at phase={phase}: {name} без подписи человека "
+            "(stop-gate §3.3; `yes (by=human:…)` или `human:<имя> at=…`; "
+            "человека нет — deferred (reason=…), §2.2b)"
+        )
+    return errs, warns
+
+
+
+def permission_block(constitution: str) -> dict[str, list[str]] | None:
+    """Блок `agent-permissions` из CONSTITUTION (§4.5); None = блока нет.
+
+    `allow` не разбираем сознательно: сверять накопительный список конкретных
+    команд = постоянное ложное срабатывание (§4.3b, случай 1). `sandbox` (§4.6) —
+    переводы из HITL в автономию, они не сверяются с настройками, а проверяются на
+    существование оракула.
+    """
+    m = re.search(r"```(?:text)?\n[ \t]*agent-permissions[ \t]*\n(.*?)```", constitution, re.S)
+    if not m:
+        return None
+    out: dict[str, list[str]] = {"deny": [], "ask": [], "sandbox": []}
+    for raw in m.group(1).splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        # partition по ПЕРВОМУ двоеточию: сами правила его содержат
+        # ("deny: Bash(git push --force:*)").
+        key, _, rule = line.partition(":")
+        if key.strip() in out and rule.strip():
+            out[key.strip()].append(rule.strip())
+    return out
+
+
+def decision_lines(text: str) -> tuple[list[str], list[str]]:
+    """(валидные, битые) решения §12.2.
+
+    Кандидат — только list-item: проза и заголовки в файле не проверяются.
+    Валидная запись называет альтернативу И причину; без альтернативы это отчёт о
+    сделанном, по которому аудит провести нельзя. Записи шаблона не попадают ни в
+    один список: они не решения, но и ругаться на них как на битый формат нельзя.
+    """
+    ok: list[str] = []
+    bad: list[str] = []
+    for line in list_entries(text):
+        if unfilled(line):
+            continue
+        low = line.lower()
+        has_alt = "вместо" in low or "instead of" in low
+        has_why = "потому что" in low or "because" in low
+        (ok if (has_alt and has_why) else bad).append(line)
+    return ok, bad
+
+
+# Цена решения, а не предпочтение. «Выбрал A вместо B — потому что дешевле» формат
+# §12.2 проходит, но **неопровержимо**: проверить это нельзя ни человеком, ни машиной,
+# значит запись не даёт аудита, ради которого она и ведётся. «B потребовал бы миграции
+# 40k строк» человек проверяет за секунды.
+#
+# ⚠ Признак — НЕ список глаголов. Первая версия (delivery@1.38) держала список
+# «требует / ломает / зависит / переписать / миграц…», и он ошибался в обе стороны:
+# обходился дописыванием слова, а хорошую запись отвергал. На dogfooding'е (lab-10)
+# он пометил «без цены» решение, где следствие названо предельно конкретно — «длина
+# съедала легитимное `First one. Second one?`», — просто глагола «съедала» в списке
+# не было. Ложное срабатывание на своей же проверке в тот же день, когда она введена.
+#
+# Признак — СОЮЗ трёх, а не замена. Первая попытка правки была «только цитата из
+# диффа», и она неверна по построению: **дифф содержит то, что выбрали, а не то, что
+# отвергли**. Цена отвергнутого варианта естественно ссылается на то, чего в коде
+# НЕТ («B требует внешнего сервиса, которого у нас нет», «B потребовал бы миграции»),
+# и такая запись — образцовая, а проверка её отвергала. Поймал существующий тест.
+#
+# Поэтому: число ИЛИ цитата из диффа ИЛИ маркер следствия. Союз даёт наименьшую долю
+# ложных срабатываний, и «дешевле» им всё равно не удовлетворить. По нашему критерию
+# «кто здесь может поймать ложь» ответ — человек за секунды, значит задача проверки
+# не принуждать, а придать записи форму, в которой ложь видна. Отсюда предупреждение,
+# не ошибка, и широкий признак вместо узкого.
+COST_MARKERS = (
+    "требует", "требовал", "ломает", "сломал", "съедал", "съест", "зависит",
+    "недоступ", "не поддерж", "переписать", "миграц", "потерял", "нет доступа",
+    "запрещ", "нет в", "пришлось бы", "потребовал",
+)
+
+DECISION_STOPWORDS = frozenset(
+    "test tests main init app src lib code file data self none true false "
+    "type name path text line list dict json yaml toml".split()
+)
+
+
+
+def decisions_without_cost(text: str, diff_ids: set[str] | None = None) -> list[str]:
+    """Решения, где цена не названа ни числом, ни ссылкой в код.
+
+    `diff_ids=None` — дифф недоступен (нет ref'а, не git-репозиторий). Тогда
+    судить нечем, и проверка молчит: предупреждение по неверной причине хуже его
+    отсутствия — оно учит игнорировать этот гейт.
+    """
+    if diff_ids is None:
+        return []
+    out = []
+    for line in decision_lines(text)[0]:
+        # ⚠ Дата записи выкидывается ДО поиска числа. Формат §12.2 — «- <дата> ·
+        # решение», поэтому цифры есть в КАЖДОЙ валидной записи, и наивный поиск
+        # числа не срабатывал бы никогда. Третий случай этого класса за сессию:
+        # хвост версии читался как количество, а цифра из id примера `A1`
+        # закрывала проверку `observability: 2+`. Число надо искать там, где оно
+        # что-то значит.
+        body = re.sub(r"^\s*[-*]?\s*\d{4}-\d{2}-\d{2}\s*[·:—-]?\s*", "", line)
+        if re.search(r"(?<![A-Za-z])\d", body):
+            continue  # число — самая проверяемая форма цены
+        low = body.lower()
+        if any(m in low for m in COST_MARKERS):
+            continue  # названо следствие
+        words = {w.lower() for w in re.findall(r"[A-Za-zА-Яа-яЁё_][\w-]{3,}", body)}
+        if words & diff_ids:
+            continue  # цитирует код — такое не напишешь, не открыв дифф
+        out.append(line)
+    return out
+
+
+```
+
+# Приложение B4 — `scripts/delivery_risk.py`
+
+```python
+#!/usr/bin/env python3
+"""Маячки на рисковый дифф (§12.5): что обязано быть прочитано человеком.
+
+Часть `delivery_check.py` (`delivery@1.53`).
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+from delivery_base import git
 
 # --- Маячки на рисковый дифф (§12.5) ----------------------------------------
 # Есть класс дефектов, у которых НЕТ оракула: архитектура выбрана неудачно, функция
@@ -3320,6 +3734,25 @@ def risk_review_gaps(
     return gaps
 
 
+```
+
+# Приложение B5 — `scripts/delivery_runtime.py`
+
+```python
+#!/usr/bin/env python3
+"""§12.6: путь, который проверяется только исполнением.
+
+Часть `delivery_check.py` (`delivery@1.53`). Класс отказов, невидимый всем
+статическим оракулам: платформа отвечает падением процесса, а не кодом ошибки.
+"""
+
+from __future__ import annotations
+
+import fnmatch
+import re
+
+from delivery_base import DEFAULT_BREAKERS, field, is_placeholder
+
 # --- §12.6: путь, который проверяется только исполнением ---------------------
 # Есть класс отказов, невидимый ВСЕМ статическим оракулам и необрабатываемый в
 # рантайме: платформа отвечает на нарушение политики смертью процесса, а не кодом
@@ -3458,6 +3891,26 @@ def runtime_proof_gaps(report: str, touched: set[str]) -> list[str]:
         )
     return gaps
 
+
+```
+
+# Приложение B6 — `scripts/delivery_history.py`
+
+```python
+#!/usr/bin/env python3
+"""История: откуда взялось ожидание (§3.1d) и тает ли долг во времени (§3.5).
+
+Часть `delivery_check.py` (`delivery@1.53`). Обе проверки смотрят не в текущее
+дерево, а в git-историю — поэтому и живут вместе.
+"""
+
+from __future__ import annotations
+
+import functools
+import os
+import re
+
+from delivery_base import ARCHIVE, ROOT, git
 
 # --- Происхождение ожидания (§3.1d) -----------------------------------------
 # §3.1d говорит: «примеры пишутся на фазе specify, ДО plan и до кода. Порядок
@@ -3684,975 +4137,1044 @@ def debt_is_not_frozen() -> list[str]:
     return errors
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--require-spec", action="store_true")
-    ap.add_argument("--require-verify", action="store_true")
-    ap.add_argument(
-        "--require-ci",
-        action="store_true",
-        help="fail unless ci-oracles: deployed (§10.4)",
+```
+
+# Приложение B7 — `scripts/delivery_status.py`
+
+```python
+#!/usr/bin/env python3
+"""Форма поставки: фаза, класс, обязательные артефакты фазы.
+
+Часть `delivery_check.py` (`delivery@1.53`) — гейт разрезан по планке 300 строк
+(§9.1a п.5), из 1969 строк 986 приходились на одну функцию `main`. Здесь первый
+раздел: он же вычисляет то, что читают следующие, и отдаёт это `ActiveCtx` —
+восемь значений, а не полсотни локальных переменных, как было внутри `main`.
+"""
+
+from __future__ import annotations
+
+import re
+
+from delivery_base import (ACTIVE, ActiveCtx, field,
+                           is_placeholder, read)
+from delivery_decisions import signature_verdict
+from delivery_diff import diff_identifiers, diff_stats
+from delivery_risk import risk_review_gaps, risky_classes
+from delivery_runtime import (breaker_value, runtime_proof_gaps,
+                              runtime_surfaces, runtime_touched)
+
+def check_status_shape(status: str, args, errors: list[str], warnings: list[str]) -> ActiveCtx:
+    """Фаза, класс и артефакты фазы. → контекст для остальных разделов."""
+    allowed = {
+        "specify",
+        "plan",
+        "tasks",
+        "implement",
+        "verify",
+        "converge",
+        "handoff",
+    }
+    implement_like = {"implement", "verify", "converge", "handoff"}
+
+    raw_phase = field(status, "phase")
+    raw_class = field(status, "class")
+
+    phase_m = (
+        re.match(r"(?i)^([a-z_]+)", raw_phase)
+        if not is_placeholder(raw_phase)
+        else None
     )
-    ap.add_argument(
-        "--diff-base",
-        metavar="REF",
-        help="check circuit breakers §3.4 against REF (e.g. origin/main)",
+    class_m = (
+        re.match(r"(?i)^([SML])\b", raw_class)
+        if not is_placeholder(raw_class)
+        else None
     )
-    args = ap.parse_args()
+    phase = phase_m.group(1).lower() if phase_m else ""
+    klass = class_m.group(1).upper() if class_m else ""
 
-    errors: list[str] = []
-    warnings: list[str] = []
-
-    if not (DELIVERY / "CONSTITUTION.md").is_file():
-        errors.append("missing delivery/CONSTITUTION.md")
-    if not ACTIVE.is_dir():
-        errors.append("missing delivery/active/")
-        for w in warnings:
-            print(f"WARNING: {w}")
-        for e in errors:
-            print(f"ERROR: {e}", file=sys.stderr)
-        print(f"delivery_check: {len(errors)} error(s), {len(warnings)} warning(s)")
-        return 1
-
-    status = read(ACTIVE / "STATUS.md")
-    if not status:
-        # Пустой active/ — ШТАТНОЕ состояние (§2.3a): предыдущая поставка
-        # заархивирована, следующая не начата. Ошибкой это быть не может, иначе
-        # контур красный между поставками — причём §13.1 сам загоняет проект в
-        # это состояние, требуя архивации на handoff (полевая находка F12).
-        # Проверки уровня архива ниже продолжают работать: именно в idle всплывает
-        # просроченное наблюдение.
-        warnings.append(
-            "idle: нет delivery/active/STATUS.md — активной поставки нет (§2.3a). "
-            "Начинаешь работу? Создай STATUS по шаблону A.2"
-        )
-    else:
-        allowed = {
-            "specify",
-            "plan",
-            "tasks",
-            "implement",
-            "verify",
-            "converge",
-            "handoff",
-        }
-        implement_like = {"implement", "verify", "converge", "handoff"}
-
-        raw_phase = field(status, "phase")
-        raw_class = field(status, "class")
-
-        phase_m = (
-            re.match(r"(?i)^([a-z_]+)", raw_phase)
-            if not is_placeholder(raw_phase)
-            else None
-        )
-        class_m = (
-            re.match(r"(?i)^([SML])\b", raw_class)
-            if not is_placeholder(raw_class)
-            else None
-        )
-        phase = phase_m.group(1).lower() if phase_m else ""
-        klass = class_m.group(1).upper() if class_m else ""
-
-        if is_placeholder(raw_phase):
-            errors.append(
-                f"STATUS.md: phase not filled in (template placeholder {raw_phase!r})"
-            )
-        elif not phase:
-            errors.append("STATUS.md: missing phase")
-        elif phase not in allowed:
-            # constitution is project-level file, not active phase
-            errors.append(
-                f"STATUS.md: unknown phase '{phase}' "
-                f"(allowed: {', '.join(sorted(allowed))})"
-            )
-
-        if not klass:
-            msg = (
-                f"STATUS.md: class not resolved (value {raw_class!r}) — "
-                "cannot apply §2.2 artifact gates; write exactly one of S|M|L"
-            )
-            # На specify класс ещё может уточняться; с plan и дальше это блокер:
-            # неизвестный класс = молча отключённые требования spec/plan.
-            if phase == "specify":
-                warnings.append(msg)
-            else:
-                errors.append(msg)
-
-        spec = ACTIVE / "spec.md"
-        plan = ACTIVE / "plan.md"
-        tasks = ACTIVE / "tasks.md"
-        verify = ACTIVE / "verify-report.md"
-        eval_smoke = ACTIVE / "eval-smoke.md"
-
-        if klass in {"M", "L"} and phase in {
-            "plan",
-            "tasks",
-            *implement_like,
-        }:
-            if not spec.is_file():
-                errors.append(f"class {klass} at phase={phase}: missing active/spec.md")
-
-        if klass in {"M", "L"} and phase in implement_like:
-            if not plan.is_file():
-                errors.append(f"class {klass} at phase={phase}: missing active/plan.md")
-            if not tasks.is_file():
-                errors.append(f"class {klass} at phase={phase}: missing active/tasks.md")
-            # §3.3 называет это stop-gate'ом — значит error, не warning.
-            # `deferred` (§2.2b) — законный третий вариант: человека нет, работа
-            # идёт под запись долга. Он пускает до converge включительно, но НЕ на
-            # handoff: подпись под ожиданиями обязательна там, где человек всё
-            # равно есть — на мерже. Без этого значения агент без доступного
-            # человека занижал класс до S, обходя требование спеки законным с виду
-            # способом (найдено независимым развёртыванием).
-            e, w = signature_verdict("human_ok_spec", field(status, "human_ok_spec"), klass, phase)
-            errors += e
-            warnings += w
-
-        if klass == "L" and phase in implement_like:
-            # §2.2b распространяется на ВСЕ поля-подписи, а не только на спеку:
-            # `human_ok_plan` упирался в тот же тупик, и агент без человека выбирал
-            # между «встать» и «занизить класс» — дыра, закрытая один раз, вернулась
-            # во втором поле. Развилка теперь одна на класс полей (см. функцию).
-            e, w = signature_verdict("human_ok_plan", field(status, "human_ok_plan"), klass, phase)
-            errors += e
-            warnings += w
-
-        if klass == "S" and phase in implement_like and not tasks.is_file():
-            errors.append("class S at implement+: missing active/tasks.md (mini-spec)")
-
-        if not verify.is_file():
-            if phase == "verify":
-                # Фаза в процессе: отчёт ещё пишется — но выйти из неё без него нельзя.
-                warnings.append(
-                    "phase=verify: active/verify-report.md not created yet"
-                )
-            elif phase in {"converge", "handoff"}:
-                errors.append(
-                    f"phase={phase}: missing active/verify-report.md (DoD §3.2.2)"
-                )
-
-        if klass in {"M", "L"} and phase in {"verify", "converge", "handoff"}:
-            if not eval_smoke.is_file():
-                errors.append(
-                    "class M/L at verify+: missing active/eval-smoke.md "
-                    "(product oracles are mandatory, §6.2)"
-                )
-
-        # --- §12.5: маячок на рисковый дифф. Предупреждение на verify, ОТКАЗ на
-        # handoff — та же лестница, что у `deferred` (§2.2b): работать не мешаем,
-        # объявить сделанным не даём. Блокировать на каждом коммите нельзя: правка
-        # опечатки получала бы требование ревью, и маячок сняли бы через неделю.
-        if phase in {"verify", "converge", "handoff"}:
-            rbase = args.diff_base or "HEAD~1"
-            rstats = diff_stats(rbase)
-            if rstats and rstats[4]:
-                gaps = risk_review_gaps(
-                    read(verify),
-                    risky_classes(rstats[4], rbase),
-                    diff_identifiers(rstats[4]),
-                )
-                for g in gaps:
-                    (errors if phase == "handoff" else warnings).append(
-                        f"рисковый дифф: {g}"
-                    )
-
-                # --- §12.6: путь, проверяемый только исполнением. Та же лестница
-                # (предупреждение на verify, отказ на handoff) и по той же причине.
-                surfaces, declared = runtime_surfaces(status)
-                if not declared:
-                    (errors if phase == "handoff" else warnings).append(
-                        "нет строки `runtime_paths:` в STATUS (§12.6) — назови "
-                        "пути, чей отказ не виден ни сборке, ни тестам (экран, "
-                        "права, железо, тракт съёмки), либо `none reason=…`. "
-                        "Молчание тут читается как «таких нет», а замер поля дал "
-                        "четыре падения подряд ровно в них"
-                    )
-                else:
-                    touched = runtime_touched(rstats[4], surfaces)
-                    for g in runtime_proof_gaps(read(verify), touched):
-                        (errors if phase == "handoff" else warnings).append(
-                            f"исполнение: {g}"
-                        )
-                    # Breaker по ПОВЕРХНОСТЯМ, а не по объёму. §3.4 считает файлы
-                    # и строки, и три правки в три подсистемы на десяток строк
-                    # проходят его не заметив — а именно так и выглядел составной
-                    # отказ, который потом разбирали перебором.
-                    cap = breaker_value(status, "max_runtime_paths")
-                    if len(touched) > cap:
-                        (errors if phase == "handoff" else warnings).append(
-                            f"исполнение: одной поставкой задето {len(touched)} "
-                            f"рисковых путей ({', '.join(sorted(touched))}) при "
-                            f"пороге {cap} (§12.6) — ставь по одному: составной "
-                            "отказ разбирается перебором, а перебор оплачивает "
-                            "человек. Осознанно — строкой "
-                            "`max_runtime_paths=<N> reason=… by=human:…` в STATUS"
-                        )
-
-        # --- Долг не должен болтаться вечно (§3.5). Проверяется ТОЛЬКО на handoff:
-        # на каждом коммите это блокировало бы работу, не связанную со старым
-        # долгом, и такой гейт отключают через неделю. Работать не мешаем —
-        # не даём объявить сделанным.
-        if phase == "handoff":
-            errors.extend(debt_is_not_frozen())
-
-        # --- §13.1: поставка уходит в archive вместе с обязательством проверить
-        # её в проде. Без этих полей «готово» проверено во всех средах, кроме
-        # единственной значимой.
-        if phase == "handoff":
-            sig = field(status, "observe_signal")
-            until = field(status, "observe_until")
-            if is_placeholder(sig):
-                errors.append(
-                    "phase=handoff: пусто observe_signal (§13.2) — что именно "
-                    "будет проверено в проде; «ошибок нет» сигналом не является, "
-                    "молчание одинаково выглядит и при не вызываемом коде"
-                )
-            if is_placeholder(until):
-                errors.append(
-                    "phase=handoff: пусто observe_until (§13.1) — до какой даты "
-                    "наблюдаем; обязательство без срока не выполняется"
-                )
-            # Уровень наблюдаемости — значение проверяемое, а не декларативное
-            # (урок §10.4: самозаявленное `ci-oracles: tooling` при красном CI).
-            level = field(status, "observability")
-            if not is_placeholder(level) and level.strip().startswith(("2", "3")):
-                # Цифра, которой НЕ предшествует латинская буква: так число порога
-                # (`180мс`) отличается от id примера (`A1`) и от имени метрики
-                # (`p95`). Наивный поиск любой цифры проходил на сигнале
-                # «A1 подтверждён, ошибок нет» — то есть по неверной причине.
-                if not re.search(r"(?<![A-Za-z])\d", sig):
-                    errors.append(
-                        f"observability: {level.strip()} заявлен, но observe_signal "
-                        "без метрики с числом (§13.3) — уровень 2+ означает замер "
-                        "ДО и порог, а не «мониторинг вроде подключён»"
-                    )
-
-        if phase == "handoff" and verify.is_file():
-            vr = read(verify)
-            if not re.search(r"READY FOR HANDOFF", vr, re.I):
-                errors.append(
-                    "phase=handoff: verify-report.md lacks 'READY FOR HANDOFF' verdict"
-                )
-            # §9.2: метрики снимаются на handoff. Без гейта ритуал не выполняется.
-            if "Harness metrics" not in vr:
-                errors.append(
-                    "phase=handoff: verify-report.md lacks the 'Harness metrics' "
-                    "block (§9.2 / A.10) — run: python scripts/delivery_metrics.py "
-                    "--base origin/main --write"
-                )
-
-        # --- Builder ≠ Verifier (§5.2): не сама независимость, но явное заявление
-        # о ней. Настоящее разделение обеспечивает required review в branch
-        # protection (CQG §8.5); здесь ловим «сам построил, сам принял».
-        if phase in {"verify", "converge", "handoff"} and verify.is_file():
-            declared = field(read(verify), "Verifier") or field(status, "verifier")
-            builder = field(status, "builder")
-            if is_placeholder(declared):
-                errors.append(
-                    "verify-report.md: Verifier not filled in — Builder must not "
-                    "accept own work (§5.2); write process:ci | agent:NAME | human:NAME"
-                )
-            elif (
-                klass in {"M", "L"}
-                and not is_placeholder(builder)
-                and declared.strip().lower() == builder.strip().lower()
-            ):
-                errors.append(
-                    f"class {klass}: verifier == builder ('{declared}') — §5.2 "
-                    "requires a different agent/model/human, or process:ci"
-                )
-
-        # --- §3.1d уровень 3 / DoD §3.2.7: ревью утверждений пропорционально
-        # непроверяемой части. `n/a` законен, только если КАЖДОЕ утверждение
-        # ведёт к примеру, который человек подписал до кода; иначе ожидание
-        # придумал исполнитель, и подпись обязана быть.
-        if klass in {"M", "L"} and phase in {"verify", "converge", "handoff"} and verify.is_file():
-            vr = read(verify)
-            reviewed = field(vr, "asserts_reviewed_by")
-            digest = re.search(r"(?im)^\s*asserts_without_example:\s*(\d+)\s*$", vr)
-            if is_placeholder(reviewed):
-                errors.append(
-                    f"class {klass}: verify-report.md без asserts_reviewed_by "
-                    "(§3.1d уровень 3, DoD §3.2.7) — последний рубеж против "
-                    "неверного ожидания; вставь дайджест: "
-                    "bash scripts/lint/assert_digest.sh >> verify-report.md"
-                )
-            elif reviewed.lower().startswith("n/a"):
-                if not digest:
-                    errors.append(
-                        "asserts_reviewed_by: n/a без вставленного дайджеста "
-                        "(нет строки 'asserts_without_example: N') — n/a надо "
-                        "заслужить, а не заявить (§3.1d уровень 3)"
-                    )
-                elif int(digest.group(1)) > 0:
-                    errors.append(
-                        f"asserts_reviewed_by: n/a, но {digest.group(1)} "
-                        "утверждений не ссылаются на примеры спеки — их ожидание "
-                        "придумал исполнитель; нужна подпись human:… at=… "
-                        "(§3.1d уровень 3)"
-                    )
-            else:
-                # Третье появление той же дыры. §2.2b закрыла её для `human_ok_spec`,
-                # v1.30 — для `human_ok_plan`, и оба раза правка была на ПОЛЕ, а не на
-                # класс полей: здесь ветка принимала ЛЮБУЮ непустую строку, поэтому
-                # `asserts_reviewed_by: посмотрел сам` и `by=agent:…` проходили, а
-                # автономному агенту не оставалось законного значения вовсе. Теперь
-                # поле идёт через ту же развилку: подпись человека, либо `deferred`
-                # с причиной, либо заслуженное `n/a` выше.
-                e, w = signature_verdict("asserts_reviewed_by", reviewed, klass, phase)
-                errors += e
-                warnings += w
-
-        # --- §3.1d уровень 1: ожидание обязано появиться РАНЬШЕ кода.
-        # Проверяем не качество примеров (это невозможно), а сам факт, что они
-        # есть и на них ссылаются тесты: иначе ожидание придумал тот же, кто писал
-        # код, и все гейты ниже проверяют его согласие с самим собой.
-        if klass in {"M", "L"} and phase in implement_like and spec.is_file():
-            spec_text = read(spec)
-            ex_ids = re.findall(r"(?m)^\s*\|\s*([A-Z]\d+)\s*\|", spec_text)
-
-            # Корпус «где искать ссылки»: smoke + tasks + verify + тексты тестов.
-            # Строится БЕЗУСЛОВНО, потому что его читают ДВЕ независимые проверки —
-            # ссылки на id ниже и реляционный оракул §6.5 дальше.
-            #
-            # lab-12: он строился внутри else-ветки, и обе ветки с ошибкой роняли
-            # гейт `UnboundLocalError: haystack` ВМЕСТО того, чтобы напечатать уже
-            # сформулированный диагноз. Класс: **проверка, обязанная поставить
-            # диагноз, умирает вместо диагноза** — исполнитель видит поломку
-            # инструмента там, где ему сообщали о его собственной ошибке. Это
-            # зеркало «гейта, врущего зелёным»: тот молчит, когда должен говорить,
-            # этот кричит не о том. Мера — не «инициализировать переменную», а
-            # держать сбор данных отдельно от разбора причин.
-            haystack = read(eval_smoke) + read(tasks) + read(verify)
-            for root_dir in ("tests", "backend/tests", "src/tests"):
-                d = ACTIVE.parent.parent / root_dir
-                if not d.is_dir():
-                    continue
-                for f in d.rglob("*test*"):
-                    # Только текстовые исходники и не служебные каталоги:
-                    # маска ловила .pyc и роняла гейт (F9).
-                    if (
-                        f.is_file()
-                        and f.suffix in TEST_TEXT_SUFFIXES
-                        and not any(p in SKIP_DIR_PARTS for p in f.parts)
-                    ):
-                        haystack += read(f)
-
-            if not re.search(r"(?im)^#+\s*acceptance\s+examples", spec_text):
-                errors.append(
-                    f"class {klass}: spec.md без блока '## Acceptance examples' "
-                    "(§3.1d) — конкретные вход→выход, подтверждённые человеком "
-                    "ДО кода; проза «работает корректно» подписью не является"
-                )
-            elif not ex_ids:
-                # Грамматика id названа ЯВНО: она не очевидна, а её нарушение
-                # раньше выглядело как «примеров нет» при полной таблице примеров.
-                # lab-12: арка написала id вида `EX1` и получила краш; вторая арка
-                # переименовала свои id, обходя соседнюю проблему, — то есть
-                # неназванное правило заставляло подстраиваться вслепую.
-                errors.append(
-                    "spec.md: блок Acceptance examples есть, но примеров с id в "
-                    "нём нет (§3.1d). id читается из первой колонки таблицы и "
-                    "обязан быть вида ОДНА заглавная латинская буква + цифры "
-                    "(`A1`, `E2`); `EX1`, `A.1`, `1` и `случай-1` не считаются"
-                )
-            else:
-                # id должны встречаться в тестах или eval-smoke: связь примера с
-                # проверкой — то, что отличает обещание от отчёта о реализации.
-                missing = [i for i in dict.fromkeys(ex_ids) if i not in haystack]
-                if missing:
-                    warnings.append(
-                        "acceptance-примеры без ссылки в тестах/eval-smoke: "
-                        f"{', '.join(missing)} (§3.1d) — пометь тест id примера"
-                    )
-
-                # Порядок «пример раньше теста» — на verify и дальше: раньше
-                # тестов может просто не быть, и проверка ругалась бы на штатное
-                # состояние фазы implement.
-                if phase in {"verify", "converge", "handoff"}:
-                    test_dirs = [d for d in ("tests", "backend/tests", "src/tests")
-                                 if (ACTIVE.parent.parent / d).is_dir()]
-                    warnings += expectation_predates_tests(ex_ids, test_dirs)
-
-            # --- §6.5 уровень 2: хотя бы один реляционный оракул на M/L.
-            # «Минимум один» стояло в §6.5 практикой и не принуждалось ничем —
-            # та же форма, что F7. Пример со значением (`f(2) == 4`) закрепляет
-            # баг, если ожидание списано с кода, и мутационный гейт его не поймает:
-            # мутант будет честно убит НЕВЕРНЫМ утверждением. Свойство подделать
-            # нельзя, потому что ожидаемого значения в нём нет.
-            #
-            # ⚠ Это проверка НАЛИЧИЯ, и она заполняется галочкой: `@given(...)` с
-            # `assert True` её проходит. Ловит такое не она, а мутационный гейт —
-            # декоративное свойство оставляет мутантов живыми. Поэтому требование
-            # осмысленно ТОЛЬКО при работающем mutation (на macOS —
-            # `brew install coreutils`, CQG §5 шаг 3), и об этом сказано в тексте
-            # ошибки: иначе получим ритуал вместо оракула.
-            if not re.search(r"@given|@hypothesis\.given|fc\.assert|fc\.property",
-                             haystack):
-                warnings.append(
-                    f"class {klass}: ни одного реляционного оракула (§6.5) — "
-                    "не найдено ни `@given` (hypothesis), ни `fc.property` "
-                    "(fast-check). Инвариант, round-trip, идемпотентность, "
-                    "метаморфное отношение или differential: в них нет ожидаемого "
-                    "значения, поэтому в них нельзя спрятать неверное ожидание. "
-                    "Один инвариант обычно ловит больше десяти тестов-значений, "
-                    "потому что раннер перебирает входы, о которых автор не думал. "
-                    "Проверь заодно, что mutation-гейт у тебя не пропускается: "
-                    "иначе слабое свойство (`assert result is not None`) пройдёт"
-                )
-
-        # kind/behavior читаем один раз — их используют обе проверки ниже.
-        kind = field(status, "kind").lower()
-        behavior = field(status, "behavior-oracles").lower()
-
-        # --- §3.1c: багфикс обязан принести тест, который падал до фикса
-        if kind.startswith("bugfix") and phase in {"verify", "converge", "handoff"}:
-            repro = field(status, "repro_test")
-            if is_placeholder(repro):
-                errors.append(
-                    "kind=bugfix at verify+: missing repro_test (§3.1c) — тест, "
-                    "который падал до фикса; иначе баг вернётся"
-                )
-            elif repro.lower().startswith("n/a") and "reason=" not in repro.lower():
-                errors.append(
-                    "repro_test: n/a без reason= (§3.1c) — «не воспроизводится» "
-                    "обычно значит «не пробовал»"
-                )
-
-        # --- §12.1: багфикс обязан показать, КАК искали, а не только что нашёл.
-        # repro_test доказывает, что баг найден; журнал гипотез — что его не будут
-        # искать заново с нуля.
-        if kind.startswith(("bugfix", "hotfix")) and phase in {
-            "verify",
-            "converge",
-            "handoff",
-        }:
-            diag = field(status, "diagnosis")
-            diag_file = ACTIVE / "diagnosis.md"
-            if is_placeholder(diag):
-                errors.append(
-                    f"kind={kind.split()[0]} at verify+: missing diagnosis (§12.1) "
-                    "— журнал гипотез с вердиктами; n/a только с reason="
-                )
-            elif diag.lower().startswith("n/a"):
-                if "reason=" not in diag.lower():
-                    errors.append(
-                        "diagnosis: n/a без reason= (§12.1) — «нашёл сразу» и «не "
-                        "искал» обязаны различаться в тексте, а не в тишине"
-                    )
-            elif not diag_file.is_file():
-                errors.append(
-                    "diagnosis указывает на файл, которого нет (§12.1) — "
-                    "ожидается delivery/active/diagnosis.md"
-                )
-            elif not verdict_blocks(read(diag_file)):
-                errors.append(
-                    "diagnosis.md без заполненных вердиктов (§12.1) — гипотезы без "
-                    "ОПРОВЕРГНУТА/ПОДТВЕРЖДЕНА это список подозрений: следующий "
-                    "читатель обязан перепроверить всё заново. Ожидается вердикт "
-                    "внутри СТРУКТУРНОГО блока: пункт списка, строка таблицы или "
-                    "раздел (перенос строки внутри пункта допустим). Строки шаблона "
-                    "(с <…>) и проза о формате вердиктами не считаются"
-                )
-
-        # --- §12.3: остановка обязана быть оформлена, иначе восстановление
-        # контекста перекладывается на человека — то самое время, которое контур
-        # экономит.
-        blockers = field(status, "blockers")
-        if blockers and not is_placeholder(blockers) and blockers.lower() not in {
-            "none",
-            "нет",
-            "n/a",
-        }:
-            esc = ACTIVE / "escalation.md"
-            if not esc.is_file():
-                errors.append(
-                    f"blockers непусты ({blockers[:50]}), а active/escalation.md "
-                    "нет (§12.3) — «я застрял» решением не является: нужны что "
-                    "пробовал, какой нужен ответ, два варианта с ценой"
-                )
-            else:
-                # Строки шаблона не считаются: скопированный и незаполненный
-                # escalation.md — это не оформленная остановка (ср. STATUS, v1.5).
-                lines_e = [ln for ln in read(esc).splitlines() if not unfilled(ln)]
-                # Разметка принимается ЛЮБАЯ разумная: жирная строка шаблона,
-                # markdown-заголовок, list-item, строка таблицы. До delivery@1.39
-                # принималась только жирная строка, и `## Вариант 1 — …` давало
-                # «вариантов 0» — то есть диагноз про СОДЕРЖАНИЕ, когда причина
-                # была в ФОРМЕ. На dogfooding'е (lab-10) я споткнулся об это трижды
-                # в трёх артефактах; ни одна подстройка не была про смысл.
-                opts = len(
-                    [
-                        ln
-                        for ln in lines_e
-                        if re.match(
-                            # `\s+` обязателен: с `\s*` заголовок раздела
-                            # «## Варианты» считался вариантом («вариант» + «ы»),
-                            # и одного варианта хватало на два. Поймал существующий
-                            # тест, а не я.
-                            r"(?i)^\s*(?:#{1,6}\s*|[-*]\s+|\|\s*)?\**\s*"
-                            r"(?:вариант|option)\s+\w",
-                            ln,
-                        )
-                    ]
-                )
-                costs = len(
-                    [ln for ln in lines_e if re.search(r"(?i)\bцена\b|\bcost\b", ln)]
-                )
-                if opts < 2:
-                    errors.append(
-                        f"escalation.md: заполненных вариантов {opts}, нужно ≥2 "
-                        "(§12.3) — один вариант это просьба согласиться, а не выбор; "
-                        "второй всегда есть и называется «не делать / отложить». "
-                        "Ожидается строка, начинающаяся со слова «Вариант» (можно "
-                        "как заголовок `## Вариант A`, жирным `**Вариант A:**`, "
-                        "пунктом списка или строкой таблицы)"
-                    )
-                elif costs < 2:
-                    errors.append(
-                        f"escalation.md: вариантов {opts}, а названных цен {costs} "
-                        "(§12.3) — вариант без цены выбрать нельзя"
-                    )
-
-        # --- §12.2a: отклонённые варианты. Без следа тот же тупик предлагают
-        # снова — и он снова выглядит разумным, потому что причина отказа нигде
-        # не записана.
-        if klass in {"M", "L"} and phase in implement_like and plan.is_file():
-            plan_text = read(plan)
-            sec = re.search(
-                r"(?ims)^#{2,3}\s*rejected\s+alternatives\s*$(.*?)(?=^#{2,3}\s|\Z)",
-                plan_text,
-            )
-            msg_alt = ""
-            if not sec:
-                msg_alt = (
-                    "plan.md без секции '## Rejected alternatives' (§12.2a) — "
-                    "отброшенный подход без записанной причины предлагается снова"
-                )
-            else:
-                # Та же склейка переносов, что у журналов: причина часто уезжает на
-                # вторую строку, и построчный разбор объявлял запись «без причины».
-                entries = [
-                    ln
-                    for ln in list_entries(sec.group(1))
-                    if not unfilled(ln)
-                    and re.search(r"(?i)потому что|because|reason=", ln)
-                ]
-                if not entries:
-                    msg_alt = (
-                        "plan.md: 'Rejected alternatives' без заполненных записей "
-                        "с причиной (§12.2a) — законна и запись «рассматривали "
-                        "только X, потому что Y исключён требованием Z»"
-                    )
-            if msg_alt:
-                (errors if klass == "L" else warnings).append(msg_alt)
-
-        # --- §12.2: журнал решений. Проверяется ФОРМАТ: лента без альтернатив
-        # неаудируема, а именно аудируемость — весь смысл файла.
-        dec_file = ACTIVE / "decisions.md"
-        late = phase in {"verify", "converge", "handoff"}
-        if dec_file.is_file():
-            good, bad = decision_lines(read(dec_file))
-            if bad:
-                errors.append(
-                    f"decisions.md: {len(bad)} строк(а) не в формате §12.2 "
-                    "«выбрал X вместо Y — потому что Z»: "
-                    + "; ".join(b[:55] for b in bad[:3])
-                )
-            if klass == "L" and late and not good:
-                errors.append(
-                    "class L: decisions.md без ни одного решения (§12.2) — эпик "
-                    "или новый модуль без выбора не бывает"
-                )
-            # Цена, а не предпочтение: «потому что дешевле» неопровержимо, значит
-            # аудита не даёт, ради которого файл и ведётся (§12.2a).
-            # Идентификаторы диффа — то, с чем сверяется «цена». Диффа нет
-            # (нет ref'а, не git) -> `None`, и проверка молчит: предупреждение по
-            # неверной причине учит игнорировать гейт.
-            # Без `--diff-base` берём `HEAD~1`: иначе проверка молчала бы на
-            # каждом локальном прогоне, а в CI работала — то есть вела бы себя
-            # по-разному там, где решение и принимается.
-            dec_stats = diff_stats(args.diff_base or "HEAD~1")
-            diff_ids = diff_identifiers(dec_stats[4]) if dec_stats else None
-            no_cost = decisions_without_cost(read(dec_file), diff_ids)
-            if no_cost and late:
-                warnings.append(
-                    f"decisions.md: {len(no_cost)} решен(ий) без цены — причина не "
-                    "названа ни числом, ни ссылкой в изменённый код: "
-                    + "; ".join(n[:55] for n in no_cost[:3])
-                    + ". «Дешевле» и «проще» проверить нельзя ничем; назови число "
-                    "или процитируй то, что менял (файл, функцию, поле) — такое "
-                    "не напишешь, не открыв дифф (§12.2a)"
-                )
-        elif klass == "L" and late:
-            errors.append(
-                "class L at verify+: missing active/decisions.md (§12.2)"
-            )
-        elif klass == "M" and late:
-            warnings.append(
-                "class M at verify+: нет active/decisions.md (§12.2) — поведение "
-                "агента неаудируемо без чтения всего диффа"
-            )
-
-        # --- §3.1b: рефакторинг без behavior-oracles = тихая регрессия
-        if kind.startswith("refactor") and phase in {"verify", "converge", "handoff"}:
-            covered = (
-                not behavior.startswith("weak")
-                or "characteriz" in status.lower()
-                or "характеризац" in status.lower()
-                or "refactor" in field(status, "waivers").lower()
-            )
-            if not covered:
-                errors.append(
-                    "kind=refactor with behavior-oracles: weak — «компилируется» не "
-                    "доказывает сохранение поведения (§3.1b). Нужны характеризационные "
-                    "тесты, наблюдаемая проверка или human waiver со словом refactor"
-                )
-
-        # --- CI (§10.4): единственный слой, который агент не может обойти локально
-        ci = field(status, "ci-oracles").lower()
-        waivers = field(status, "waivers").lower()
-        if is_placeholder(ci):
-            warnings.append(
-                "STATUS.md: missing ci-oracles (weak|tooling|deployed) — §10.4"
-            )
-        elif ci.startswith("weak"):
-            # Было `"ci" not in waivers`: строка `waivers: ci` снимала требование
-            # ПОДСТРОКОЙ — без причины и без подписи. Форма waiver'а одна на весь
-            # контур (§4.3a). Нашло приёмочное развёртывание.
-            ci_waived = bool(re.search(r"ci\b.*reason=.*by=human:", waivers))
-            # Компенсация §10.4 правило 4 — ТРЕТИЙ законный выход, наравне с waiver'ом.
-            # Она была описана прозой и не проверялась ничем, поэтому автономное
-            # развёртывание в проект без хостинга не имело **честного** способа сделать
-            # гейт зелёным: waiver требует человека, занижать класс запрещено §2.2b, а
-            # `blockers:` + `escalation.md` гейт не принимал. Рядом лежали две дешёвые
-            # лазейки (занизить класс, написать `waivers: ci`), то есть канон учил
-            # обходить себя законным с виду способом — ровно то, против чего §2.2b.
-            # Асимметрия была видна в собственном выводе: для `human_ok_*` третье
-            # значение сделали, для `ci-oracles` — нет.
-            #
-            # Компенсация проверяется по ФАКТУ артефакта, а не по заявлению: строка
-            # `clean_clone_run:` в verify-report (что прогнали и когда) + непустые
-            # `blockers:` + существующий `escalation.md` (§12.3 сам требует там два
-            # варианта с ценой). Это не эквивалент CI и не снятие требования: остаётся
-            # громкий warning, `ci-oracles` остаётся `weak`, и строка приёмки §6
-            # закрывается как `weak`, а не как `auto`.
-            compensated = (
-                bool(re.search(r"(?im)^\s*\**clean_clone_run\**\s*:\s*\S", read(verify)))
-                and bool(field(status, "blockers").lower() not in {"", "none", "-"})
-                and (ACTIVE / "escalation.md").is_file()
-            )
-            if klass == "L" and not ci_waived and not compensated:
-                errors.append(
-                    "class L with ci-oracles: weak — нужен либо human waiver "
-                    "(`waivers: ci reason=… by=human:…`), либо компенсация §10.4 п.4: "
-                    "строка `clean_clone_run: <что прогнал> at=<дата>` в "
-                    "verify-report.md + непустые blockers: + active/escalation.md. "
-                    "Занижать класс, чтобы гейт позеленел, запрещено (§2.2b)"
-                )
-            elif klass == "L" and compensated and not ci_waived:
-                warnings.append(
-                    "class L, ci-oracles: weak — закрыто компенсацией §10.4 п.4 "
-                    "(clean_clone_run + blockers + escalation.md). Это НЕ эквивалент "
-                    "CI: строка приёмки §6 закрывается как weak, не как auto"
-                )
-            else:
-                warnings.append(
-                    "ci-oracles: weak — local gates are bypassable (§10.4); "
-                    "Verifier must attach a clean-clone run to verify-report.md"
-                )
-        # 'tooling' — легитимный режим (гейт мержа в репо, серверного нет по тарифу),
-        # а не поддавки: см. §10.4. Недопустим только 'weak'.
-        if args.require_ci and not ci.startswith(("deployed", "tooling")):
-            errors.append(
-                "--require-ci: ci-oracles is neither 'deployed' nor 'tooling'"
-            )
-
-        stack = field(status, "stack")
-        if is_placeholder(stack) or "delivery@" not in stack:
-            warnings.append(
-                "STATUS.md: missing stack version "
-                "(e.g. 'delivery@<version>, cqg@<version>, okf@absent')"
-            )
-
-        # --- Circuit breakers (§3.4): анти-oneshot по объёму поставки.
-        #
-        # `kind: bootstrap` breaker'ом не мерится, и это не поддавки. Bootstrap — не
-        # поставка продукта: у него своя DoD (§7.3), он по построению трогает всё
-        # дерево контура и не может быть «разрезан на части» — совет гейта «split the
-        # PR» для него не выполним ни в каком виде. Приёмочное развёртывание показало
-        # это числом: даже после исключения механики контура остаётся 30 файлов и
-        # 2437 строк конфигов, снимков и workflow'ов против лимита 800. Единственным
-        # выходом оставался рутинный waiver, который §4.3a сам называет
-        # обесцениванием механизма — то есть гейт учил себя обходить.
-        #
-        # Объём при этом не замалчивается: он печатается строкой ниже, и §7.3 требует
-        # приёмку §6 — bootstrap проверяется своей процедурой, а не breaker'ом.
-        if field(status, "kind").lower().startswith("bootstrap"):
-            print(
-                "breakers: kind=bootstrap — объём не мерится (§3.4): развёртывание "
-                "контура не режется на части, его DoD — §7.3 + приёмка §6"
-            )
-        elif args.diff_base:
-            limits = dict(DEFAULT_BREAKERS)
-            # Одна и та же форма покрывает и override в circuit_breakers,
-            # и human waiver: "max_files_touched=40 reason=… by=human:…".
-            for m in re.finditer(r"(max_[a-z_]+)[ \t]*=[ \t]*(\d+)", status):
-                if m.group(1) not in limits:
-                    continue
-                # Смотрим СТРОКУ, в которой стоит override, а не только совпадение.
-                # §3.4 различает две вещи одной формы: настройка проекта (строка
-                # `circuit_breakers:`) и **human waiver**. Про waiver канон говорил
-                # «только человек», а парсер принимал `max_loc_diff=99999` без
-                # причины и без подписи — то есть требование жило в прозе, а
-                # механика позволяла агенту поднять себе лимит молча. Три
-                # независимых развёртывания нашли это по отдельности.
-                bol = status.rfind("\n", 0, m.start()) + 1
-                eol = status.find("\n", m.end())
-                line = status[bol: eol if eol != -1 else len(status)]
-                if "circuit_breakers" in line.lower():
-                    limits[m.group(1)] = int(m.group(2))
-                    continue
-                if "reason=" not in line or "by=human:" not in line:
-                    errors.append(
-                        f"waiver {m.group(1)}={m.group(2)} без reason= и by=human: "
-                        "(§3.4) — лимит поднимает человек, не исполнитель. Нет "
-                        "человека — не waiver, а `blockers:` + escalation.md (§12.3) "
-                        "или более узкая поставка; настройка проекта пишется строкой "
-                        "circuit_breakers:"
-                    )
-                    continue
-                limits[m.group(1)] = int(m.group(2))
-            stats = diff_stats(args.diff_base)
-            if stats is None:
-                warnings.append(
-                    f"circuit breakers: ref '{args.diff_base}' unavailable "
-                    "(shallow clone? need full history)"
-                )
-            else:
-                n_files, added, deleted, excluded, changed = stats
-                # --- §2.2a: уроки по затронутым путям должны быть упомянуты.
-                # Warning, не error: сопоставление «префикс пути → урок»
-                # приблизительно, а по §4.3b ложное срабатывание дороже пропуска.
-                lessons = applicable_lessons(read(ARCHIVE / "INDEX.md"), changed)
-                if lessons:
-                    cited = read(plan) + read(tasks) + status
-                    unread = [
-                        i for i in lessons if not re.search(rf"\b{i}\b", cited)
-                    ]
-                    if unread:
-                        warnings.append(
-                            "archive/INDEX.md: уроки по затронутым путям не "
-                            f"упомянуты: {', '.join(unread)} (§2.2a) — прочти "
-                            "строки и сошлись на id в plan.md/tasks.md либо "
-                            "напиши, почему не применимо"
-                        )
-                net = abs(added - deleted)
-                print(
-                    f"breakers: files={n_files} net_loc={net} (+{added}/-{deleted}), "
-                    f"excluded={excluded} ({'|'.join(BREAKER_EXCLUDE)}), "
-                    f"limits={limits}"
-                )
-                # --- Стартовый дифф (lab-11 F12/F13/F8). На specify/plan/tasks
-                # поставка ещё не написала продуктового кода: всё, что дифф
-                # показывает сверх BREAKER_EXCLUDE, принесено извне — незамерженная
-                # предыдущая поставка (bootstrap, который мержится ПОКА активен,
-                # §7.2 шаг 6) или ветка от старой базы после squash-мержа. Обе арки
-                # lab-11 обнаружили это на handoff ценой полного цикла: breaker
-                # мерил 33 файла при собственных 2, и совет «split the PR» резал
-                # нечего. Здесь тот же тупик называется на входе и стоит минуту.
-                if phase in ("specify", "plan", "tasks") and n_files:
-                    # Слито в локальный main, но не запушено — отдельный честный
-                    # диагноз: чинится push'ем, а не rebase'ом.
-                    alt_clean = False
-                    for cand in ("main", "master"):
-                        alt = None if cand == args.diff_base else diff_stats(cand)
-                        if alt is not None and alt[0] == 0:
-                            alt_clean = True
-                            break
-                    if alt_clean:
-                        warnings.append(
-                            f"стартовый дифф против {args.diff_base} непуст "
-                            f"({n_files} файл(ов)), против локального main пуст: "
-                            "предыдущая поставка слита, но не запушена — CI и "
-                            "breakers меряют чужой дифф, пока push не ушёл (§3.4)"
-                        )
-                    else:
-                        errors.append(
-                            f"стартовый дифф непуст: {n_files} файл(ов) кода в "
-                            f"{args.diff_base}..HEAD уже на фазе {phase} — это "
-                            "чужие изменения, поставка не стартует поверх них "
-                            "(§7.2 шаг 6). Незамерженная предыдущая — слей через "
-                            "merge_guard (bootstrap мержится ПОКА активен); ветка "
-                            "от старой базы после squash-мержа — git rebase --onto "
-                            f"{args.diff_base} <старая-база> (lab-11 F12/F8)"
-                        )
-                # §2.2b: класс S при S-нетипичном объёме — warning, не ошибка.
-                # Большой механический багфикс бывает, но и занижение класса ради
-                # обхода human_ok_spec выглядит именно так. Молчать нельзя:
-                # молчание эту дыру и создало.
-                if klass == "S" and (n_files > 5 or net > 200):
-                    warnings.append(
-                        f"class S, а тронуто {n_files} файл(ов) / {net} строк — "
-                        "класс занижен? (§2.2b) Класс определяется работой, а не "
-                        "доступностью человека; нет человека — human_ok_spec: deferred"
-                    )
-                if n_files > limits["max_files_touched"]:
-                    errors.append(
-                        f"circuit breaker: files_touched {n_files} > "
-                        f"{limits['max_files_touched']} — split the PR or add a "
-                        "human waiver line to STATUS (§3.4)"
-                    )
-                if net > limits["max_loc_diff"]:
-                    errors.append(
-                        f"circuit breaker: net loc_diff {net} > "
-                        f"{limits['max_loc_diff']} — split the PR or add a "
-                        "human waiver line to STATUS (§3.4)"
-                    )
-
-    # --- §2.2a: архив без индекса не читается, а отставший индекс врёт о полноте.
-    # Обе проверки не зависят от фазы и от наличия diff-base: они про сам архив.
-    if ARCHIVE.is_dir():
-        shipments = sorted(d.name for d in ARCHIVE.iterdir() if d.is_dir())
-        idx_text = read(ARCHIVE / "INDEX.md")
-        if shipments and not idx_text:
-            errors.append(
-                f"delivery/archive/ содержит {len(shipments)} поставок, а "
-                "INDEX.md нет (§2.2a / A.13) — неиндексированный архив никем "
-                "не читается"
-            )
-        elif idx_text:
-            unlisted = [s for s in shipments if s not in idx_text]
-            if unlisted:
-                errors.append(
-                    "archive/INDEX.md отстал от архива: не упомянуты "
-                    f"{', '.join(unlisted)} (§2.2a) — индекс, который врёт о "
-                    "своей полноте, хуже отсутствующего"
-                )
-
-        # --- §13.1: просроченное наблюдение. Лаг в одну поставку — проверка
-        # срабатывает тогда, когда человек всё равно смотрит в PR. Дыра названа
-        # в каноне: если следующей поставки не будет, никто не проверит; на это
-        # тот же периодический прогон, что okf_sync_gate --check-stale.
-        today = date.today().isoformat()
-        for name in shipments:
-            arch_status = read(ARCHIVE / name / "STATUS.md")
-            if not arch_status:
-                continue
-            until = field(arch_status, "observe_until")
-            if is_placeholder(until):
-                continue
-            due = re.match(r"(\d{4}-\d{2}-\d{2})", until)
-            if not due or due.group(1) > today:
-                continue
-            if not (ARCHIVE / name / "observed.md").is_file():
-                errors.append(
-                    f"наблюдение просрочено: {name} — observe_until={due.group(1)} "
-                    f"(сегодня {today}), а observed.md нет (§13.1 / A.17). "
-                    "Проверь сигнал в проде и закрой наблюдение, либо сдвинь срок "
-                    "с причиной"
-                )
-
-    if args.require_spec and not (ACTIVE / "spec.md").is_file():
-        errors.append("--require-spec: active/spec.md missing")
-    if args.require_verify and not (ACTIVE / "verify-report.md").is_file():
-        errors.append("--require-verify: verify-report.md missing")
-
-    # --- §4.5: права на действия. Объявлено (CONSTITUTION) ↔ подключено (настройки).
-    settings_path = ROOT / ".claude" / "settings.json"
-    declared = permission_block(read(DELIVERY / "CONSTITUTION.md"))
-    settings, s_err = read_json(settings_path)
-    if s_err:
+    if is_placeholder(raw_phase):
         errors.append(
-            f".claude/settings.json: не парсится ({s_err}) — права агента "
-            "не проверяемы (§4.5)"
+            f"STATUS.md: phase not filled in (template placeholder {raw_phase!r})"
         )
-    perms = settings.get("permissions") or {}
-    wired = {k: list(perms.get(k) or []) for k in ("deny", "ask")}
+    elif not phase:
+        errors.append("STATUS.md: missing phase")
+    elif phase not in allowed:
+        # constitution is project-level file, not active phase
+        errors.append(
+            f"STATUS.md: unknown phase '{phase}' "
+            f"(allowed: {', '.join(sorted(allowed))})"
+        )
 
-    if declared is None:
+    if not klass:
         msg = (
-            "CONSTITUTION.md: нет блока `agent-permissions` (§4.5 / A.1) — контур "
-            "контролирует выход и молчит про действия агента"
+            f"STATUS.md: class not resolved (value {raw_class!r}) — "
+            "cannot apply §2.2 artifact gates; write exactly one of S|M|L"
         )
-        if any(wired.values()):
+        # На specify класс ещё может уточняться; с plan и дальше это блокер:
+        # неизвестный класс = молча отключённые требования spec/plan.
+        if phase == "specify":
+            warnings.append(msg)
+        else:
+            errors.append(msg)
+
+    spec = ACTIVE / "spec.md"
+    plan = ACTIVE / "plan.md"
+    tasks = ACTIVE / "tasks.md"
+    verify = ACTIVE / "verify-report.md"
+    eval_smoke = ACTIVE / "eval-smoke.md"
+
+    if klass in {"M", "L"} and phase in {
+        "plan",
+        "tasks",
+        *implement_like,
+    }:
+        if not spec.is_file():
+            errors.append(f"class {klass} at phase={phase}: missing active/spec.md")
+
+    if klass in {"M", "L"} and phase in implement_like:
+        if not plan.is_file():
+            errors.append(f"class {klass} at phase={phase}: missing active/plan.md")
+        if not tasks.is_file():
+            errors.append(f"class {klass} at phase={phase}: missing active/tasks.md")
+        # §3.3 называет это stop-gate'ом — значит error, не warning.
+        # `deferred` (§2.2b) — законный третий вариант: человека нет, работа
+        # идёт под запись долга. Он пускает до converge включительно, но НЕ на
+        # handoff: подпись под ожиданиями обязательна там, где человек всё
+        # равно есть — на мерже. Без этого значения агент без доступного
+        # человека занижал класс до S, обходя требование спеки законным с виду
+        # способом (найдено независимым развёртыванием).
+        e, w = signature_verdict("human_ok_spec", field(status, "human_ok_spec"), klass, phase)
+        errors += e
+        warnings += w
+
+    if klass == "L" and phase in implement_like:
+        # §2.2b распространяется на ВСЕ поля-подписи, а не только на спеку:
+        # `human_ok_plan` упирался в тот же тупик, и агент без человека выбирал
+        # между «встать» и «занизить класс» — дыра, закрытая один раз, вернулась
+        # во втором поле. Развилка теперь одна на класс полей (см. функцию).
+        e, w = signature_verdict("human_ok_plan", field(status, "human_ok_plan"), klass, phase)
+        errors += e
+        warnings += w
+
+    if klass == "S" and phase in implement_like and not tasks.is_file():
+        errors.append("class S at implement+: missing active/tasks.md (mini-spec)")
+
+    if not verify.is_file():
+        if phase == "verify":
+            # Фаза в процессе: отчёт ещё пишется — но выйти из неё без него нельзя.
+            warnings.append(
+                "phase=verify: active/verify-report.md not created yet"
+            )
+        elif phase in {"converge", "handoff"}:
             errors.append(
-                msg + "; при этом deny/ask в настройках заданы, то есть границы "
-                "действий живут без ревью"
+                f"phase={phase}: missing active/verify-report.md (DoD §3.2.2)"
+            )
+
+    if klass in {"M", "L"} and phase in {"verify", "converge", "handoff"}:
+        if not eval_smoke.is_file():
+            errors.append(
+                "class M/L at verify+: missing active/eval-smoke.md "
+                "(product oracles are mandatory, §6.2)"
+            )
+
+    # --- §12.5: маячок на рисковый дифф. Предупреждение на verify, ОТКАЗ на
+    # handoff — та же лестница, что у `deferred` (§2.2b): работать не мешаем,
+    # объявить сделанным не даём. Блокировать на каждом коммите нельзя: правка
+    # опечатки получала бы требование ревью, и маячок сняли бы через неделю.
+    if phase in {"verify", "converge", "handoff"}:
+        rbase = args.diff_base or "HEAD~1"
+        rstats = diff_stats(rbase)
+        if rstats and rstats[4]:
+            gaps = risk_review_gaps(
+                read(verify),
+                risky_classes(rstats[4], rbase),
+                diff_identifiers(rstats[4]),
+            )
+            for g in gaps:
+                (errors if phase == "handoff" else warnings).append(
+                    f"рисковый дифф: {g}"
+                )
+
+            # --- §12.6: путь, проверяемый только исполнением. Та же лестница
+            # (предупреждение на verify, отказ на handoff) и по той же причине.
+            surfaces, declared = runtime_surfaces(status)
+            if not declared:
+                (errors if phase == "handoff" else warnings).append(
+                    "нет строки `runtime_paths:` в STATUS (§12.6) — назови "
+                    "пути, чей отказ не виден ни сборке, ни тестам (экран, "
+                    "права, железо, тракт съёмки), либо `none reason=…`. "
+                    "Молчание тут читается как «таких нет», а замер поля дал "
+                    "четыре падения подряд ровно в них"
+                )
+            else:
+                touched = runtime_touched(rstats[4], surfaces)
+                for g in runtime_proof_gaps(read(verify), touched):
+                    (errors if phase == "handoff" else warnings).append(
+                        f"исполнение: {g}"
+                    )
+                # Breaker по ПОВЕРХНОСТЯМ, а не по объёму. §3.4 считает файлы
+                # и строки, и три правки в три подсистемы на десяток строк
+                # проходят его не заметив — а именно так и выглядел составной
+                # отказ, который потом разбирали перебором.
+                cap = breaker_value(status, "max_runtime_paths")
+                if len(touched) > cap:
+                    (errors if phase == "handoff" else warnings).append(
+                        f"исполнение: одной поставкой задето {len(touched)} "
+                        f"рисковых путей ({', '.join(sorted(touched))}) при "
+                        f"пороге {cap} (§12.6) — ставь по одному: составной "
+                        "отказ разбирается перебором, а перебор оплачивает "
+                        "человек. Осознанно — строкой "
+                        "`max_runtime_paths=<N> reason=… by=human:…` в STATUS"
+                    )
+
+
+    return ActiveCtx(phase=phase, klass=klass, spec=spec, plan=plan, tasks=tasks, verify=verify, eval_smoke=eval_smoke, implement_like=implement_like)
+```
+
+# Приложение B8 — `scripts/delivery_evidence.py`
+
+```python
+#!/usr/bin/env python3
+"""Доказательства: происхождение ожидания, ревью утверждений, репро-тест.
+
+Часть `delivery_check.py` (`delivery@1.53`). Раздел отвечает на вопрос «чем
+подтверждено», а не «что заполнено»: подпись под примерами, дифф утверждений,
+тест, падавший до фикса.
+"""
+
+from __future__ import annotations
+
+import re
+
+from delivery_base import (ACTIVE, ActiveCtx, field, is_placeholder,
+                           read)
+from delivery_base import SKIP_DIR_PARTS, TEST_TEXT_SUFFIXES
+from delivery_decisions import signature_verdict
+from delivery_history import debt_is_not_frozen, expectation_predates_tests
+
+def check_evidence(status: str, args, errors: list[str], warnings: list[str], ctx: ActiveCtx) -> None:
+    """Ожидание раньше кода, утверждения отревьюены, багфикс принёс тест."""
+    phase, klass, spec, tasks, verify, eval_smoke, implement_like = (
+        ctx.phase,
+        ctx.klass,
+        ctx.spec,
+        ctx.tasks,
+        ctx.verify,
+        ctx.eval_smoke,
+        ctx.implement_like)
+    # --- Долг не должен болтаться вечно (§3.5). Проверяется ТОЛЬКО на handoff:
+    # на каждом коммите это блокировало бы работу, не связанную со старым
+    # долгом, и такой гейт отключают через неделю. Работать не мешаем —
+    # не даём объявить сделанным.
+    if phase == "handoff":
+        errors.extend(debt_is_not_frozen())
+
+    # --- §13.1: поставка уходит в archive вместе с обязательством проверить
+    # её в проде. Без этих полей «готово» проверено во всех средах, кроме
+    # единственной значимой.
+    if phase == "handoff":
+        sig = field(status, "observe_signal")
+        until = field(status, "observe_until")
+        if is_placeholder(sig):
+            errors.append(
+                "phase=handoff: пусто observe_signal (§13.2) — что именно "
+                "будет проверено в проде; «ошибок нет» сигналом не является, "
+                "молчание одинаково выглядит и при не вызываемом коде"
+            )
+        if is_placeholder(until):
+            errors.append(
+                "phase=handoff: пусто observe_until (§13.1) — до какой даты "
+                "наблюдаем; обязательство без срока не выполняется"
+            )
+        # Уровень наблюдаемости — значение проверяемое, а не декларативное
+        # (урок §10.4: самозаявленное `ci-oracles: tooling` при красном CI).
+        level = field(status, "observability")
+        if not is_placeholder(level) and level.strip().startswith(("2", "3")):
+            # Цифра, которой НЕ предшествует латинская буква: так число порога
+            # (`180мс`) отличается от id примера (`A1`) и от имени метрики
+            # (`p95`). Наивный поиск любой цифры проходил на сигнале
+            # «A1 подтверждён, ошибок нет» — то есть по неверной причине.
+            if not re.search(r"(?<![A-Za-z])\d", sig):
+                errors.append(
+                    f"observability: {level.strip()} заявлен, но observe_signal "
+                    "без метрики с числом (§13.3) — уровень 2+ означает замер "
+                    "ДО и порог, а не «мониторинг вроде подключён»"
+                )
+
+    if phase == "handoff" and verify.is_file():
+        vr = read(verify)
+        if not re.search(r"READY FOR HANDOFF", vr, re.I):
+            errors.append(
+                "phase=handoff: verify-report.md lacks 'READY FOR HANDOFF' verdict"
+            )
+        # §9.2: метрики снимаются на handoff. Без гейта ритуал не выполняется.
+        if "Harness metrics" not in vr:
+            errors.append(
+                "phase=handoff: verify-report.md lacks the 'Harness metrics' "
+                "block (§9.2 / A.10) — run: python scripts/delivery_metrics.py "
+                "--base origin/main --write"
+            )
+
+    # --- Builder ≠ Verifier (§5.2): не сама независимость, но явное заявление
+    # о ней. Настоящее разделение обеспечивает required review в branch
+    # protection (CQG §8.5); здесь ловим «сам построил, сам принял».
+    if phase in {"verify", "converge", "handoff"} and verify.is_file():
+        declared = field(read(verify), "Verifier") or field(status, "verifier")
+        builder = field(status, "builder")
+        if is_placeholder(declared):
+            errors.append(
+                "verify-report.md: Verifier not filled in — Builder must not "
+                "accept own work (§5.2); write process:ci | agent:NAME | human:NAME"
+            )
+        elif (
+            klass in {"M", "L"}
+            and not is_placeholder(builder)
+            and declared.strip().lower() == builder.strip().lower()
+        ):
+            errors.append(
+                f"class {klass}: verifier == builder ('{declared}') — §5.2 "
+                "requires a different agent/model/human, or process:ci"
+            )
+
+    # --- §3.1d уровень 3 / DoD §3.2.7: ревью утверждений пропорционально
+    # непроверяемой части. `n/a` законен, только если КАЖДОЕ утверждение
+    # ведёт к примеру, который человек подписал до кода; иначе ожидание
+    # придумал исполнитель, и подпись обязана быть.
+    if klass in {"M", "L"} and phase in {"verify", "converge", "handoff"} and verify.is_file():
+        vr = read(verify)
+        reviewed = field(vr, "asserts_reviewed_by")
+        digest = re.search(r"(?im)^\s*asserts_without_example:\s*(\d+)\s*$", vr)
+        if is_placeholder(reviewed):
+            errors.append(
+                f"class {klass}: verify-report.md без asserts_reviewed_by "
+                "(§3.1d уровень 3, DoD §3.2.7) — последний рубеж против "
+                "неверного ожидания; вставь дайджест: "
+                "bash scripts/lint/assert_digest.sh >> verify-report.md"
+            )
+        elif reviewed.lower().startswith("n/a"):
+            if not digest:
+                errors.append(
+                    "asserts_reviewed_by: n/a без вставленного дайджеста "
+                    "(нет строки 'asserts_without_example: N') — n/a надо "
+                    "заслужить, а не заявить (§3.1d уровень 3)"
+                )
+            elif int(digest.group(1)) > 0:
+                errors.append(
+                    f"asserts_reviewed_by: n/a, но {digest.group(1)} "
+                    "утверждений не ссылаются на примеры спеки — их ожидание "
+                    "придумал исполнитель; нужна подпись human:… at=… "
+                    "(§3.1d уровень 3)"
+                )
+        else:
+            # Третье появление той же дыры. §2.2b закрыла её для `human_ok_spec`,
+            # v1.30 — для `human_ok_plan`, и оба раза правка была на ПОЛЕ, а не на
+            # класс полей: здесь ветка принимала ЛЮБУЮ непустую строку, поэтому
+            # `asserts_reviewed_by: посмотрел сам` и `by=agent:…` проходили, а
+            # автономному агенту не оставалось законного значения вовсе. Теперь
+            # поле идёт через ту же развилку: подпись человека, либо `deferred`
+            # с причиной, либо заслуженное `n/a` выше.
+            e, w = signature_verdict("asserts_reviewed_by", reviewed, klass, phase)
+            errors += e
+            warnings += w
+
+    # --- §3.1d уровень 1: ожидание обязано появиться РАНЬШЕ кода.
+    # Проверяем не качество примеров (это невозможно), а сам факт, что они
+    # есть и на них ссылаются тесты: иначе ожидание придумал тот же, кто писал
+    # код, и все гейты ниже проверяют его согласие с самим собой.
+    if klass in {"M", "L"} and phase in implement_like and spec.is_file():
+        spec_text = read(spec)
+        ex_ids = re.findall(r"(?m)^\s*\|\s*([A-Z]\d+)\s*\|", spec_text)
+
+        # Корпус «где искать ссылки»: smoke + tasks + verify + тексты тестов.
+        # Строится БЕЗУСЛОВНО, потому что его читают ДВЕ независимые проверки —
+        # ссылки на id ниже и реляционный оракул §6.5 дальше.
+        #
+        # lab-12: он строился внутри else-ветки, и обе ветки с ошибкой роняли
+        # гейт `UnboundLocalError: haystack` ВМЕСТО того, чтобы напечатать уже
+        # сформулированный диагноз. Класс: **проверка, обязанная поставить
+        # диагноз, умирает вместо диагноза** — исполнитель видит поломку
+        # инструмента там, где ему сообщали о его собственной ошибке. Это
+        # зеркало «гейта, врущего зелёным»: тот молчит, когда должен говорить,
+        # этот кричит не о том. Мера — не «инициализировать переменную», а
+        # держать сбор данных отдельно от разбора причин.
+        haystack = read(eval_smoke) + read(tasks) + read(verify)
+        for root_dir in ("tests", "backend/tests", "src/tests"):
+            d = ACTIVE.parent.parent / root_dir
+            if not d.is_dir():
+                continue
+            for f in d.rglob("*test*"):
+                # Только текстовые исходники и не служебные каталоги:
+                # маска ловила .pyc и роняла гейт (F9).
+                if (
+                    f.is_file()
+                    and f.suffix in TEST_TEXT_SUFFIXES
+                    and not any(p in SKIP_DIR_PARTS for p in f.parts)
+                ):
+                    haystack += read(f)
+
+        if not re.search(r"(?im)^#+\s*acceptance\s+examples", spec_text):
+            errors.append(
+                f"class {klass}: spec.md без блока '## Acceptance examples' "
+                "(§3.1d) — конкретные вход→выход, подтверждённые человеком "
+                "ДО кода; проза «работает корректно» подписью не является"
+            )
+        elif not ex_ids:
+            # Грамматика id названа ЯВНО: она не очевидна, а её нарушение
+            # раньше выглядело как «примеров нет» при полной таблице примеров.
+            # lab-12: арка написала id вида `EX1` и получила краш; вторая арка
+            # переименовала свои id, обходя соседнюю проблему, — то есть
+            # неназванное правило заставляло подстраиваться вслепую.
+            errors.append(
+                "spec.md: блок Acceptance examples есть, но примеров с id в "
+                "нём нет (§3.1d). id читается из первой колонки таблицы и "
+                "обязан быть вида ОДНА заглавная латинская буква + цифры "
+                "(`A1`, `E2`); `EX1`, `A.1`, `1` и `случай-1` не считаются"
             )
         else:
-            warnings.append(msg)
-    elif not settings_path.is_file():
+            # id должны встречаться в тестах или eval-smoke: связь примера с
+            # проверкой — то, что отличает обещание от отчёта о реализации.
+            missing = [i for i in dict.fromkeys(ex_ids) if i not in haystack]
+            if missing:
+                warnings.append(
+                    "acceptance-примеры без ссылки в тестах/eval-smoke: "
+                    f"{', '.join(missing)} (§3.1d) — пометь тест id примера"
+                )
+
+            # Порядок «пример раньше теста» — на verify и дальше: раньше
+            # тестов может просто не быть, и проверка ругалась бы на штатное
+            # состояние фазы implement.
+            if phase in {"verify", "converge", "handoff"}:
+                test_dirs = [d for d in ("tests", "backend/tests", "src/tests")
+                             if (ACTIVE.parent.parent / d).is_dir()]
+                warnings += expectation_predates_tests(ex_ids, test_dirs)
+
+        # --- §6.5 уровень 2: хотя бы один реляционный оракул на M/L.
+        # «Минимум один» стояло в §6.5 практикой и не принуждалось ничем —
+        # та же форма, что F7. Пример со значением (`f(2) == 4`) закрепляет
+        # баг, если ожидание списано с кода, и мутационный гейт его не поймает:
+        # мутант будет честно убит НЕВЕРНЫМ утверждением. Свойство подделать
+        # нельзя, потому что ожидаемого значения в нём нет.
+        #
+        # ⚠ Это проверка НАЛИЧИЯ, и она заполняется галочкой: `@given(...)` с
+        # `assert True` её проходит. Ловит такое не она, а мутационный гейт —
+        # декоративное свойство оставляет мутантов живыми. Поэтому требование
+        # осмысленно ТОЛЬКО при работающем mutation (на macOS —
+        # `brew install coreutils`, CQG §5 шаг 3), и об этом сказано в тексте
+        # ошибки: иначе получим ритуал вместо оракула.
+        if not re.search(r"@given|@hypothesis\.given|fc\.assert|fc\.property",
+                         haystack):
+            warnings.append(
+                f"class {klass}: ни одного реляционного оракула (§6.5) — "
+                "не найдено ни `@given` (hypothesis), ни `fc.property` "
+                "(fast-check). Инвариант, round-trip, идемпотентность, "
+                "метаморфное отношение или differential: в них нет ожидаемого "
+                "значения, поэтому в них нельзя спрятать неверное ожидание. "
+                "Один инвариант обычно ловит больше десяти тестов-значений, "
+                "потому что раннер перебирает входы, о которых автор не думал. "
+                "Проверь заодно, что mutation-гейт у тебя не пропускается: "
+                "иначе слабое свойство (`assert result is not None`) пройдёт"
+            )
+
+```
+
+# Приложение B9 — `scripts/delivery_journals.py`
+
+```python
+#!/usr/bin/env python3
+"""Журналы поведения: диагноз, эскалация, отклонённые варианты, решения.
+
+Часть `delivery_check.py` (`delivery@1.53`). §12.1–12.3: контур фиксировал
+результат и не показывал, КАК агент к нему шёл. Проверяется форма записи —
+альтернатива и причина обязательны, шаблон записью не считается.
+"""
+
+from __future__ import annotations
+
+import re
+
+from delivery_base import (ACTIVE, ActiveCtx, field, is_placeholder,
+                           list_entries, read, unfilled, verdict_blocks)
+from delivery_artifact import (check_artifact_oracle,
+                               check_weak_names_the_cheap_gap)
+from delivery_decisions import decision_lines, decisions_without_cost
+from delivery_diff import diff_identifiers, diff_stats
+
+
+
+def check_journals(status: str, args, errors: list[str], warnings: list[str], ctx: ActiveCtx) -> None:
+    """Диагноз, эскалация, отклонённые варианты и лента решений."""
+    phase, klass, plan, implement_like = (
+        ctx.phase,
+        ctx.klass,
+        ctx.plan,
+        ctx.implement_like)
+    # kind/behavior читаем один раз — их используют обе проверки ниже.
+    kind = field(status, "kind").lower()
+    behavior = field(status, "behavior-oracles").lower()
+
+    # --- §3.1c: багфикс обязан принести тест, который падал до фикса
+    if kind.startswith("bugfix") and phase in {"verify", "converge", "handoff"}:
+        repro = field(status, "repro_test")
+        if is_placeholder(repro):
+            errors.append(
+                "kind=bugfix at verify+: missing repro_test (§3.1c) — тест, "
+                "который падал до фикса; иначе баг вернётся"
+            )
+        elif repro.lower().startswith("n/a") and "reason=" not in repro.lower():
+            errors.append(
+                "repro_test: n/a без reason= (§3.1c) — «не воспроизводится» "
+                "обычно значит «не пробовал»"
+            )
+
+    # --- §12.1: багфикс обязан показать, КАК искали, а не только что нашёл.
+    # repro_test доказывает, что баг найден; журнал гипотез — что его не будут
+    # искать заново с нуля.
+    if kind.startswith(("bugfix", "hotfix")) and phase in {
+        "verify",
+        "converge",
+        "handoff",
+    }:
+        diag = field(status, "diagnosis")
+        diag_file = ACTIVE / "diagnosis.md"
+        if is_placeholder(diag):
+            errors.append(
+                f"kind={kind.split()[0]} at verify+: missing diagnosis (§12.1) "
+                "— журнал гипотез с вердиктами; n/a только с reason="
+            )
+        elif diag.lower().startswith("n/a"):
+            if "reason=" not in diag.lower():
+                errors.append(
+                    "diagnosis: n/a без reason= (§12.1) — «нашёл сразу» и «не "
+                    "искал» обязаны различаться в тексте, а не в тишине"
+                )
+        elif not diag_file.is_file():
+            errors.append(
+                "diagnosis указывает на файл, которого нет (§12.1) — "
+                "ожидается delivery/active/diagnosis.md"
+            )
+        elif not verdict_blocks(read(diag_file)):
+            errors.append(
+                "diagnosis.md без заполненных вердиктов (§12.1) — гипотезы без "
+                "ОПРОВЕРГНУТА/ПОДТВЕРЖДЕНА это список подозрений: следующий "
+                "читатель обязан перепроверить всё заново. Ожидается вердикт "
+                "внутри СТРУКТУРНОГО блока: пункт списка, строка таблицы или "
+                "раздел (перенос строки внутри пункта допустим). Строки шаблона "
+                "(с <…>) и проза о формате вердиктами не считаются"
+            )
+
+    # --- §12.3: остановка обязана быть оформлена, иначе восстановление
+    # контекста перекладывается на человека — то самое время, которое контур
+    # экономит.
+    blockers = field(status, "blockers")
+    if blockers and not is_placeholder(blockers) and blockers.lower() not in {
+        "none",
+        "нет",
+        "n/a",
+    }:
+        esc = ACTIVE / "escalation.md"
+        if not esc.is_file():
+            errors.append(
+                f"blockers непусты ({blockers[:50]}), а active/escalation.md "
+                "нет (§12.3) — «я застрял» решением не является: нужны что "
+                "пробовал, какой нужен ответ, два варианта с ценой"
+            )
+        else:
+            # Строки шаблона не считаются: скопированный и незаполненный
+            # escalation.md — это не оформленная остановка (ср. STATUS, v1.5).
+            lines_e = [ln for ln in read(esc).splitlines() if not unfilled(ln)]
+            # Разметка принимается ЛЮБАЯ разумная: жирная строка шаблона,
+            # markdown-заголовок, list-item, строка таблицы. До delivery@1.39
+            # принималась только жирная строка, и `## Вариант 1 — …` давало
+            # «вариантов 0» — то есть диагноз про СОДЕРЖАНИЕ, когда причина
+            # была в ФОРМЕ. На dogfooding'е (lab-10) я споткнулся об это трижды
+            # в трёх артефактах; ни одна подстройка не была про смысл.
+            opts = len(
+                [
+                    ln
+                    for ln in lines_e
+                    if re.match(
+                        # `\s+` обязателен: с `\s*` заголовок раздела
+                        # «## Варианты» считался вариантом («вариант» + «ы»),
+                        # и одного варианта хватало на два. Поймал существующий
+                        # тест, а не я.
+                        r"(?i)^\s*(?:#{1,6}\s*|[-*]\s+|\|\s*)?\**\s*"
+                        r"(?:вариант|option)\s+\w",
+                        ln,
+                    )
+                ]
+            )
+            costs = len(
+                [ln for ln in lines_e if re.search(r"(?i)\bцена\b|\bcost\b", ln)]
+            )
+            if opts < 2:
+                errors.append(
+                    f"escalation.md: заполненных вариантов {opts}, нужно ≥2 "
+                    "(§12.3) — один вариант это просьба согласиться, а не выбор; "
+                    "второй всегда есть и называется «не делать / отложить». "
+                    "Ожидается строка, начинающаяся со слова «Вариант» (можно "
+                    "как заголовок `## Вариант A`, жирным `**Вариант A:**`, "
+                    "пунктом списка или строкой таблицы)"
+                )
+            elif costs < 2:
+                errors.append(
+                    f"escalation.md: вариантов {opts}, а названных цен {costs} "
+                    "(§12.3) — вариант без цены выбрать нельзя"
+                )
+
+    # --- §12.2a: отклонённые варианты. Без следа тот же тупик предлагают
+    # снова — и он снова выглядит разумным, потому что причина отказа нигде
+    # не записана.
+    if klass in {"M", "L"} and phase in implement_like and plan.is_file():
+        plan_text = read(plan)
+        sec = re.search(
+            r"(?ims)^#{2,3}\s*rejected\s+alternatives\s*$(.*?)(?=^#{2,3}\s|\Z)",
+            plan_text,
+        )
+        msg_alt = ""
+        if not sec:
+            msg_alt = (
+                "plan.md без секции '## Rejected alternatives' (§12.2a) — "
+                "отброшенный подход без записанной причины предлагается снова"
+            )
+        else:
+            # Та же склейка переносов, что у журналов: причина часто уезжает на
+            # вторую строку, и построчный разбор объявлял запись «без причины».
+            entries = [
+                ln
+                for ln in list_entries(sec.group(1))
+                if not unfilled(ln)
+                and re.search(r"(?i)потому что|because|reason=", ln)
+            ]
+            if not entries:
+                msg_alt = (
+                    "plan.md: 'Rejected alternatives' без заполненных записей "
+                    "с причиной (§12.2a) — законна и запись «рассматривали "
+                    "только X, потому что Y исключён требованием Z»"
+                )
+        if msg_alt:
+            (errors if klass == "L" else warnings).append(msg_alt)
+
+    # --- §12.2: журнал решений. Проверяется ФОРМАТ: лента без альтернатив
+    # неаудируема, а именно аудируемость — весь смысл файла.
+    dec_file = ACTIVE / "decisions.md"
+    late = phase in {"verify", "converge", "handoff"}
+    if dec_file.is_file():
+        good, bad = decision_lines(read(dec_file))
+        if bad:
+            errors.append(
+                f"decisions.md: {len(bad)} строк(а) не в формате §12.2 "
+                "«выбрал X вместо Y — потому что Z»: "
+                + "; ".join(b[:55] for b in bad[:3])
+            )
+        if klass == "L" and late and not good:
+            errors.append(
+                "class L: decisions.md без ни одного решения (§12.2) — эпик "
+                "или новый модуль без выбора не бывает"
+            )
+        # Цена, а не предпочтение: «потому что дешевле» неопровержимо, значит
+        # аудита не даёт, ради которого файл и ведётся (§12.2a).
+        # Идентификаторы диффа — то, с чем сверяется «цена». Диффа нет
+        # (нет ref'а, не git) -> `None`, и проверка молчит: предупреждение по
+        # неверной причине учит игнорировать гейт.
+        # Без `--diff-base` берём `HEAD~1`: иначе проверка молчала бы на
+        # каждом локальном прогоне, а в CI работала — то есть вела бы себя
+        # по-разному там, где решение и принимается.
+        dec_stats = diff_stats(args.diff_base or "HEAD~1")
+        diff_ids = diff_identifiers(dec_stats[4]) if dec_stats else None
+        no_cost = decisions_without_cost(read(dec_file), diff_ids)
+        if no_cost and late:
+            warnings.append(
+                f"decisions.md: {len(no_cost)} решен(ий) без цены — причина не "
+                "названа ни числом, ни ссылкой в изменённый код: "
+                + "; ".join(n[:55] for n in no_cost[:3])
+                + ". «Дешевле» и «проще» проверить нельзя ничем; назови число "
+                "или процитируй то, что менял (файл, функцию, поле) — такое "
+                "не напишешь, не открыв дифф (§12.2a)"
+            )
+    elif klass == "L" and late:
         errors.append(
-            "CONSTITUTION.md объявляет agent-permissions, а .claude/settings.json "
-            "нет (§4.5) — объявленный неработающий запрет хуже отсутствующего: "
-            "он выглядит как контроль"
+            "class L at verify+: missing active/decisions.md (§12.2)"
         )
-    elif not s_err:
-        for bucket in ("deny", "ask"):
-            only_canon = [r for r in declared[bucket] if r not in wired[bucket]]
-            only_wired = [r for r in wired[bucket] if r not in declared[bucket]]
-            if only_canon:
-                errors.append(
-                    f"permissions.{bucket}: объявлено в CONSTITUTION, нет в "
-                    f".claude/settings.json: {', '.join(only_canon)} (§4.5)"
-                )
-            if only_wired:
-                errors.append(
-                    f"permissions.{bucket}: есть в .claude/settings.json, нет в "
-                    f"CONSTITUTION: {', '.join(only_wired)} (§4.5) — границу "
-                    "действий двигали молча"
-                )
-
-    # --- §4.6: перевод из HITL в автономию обязан назвать существующий оракул.
-    # Объявленная песочница без скрипта — снятая проверка с видом усиления;
-    # класс тот же, что «скрипт лежал в репозитории, никто не вызывал» (§3.1a).
-    for line in (declared or {}).get("sandbox", []):
-        m_or = re.search(r"oracle=([^\s]+)", line)
-        if not m_or:
-            errors.append(
-                f"sandbox без oracle=: {line[:60]} (§4.6) — перевод из HITL "
-                "в автономию обязан назвать оракул, заменивший человека"
-            )
-        elif not (ROOT / m_or.group(1)).exists():
-            errors.append(
-                f"sandbox: oracle={m_or.group(1)} не существует (§4.6) — "
-                "объявленная песочница без скрипта это снятая проверка "
-                "с видом усиления"
-            )
-
-    # Ратчет прав: длинный allow при пустом deny = права росли только вверх.
-    # Считаем и локальные настройки — именно там оседают клики «yes».
-    local, _ = read_json(ROOT / ".claude" / "settings.local.json")
-    n_allow = len(perms.get("allow") or []) + len(
-        (local.get("permissions") or {}).get("allow") or []
-    )
-    if n_allow >= 50 and not wired["deny"]:
+    elif klass == "M" and late:
         warnings.append(
-            f"permissions: {n_allow} правил в allow и ни одного в deny (§4.5) — "
-            "права накапливались кликами «yes» и ни разу не сужались"
+            "class M at verify+: нет active/decisions.md (§12.2) — поведение "
+            "агента неаудируемо без чтения всего диффа"
         )
 
-    if (ROOT / "CODE_QUALITY_GATES.md").is_file():
-        cons = read(DELIVERY / "CONSTITUTION.md")
-        if "CODE_QUALITY_GATES" not in cons:
-            warnings.append("CQG present but CONSTITUTION.md has no pointer")
-    if (ROOT / "OKF_KNOWLEDGE_BUNDLE.md").is_file() or (ROOT / "knowledge").is_dir():
-        cons = read(DELIVERY / "CONSTITUTION.md")
-        if "OKF" not in cons and "knowledge/" not in cons:
-            warnings.append("OKF/knowledge present but CONSTITUTION.md has no pointer")
+    check_artifact_oracle(status, phase, klass, errors, warnings)
+    check_weak_names_the_cheap_gap(status, errors, warnings)
 
-    for w in warnings:
-        print(f"WARNING: {w}")
-    for e in errors:
-        print(f"ERROR: {e}", file=sys.stderr)
-    print(f"delivery_check: {len(errors)} error(s), {len(warnings)} warning(s)")
-    return 1 if errors else 0
+    # --- §3.1b: рефакторинг без behavior-oracles = тихая регрессия
+    if kind.startswith("refactor") and phase in {"verify", "converge", "handoff"}:
+        covered = (
+            not behavior.startswith("weak")
+            or "characteriz" in status.lower()
+            or "характеризац" in status.lower()
+            or "refactor" in field(status, "waivers").lower()
+        )
+        if not covered:
+            errors.append(
+                "kind=refactor with behavior-oracles: weak — «компилируется» не "
+                "доказывает сохранение поведения (§3.1b). Нужны характеризационные "
+                "тесты, наблюдаемая проверка или human waiver со словом refactor"
+            )
+
+    # --- CI (§10.4): единственный слой, который агент не может обойти локально
+```
+
+# Приложение B11 — `scripts/delivery_artifact.py`
+
+```python
+#!/usr/bin/env python3
+"""§6.5a: артефакт сборки судится, а `weak` называет дешёвое непокрытое.
+
+Часть `delivery_check.py` (`delivery@1.54`). Оба правила — про одну границу:
+между «исходник корректен» и «продукт правилен». Форму исходника судит CQG,
+поведение — тесты, а собранный артефакт до сих пор не читал никто, и «зелёный
+CI» читался как «продукт правилен».
+"""
+
+from __future__ import annotations
+
+import re
+
+from delivery_base import ROOT, field, is_placeholder
+
+BUILD_MARKERS = (
+    ("package.json", r'"scripts"\s*:\s*\{[^{}]*"build"\s*:'),
+    ("Makefile", r"(?m)^build\s*:"),
+    ("justfile", r"(?m)^build\s*:"),
+)
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+def declares_build(root) -> str:
+    """Чем объявлен шаг сборки; пусто — проект ничего не собирает.
+
+    Ищем ОБЪЯВЛЕНИЕ, а не угадываем стек: `scripts.build` в `package.json`,
+    цель `build:` в Makefile/justfile. Не найдено — правило §6.5a не применяется,
+    и это честнее, чем требовать артефакт у библиотеки.
+    """
+    for name, pattern in BUILD_MARKERS:
+        p = root / name
+        if p.is_file() and re.search(pattern, p.read_text(encoding="utf-8", errors="replace")):
+            return name
+    return ""
+
+
+def check_artifact_oracle(status, phase, klass, errors, warnings) -> None:
+    """§6.5a: у артефакта сборки обязан быть машинный инвариант.
+
+    **Замер восьмого развёртывания.** Развёрнуто пятнадцать ролей CQG, CI зелёный,
+    и при этом ни одна проверка не читает `dist/`: между «исходник корректен» и
+    «продукт правилен» лежит зона, которую не судит ничто. Это не дыра каталога,
+    а его предмет — форма исходника и поведение продукта разные слои, — но пока
+    зона не названа, «зелёный CI» читается как «продукт правилен».
+
+    Объявление живёт в STATUS (`artifact_oracle:`), как `runtime_paths` и
+    `repro_test`, и проверяется по ФАКТУ файла: объявленный оракул без скрипта —
+    снятая проверка с видом усиления (§4.6, тот же класс).
+    """
+    built = declares_build(ROOT)
+    if not built:
+        return
+    declared = field(status, "artifact_oracle")
+    hard = phase == "handoff" and klass in {"M", "L"}
+    if not declared or is_placeholder(declared):
+        (errors if hard else warnings).append(
+            f"artifact_oracle: проект собирает артефакт ({built}), а оракула на "
+            "него в STATUS нет — между «исходник корректен» и «продукт правилен» "
+            "не судит ничто (§6.5a). Объяви проверку собранного или `n/a reason=…`"
+        )
+        return
+    low = declared.lower()
+    if low.startswith(("n/a", "нет", "no ")):
+        if "reason=" not in low:
+            errors.append(
+                "artifact_oracle: n/a без reason= — «не делали» и «нечем» это "
+                "разные вещи, и различать их обязана запись (§6.5a)"
+            )
+        return
+    path = declared.split()[0].strip("`\"',")
+    if not (ROOT / path).exists():
+        errors.append(
+            f"artifact_oracle: {path} — файла нет. Объявленный оракул без скрипта "
+            "это снятая проверка с видом усиления (§4.6)"
+        )
+
+
+def check_weak_names_the_cheap_gap(status, errors, warnings) -> None:
+    """`weak` обязан называть, что проверяемо машиной и не сделано (§6.5a).
+
+    «Не развёрнуто» и «непроверяемо» — разные вещи, а `weak` их смешивает и
+    потому живёт вечно. Замер того же развёртывания: слой behavior пуст, но
+    большая часть непокрытого проверяется дёшево и без новых зависимостей —
+    разбор собранного html, контраст как арифметика над токенами, переключатель
+    языков как функция пути. Пока это не названо, `weak` читается как «нельзя».
+
+    Правило то же, что §9.1a п.2 даёт гейтам: молчащий механизм либо убирают,
+    либо пишут, почему держат. Здесь — либо покрывают, либо называют дешёвое.
+    """
+    raw = field(status, "behavior-oracles")
+    if not raw.lower().startswith("weak"):
+        return
+    tail = raw[len("weak"):].strip(" —-:;()")
+    if tail and not is_placeholder(tail):
+        return
+    warnings.append(
+        "behavior-oracles: weak без названного — «не развёрнуто» и «непроверяемо» "
+        "разные вещи (§6.5a). Что из непокрытого проверяемо машиной СЕГОДНЯ? "
+        "Форма: `behavior-oracles: weak — дёшево: <что именно>`"
+    )
+```
+
+# Приложение B10 — `scripts/delivery_limits.py`
+
+```python
+#!/usr/bin/env python3
+"""Пределы поставки: CI-слой, объёмные breaker'ы, рисковый дифф.
+
+Часть `delivery_check.py` (`delivery@1.53`). Здесь то, что ограничивает поставку
+снаружи: чем закрыт CI, не разрослась ли она объёмом и прочитано ли то, что
+помечено рисковым.
+"""
+
+from __future__ import annotations
+
+import re
+
+from delivery_base import (ACTIVE, ARCHIVE, BREAKER_EXCLUDE, ActiveCtx,
+                           DEFAULT_BREAKERS, field,
+                           is_placeholder, read)
+from delivery_diff import applicable_lessons, diff_stats
+
+def check_limits(status: str, args, errors: list[str], warnings: list[str], ctx: ActiveCtx) -> None:
+    """CI-слой, объёмные breaker'ы и рисковый дифф."""
+    phase, klass, plan, tasks, verify = (
+        ctx.phase,
+        ctx.klass,
+        ctx.plan,
+        ctx.tasks,
+        ctx.verify)
+    ci = field(status, "ci-oracles").lower()
+    waivers = field(status, "waivers").lower()
+    if is_placeholder(ci):
+        warnings.append(
+            "STATUS.md: missing ci-oracles (weak|tooling|deployed) — §10.4"
+        )
+    elif ci.startswith("weak"):
+        # Было `"ci" not in waivers`: строка `waivers: ci` снимала требование
+        # ПОДСТРОКОЙ — без причины и без подписи. Форма waiver'а одна на весь
+        # контур (§4.3a). Нашло приёмочное развёртывание.
+        ci_waived = bool(re.search(r"ci\b.*reason=.*by=human:", waivers))
+        # Компенсация §10.4 правило 4 — ТРЕТИЙ законный выход, наравне с waiver'ом.
+        # Она была описана прозой и не проверялась ничем, поэтому автономное
+        # развёртывание в проект без хостинга не имело **честного** способа сделать
+        # гейт зелёным: waiver требует человека, занижать класс запрещено §2.2b, а
+        # `blockers:` + `escalation.md` гейт не принимал. Рядом лежали две дешёвые
+        # лазейки (занизить класс, написать `waivers: ci`), то есть канон учил
+        # обходить себя законным с виду способом — ровно то, против чего §2.2b.
+        # Асимметрия была видна в собственном выводе: для `human_ok_*` третье
+        # значение сделали, для `ci-oracles` — нет.
+        #
+        # Компенсация проверяется по ФАКТУ артефакта, а не по заявлению: строка
+        # `clean_clone_run:` в verify-report (что прогнали и когда) + непустые
+        # `blockers:` + существующий `escalation.md` (§12.3 сам требует там два
+        # варианта с ценой). Это не эквивалент CI и не снятие требования: остаётся
+        # громкий warning, `ci-oracles` остаётся `weak`, и строка приёмки §6
+        # закрывается как `weak`, а не как `auto`.
+        compensated = (
+            bool(re.search(r"(?im)^\s*\**clean_clone_run\**\s*:\s*\S", read(verify)))
+            and bool(field(status, "blockers").lower() not in {"", "none", "-"})
+            and (ACTIVE / "escalation.md").is_file()
+        )
+        if klass == "L" and not ci_waived and not compensated:
+            errors.append(
+                "class L with ci-oracles: weak — нужен либо human waiver "
+                "(`waivers: ci reason=… by=human:…`), либо компенсация §10.4 п.4: "
+                "строка `clean_clone_run: <что прогнал> at=<дата>` в "
+                "verify-report.md + непустые blockers: + active/escalation.md. "
+                "Занижать класс, чтобы гейт позеленел, запрещено (§2.2b)"
+            )
+        elif klass == "L" and compensated and not ci_waived:
+            warnings.append(
+                "class L, ci-oracles: weak — закрыто компенсацией §10.4 п.4 "
+                "(clean_clone_run + blockers + escalation.md). Это НЕ эквивалент "
+                "CI: строка приёмки §6 закрывается как weak, не как auto"
+            )
+        else:
+            warnings.append(
+                "ci-oracles: weak — local gates are bypassable (§10.4); "
+                "Verifier must attach a clean-clone run to verify-report.md"
+            )
+    # 'tooling' — легитимный режим (гейт мержа в репо, серверного нет по тарифу),
+    # а не поддавки: см. §10.4. Недопустим только 'weak'.
+    #
+    # ⚠ У флага ОБЯЗАН быть первый прогон, иначе он замкнут в круг (`delivery@1.52`).
+    # §10.4 велит ставить `deployed` по факту ЗЕЛЁНОГО прогона, а флаг стоит в
+    # том самом прогоне: честное `weak` держит его красным, а красный прогон не
+    # даёт значению стать честным. Восьмое развёртывание вышло из круга флипом в
+    # том же коммите — законно, но канон об этом не говорил, и агент имел ровно
+    # два выхода, оба выглядящие как обход собственного правила.
+    #
+    # Развязка по СМЫСЛУ флага: он защищает не «каждый прогон», а ЗАКРЫТИЕ
+    # поставки. На фазе `handoff` `weak` — ошибка, как и было. До неё — громкий
+    # warning, который называет ровно один ход: обновить STATUS по факту этого
+    # прогона, в том же коммите. Реальность (прогон исполняется) старше записи,
+    # и спорить с ней значит требовать вранья в одну или другую сторону.
+    if args.require_ci and not ci.startswith(("deployed", "tooling")):
+        if phase == "handoff":
+            errors.append(
+                "--require-ci: ci-oracles is neither 'deployed' nor 'tooling' "
+                "— поставку с weak CI не закрываем (§10.4)"
+            )
+        else:
+            warnings.append(
+                "--require-ci: ci-oracles = weak, а прогон уже идёт. Это первый "
+                "прогон: поставь `ci-oracles: deployed` по факту ЭТОГО прогона "
+                "в том же коммите (§10.4). На фазе handoff это станет ошибкой"
+            )
+
+    stack = field(status, "stack")
+    if is_placeholder(stack) or "delivery@" not in stack:
+        warnings.append(
+            "STATUS.md: missing stack version "
+            "(e.g. 'delivery@<version>, cqg@<version>, okf@absent')"
+        )
+
+    # --- Circuit breakers (§3.4): анти-oneshot по объёму поставки.
+    #
+    # `kind: bootstrap` breaker'ом не мерится, и это не поддавки. Bootstrap — не
+    # поставка продукта: у него своя DoD (§7.3), он по построению трогает всё
+    # дерево контура и не может быть «разрезан на части» — совет гейта «split the
+    # PR» для него не выполним ни в каком виде. Приёмочное развёртывание показало
+    # это числом: даже после исключения механики контура остаётся 30 файлов и
+    # 2437 строк конфигов, снимков и workflow'ов против лимита 800. Единственным
+    # выходом оставался рутинный waiver, который §4.3a сам называет
+    # обесцениванием механизма — то есть гейт учил себя обходить.
+    #
+    # Объём при этом не замалчивается: он печатается строкой ниже, и §7.3 требует
+    # приёмку §6 — bootstrap проверяется своей процедурой, а не breaker'ом.
+    if field(status, "kind").lower().startswith("bootstrap"):
+        print(
+            "breakers: kind=bootstrap — объём не мерится (§3.4): развёртывание "
+            "контура не режется на части, его DoD — §7.3 + приёмка §6"
+        )
+    elif args.diff_base:
+        limits = dict(DEFAULT_BREAKERS)
+        # Одна и та же форма покрывает и override в circuit_breakers,
+        # и human waiver: "max_files_touched=40 reason=… by=human:…".
+        for m in re.finditer(r"(max_[a-z_]+)[ \t]*=[ \t]*(\d+)", status):
+            if m.group(1) not in limits:
+                continue
+            # Смотрим СТРОКУ, в которой стоит override, а не только совпадение.
+            # §3.4 различает две вещи одной формы: настройка проекта (строка
+            # `circuit_breakers:`) и **human waiver**. Про waiver канон говорил
+            # «только человек», а парсер принимал `max_loc_diff=99999` без
+            # причины и без подписи — то есть требование жило в прозе, а
+            # механика позволяла агенту поднять себе лимит молча. Три
+            # независимых развёртывания нашли это по отдельности.
+            bol = status.rfind("\n", 0, m.start()) + 1
+            eol = status.find("\n", m.end())
+            line = status[bol: eol if eol != -1 else len(status)]
+            if "circuit_breakers" in line.lower():
+                limits[m.group(1)] = int(m.group(2))
+                continue
+            if "reason=" not in line or "by=human:" not in line:
+                errors.append(
+                    f"waiver {m.group(1)}={m.group(2)} без reason= и by=human: "
+                    "(§3.4) — лимит поднимает человек, не исполнитель. Нет "
+                    "человека — не waiver, а `blockers:` + escalation.md (§12.3) "
+                    "или более узкая поставка; настройка проекта пишется строкой "
+                    "circuit_breakers:"
+                )
+                continue
+            limits[m.group(1)] = int(m.group(2))
+        stats = diff_stats(args.diff_base)
+        if stats is None:
+            warnings.append(
+                f"circuit breakers: ref '{args.diff_base}' unavailable "
+                "(shallow clone? need full history)"
+            )
+        else:
+            n_files, added, deleted, excluded, changed = stats
+            # --- §2.2a: уроки по затронутым путям должны быть упомянуты.
+            # Warning, не error: сопоставление «префикс пути → урок»
+            # приблизительно, а по §4.3b ложное срабатывание дороже пропуска.
+            lessons = applicable_lessons(read(ARCHIVE / "INDEX.md"), changed)
+            if lessons:
+                cited = read(plan) + read(tasks) + status
+                unread = [
+                    i for i in lessons if not re.search(rf"\b{i}\b", cited)
+                ]
+                if unread:
+                    warnings.append(
+                        "archive/INDEX.md: уроки по затронутым путям не "
+                        f"упомянуты: {', '.join(unread)} (§2.2a) — прочти "
+                        "строки и сошлись на id в plan.md/tasks.md либо "
+                        "напиши, почему не применимо"
+                    )
+            net = abs(added - deleted)
+            print(
+                f"breakers: files={n_files} net_loc={net} (+{added}/-{deleted}), "
+                f"excluded={excluded} ({'|'.join(BREAKER_EXCLUDE)}), "
+                f"limits={limits}"
+            )
+            # --- Стартовый дифф (lab-11 F12/F13/F8). На specify/plan/tasks
+            # поставка ещё не написала продуктового кода: всё, что дифф
+            # показывает сверх BREAKER_EXCLUDE, принесено извне — незамерженная
+            # предыдущая поставка (bootstrap, который мержится ПОКА активен,
+            # §7.2 шаг 6) или ветка от старой базы после squash-мержа. Обе арки
+            # lab-11 обнаружили это на handoff ценой полного цикла: breaker
+            # мерил 33 файла при собственных 2, и совет «split the PR» резал
+            # нечего. Здесь тот же тупик называется на входе и стоит минуту.
+            if phase in ("specify", "plan", "tasks") and n_files:
+                # Слито в локальный main, но не запушено — отдельный честный
+                # диагноз: чинится push'ем, а не rebase'ом.
+                alt_clean = False
+                for cand in ("main", "master"):
+                    alt = None if cand == args.diff_base else diff_stats(cand)
+                    if alt is not None and alt[0] == 0:
+                        alt_clean = True
+                        break
+                if alt_clean:
+                    warnings.append(
+                        f"стартовый дифф против {args.diff_base} непуст "
+                        f"({n_files} файл(ов)), против локального main пуст: "
+                        "предыдущая поставка слита, но не запушена — CI и "
+                        "breakers меряют чужой дифф, пока push не ушёл (§3.4)"
+                    )
+                else:
+                    errors.append(
+                        f"стартовый дифф непуст: {n_files} файл(ов) кода в "
+                        f"{args.diff_base}..HEAD уже на фазе {phase} — это "
+                        "чужие изменения, поставка не стартует поверх них "
+                        "(§7.2 шаг 6). Незамерженная предыдущая — слей через "
+                        "merge_guard (bootstrap мержится ПОКА активен); ветка "
+                        "от старой базы после squash-мержа — git rebase --onto "
+                        f"{args.diff_base} <старая-база> (lab-11 F12/F8)"
+                    )
+            # §2.2b: класс S при S-нетипичном объёме — warning, не ошибка.
+            # Большой механический багфикс бывает, но и занижение класса ради
+            # обхода human_ok_spec выглядит именно так. Молчать нельзя:
+            # молчание эту дыру и создало.
+            if klass == "S" and (n_files > 5 or net > 200):
+                warnings.append(
+                    f"class S, а тронуто {n_files} файл(ов) / {net} строк — "
+                    "класс занижен? (§2.2b) Класс определяется работой, а не "
+                    "доступностью человека; нет человека — human_ok_spec: deferred"
+                )
+            if n_files > limits["max_files_touched"]:
+                errors.append(
+                    f"circuit breaker: files_touched {n_files} > "
+                    f"{limits['max_files_touched']} — split the PR or add a "
+                    "human waiver line to STATUS (§3.4)"
+                )
+            if net > limits["max_loc_diff"]:
+                errors.append(
+                    f"circuit breaker: net loc_diff {net} > "
+                    f"{limits['max_loc_diff']} — split the PR or add a "
+                    "human waiver line to STATUS (§3.4)"
+                )
 ```
 
 ```bash
@@ -4939,6 +5461,10 @@ python scripts/delivery_metrics.py --base origin/main --write   # на handoff
 | 2026-07-28 | **v1.15**: §4.3a «Waiver живёт там, где идёт ревью» — таблица env / конфиг / STATUS с оценкой видимости и срока жизни; правило для новых гейтов; поля `canon_drift_waiver:` и `baseline_growth_waiver:` в шаблоне STATUS |
 | 2026-07-28 | **v1.16**: §4.3b «Ложное срабатывание — дефект гейта, а не повод его снять»: порядок лечения (сузить область → видимый waiver → никогда не отключать), диагностический вопрос «ругается ли гейт на то, что должен проверять», два разобранных случая |
 | 2026-07-28 | **v1.17**: §3.1c — багфикс без регрессионного теста не закрывается (поле `repro_test:`, проверка в `delivery_check`, `n/a` только с причиной): повторный баг — самый дорогой сорт |
+| 2026-08-07 | **v1.54**: **§6.5a — между «исходник корректен» и «продукт правилен» лежал артефакт, и его не читал никто.** Замер приёмки восьмого развёртывания: пятнадцать ролей CQG зелены, CI зелёный, `astro check` проверяет типы, zod — frontmatter, а `dist/` не читает ни одна проверка. Сборка останется зелёной при уехавшей раскладке, и «зелёный CI» читается как «продукт правилен». Правило: проект объявил шаг сборки (`scripts.build`, цель `build:`) → у артефакта обязан быть машинный инвариант, объявленный строкой `artifact_oracle:`. Форма как у `runtime_paths`: объявление + проверка по ФАКТУ файла (объявленный оракул без скрипта — снятая проверка с видом усиления, §4.6), `n/a reason=…` законно, на `handoff` M/L отсутствие — ошибка. Правило не применяется к проектам без сборки: требовать артефакт у библиотеки значило бы шуметь там, где предмета нет (§4.3b). **Второе, и оно важнее: `weak` смешивал «не развёрнуто» и «непроверяемо».** Тот же отчёт разделил их сам — слой behavior пуст, но большая часть непокрытого проверяется ДЁШЕВО и без новых зависимостей (разбор собранного html, состав `dist/`, контраст как арифметика над токенами, переключатель языков как функция пути), а дорого стоит только то, чему нужен layout engine. Теперь `behavior-oracles: weak` обязан называть, что проверяемо машиной СЕГОДНЯ и не сделано, — правило то же, что §9.1a п.2 даёт гейтам: молчащая непокрытость либо закрывается, либо объясняется. Шаблон `<что именно>` за название не считается (класс v1.5). **Названо и то, чего не брать:** визуальные снапшоты — у них фирменный отказ «зелёный, потому что снимок перезаписали», и брать их можно только с дисциплиной журнала веса. Планка §2.1 зажала правку в том же прогоне: `delivery_journals.py` перевалил за 300, и новое выделено в `delivery_artifact.py`. Шесть прогонов на артефакт (нет оракула → warning; на handoff → ошибка; проект без сборки → тишина; объявленный файл отсутствует → ошибка; лежит → тишина; `n/a` без reason → ошибка) и три на `weak`. **вес: +107 строк, за §6.5a и его модуль** |
+| 2026-08-07 | **v1.53**: **`delivery_check.py` разрезан — последний файл контура сверх планки 300.** 1969 строк, из них **986 в одной функции `main`** (cx=212) — половина файла. Одиннадцать модулей: `delivery_base` (пути, чтение, поля STATUS — соседей не знает, цикла нет по построению), `delivery_diff`, `delivery_decisions`, `delivery_risk`, `delivery_runtime`, `delivery_history` (обе проверки смотрят в git-историю, поэтому живут вместе) и четыре раздела активной поставки: `delivery_status` (форма — фаза, класс, артефакты), `delivery_evidence` (чем подтверждено), `delivery_journals` (§12.1–12.3), `delivery_limits` (CI, breaker'ы, рисковый дифф). **Точки разреза найдены ЗАМЕРОМ, а не на глаз:** перебор по AST искал границы, где меньше всего переменных живёт через шов, — их оказалось восемь, и они собраны в `ActiveCtx`. Внутри `main` их роль играли полсотни локальных, и именно поэтому функция не резалась годами. **Сверка вывода до/после в трёх режимах** (`--require-spec`, `--require-ci`, без флагов) — идентично. **Правило поймало саму правку, и это оказалось важнее разреза:** четыре раздела по ~200 строк — «новые функции сверх §2.1», а запрет `cqg@1.84` не имел выхода вовсе. Запрет без выхода даёт ровно два исхода: работа стоит или оракул снимают. Дописан выход — строка changelog с ТОЧНЫМИ числами, как «вес: +N строк» у веса. Записи этой правки: **функция: scripts/delivery_status.py::check_status_shape 166/39, за разрез main на разделы**; **функция: scripts/delivery_evidence.py::check_evidence 222/39, за разрез main на разделы**; **функция: scripts/delivery_journals.py::check_journals 214/47, за разрез main на разделы**; **функция: scripts/delivery_limits.py::check_limits 228/37, за разрез main на разделы**. Долг назван: разделы всё ещё вчетверо над §2.1, следующий заход — резать их на проверки. `main` при этом ужался 986 → 186 строк (cx 212 → 54). **вес: +218 строк, за разрез последнего файла сверх планки.** Свыше 300 строк в контуре не осталось НИ ОДНОГО файла: 46 скриптов, 8586 строк |
+| 2026-08-07 | **v1.52**: **у `--require-ci` не было первого прогона — канон замыкал круг сам.** §10.4 велит ставить `ci-oracles: deployed` по факту ЗЕЛЁНОГО прогона, а флаг стоит внутри того самого прогона (§8.3, джоба `delivery`): честное `weak` держит прогон красным, красный прогон не даёт значению стать честным. Замерено на восьмом развёртывании — агент вышел флипом в том же коммите, законно, но канон об этом молчал, и оба видимых выхода выглядели как обход собственного правила. **Развязка по смыслу флага:** он защищает не каждый прогон, а ЗАКРЫТИЕ поставки. До `handoff` `weak` даёт warning с единственным названным ходом («поставь `deployed` по факту ЭТОГО прогона, в том же коммите»), на `handoff` остаётся ошибкой — иначе развязка была бы снятием требования. Реальность (прогон исполняется) старше записи. Три прогона: первый прогон → warning и exit 0; закрытие с weak → ошибка; честное `deployed` → тишина. Обратный прогон вернул ошибку на всех фазах — упал ровно тест первого прогона |
+| 2026-08-07 | **v1.51**: **§9.1a п.5 — ратчет на ВЕС контура, а не только на число гейтов.** Бюджет держал количество (22 с 2026-07-29), а механика всё это время росла внутри существующих файлов: замер дал **22 скрипта и 8023 строки**, семь свыше 300, рекорд `delivery_check.py` — 1948. Правило симметрично коду: потолок на скрипт = размер на день съёмки, снимок только вниз; новый скрипт контура — не выше 300 строк, то есть по §2.1, который контур требует от чужого кода; ужатие законно всегда. **Повод — обещание без механики:** `check_file_length.sh` исключает контур из гейта длины со ссылкой «размер скриптов контура мерится отдельно (§9.1a)», а такого замера не существовало нигде — ни в сьюте, ни в `delivery_metrics.py`, ни в докторе. Контур вывел себя из-под собственного правила и не завёл замену — тот же класс, который он ловит у чужого кода. Замер живёт в репозитории канона (`tests/test_contour_size.py` + снимок `tests/contour_size_baseline.txt`), потому что размер payload — свойство канона: в проекте эти файлы не меняются, а если меняются, это адаптация и её объявляет `adapted.json`. **Названо и то, что растёт быстрее всего:** проверяющий слой — `contour_doctor.py` прошёл 591 → 940 → 1082 строки, и три дефекта правки `cqg@1.80` были дефектами самой проверки. Обратные прогоны: рост живого скрипта на 40 строк роняет сьют с адресом и дельтой (`check_ci_status.sh: 176 при потолке 136, +40`), плюс три прогона на выключенных правилах (рост, планка, призрак в снимке) — каждый уронил ровно свой тест. **И находка первого применения:** оракул покраснел на правке, которая его вводила (комментарий в `check_file_length.sh` вырос на две строки), а что делать с ЗАКОННЫМ ростом, первая редакция правила не говорила — снимок «только вниз» без описанного хода вверх либо останавливает работу, либо переснимается молча. Ход дописан: рост — решение с записью, как поднятие лимита в п.1. **вес: +2 строки, за комментарий, который перестал обещать несуществующий замер.** **Вторая величина — функция:** снимок на длину и сложность с hard-порогами §2.1 (80/10), потому что ратчет только на файл покупается перекладыванием — скрипт ужимается, монолит остаётся. Замер: 136 функций, 21 сверх порога, рекорд `delivery_check.py::main` — 965 строк и cx=211 (половина файла в одной функции), девять из двадцати одной — в `contour_doctor.py`. Сложность считается прокси на stdlib-ast и названа прокси: оракул, молча не запускающийся без ruff, был бы тем самым классом, который контур ловит |
 | 2026-08-06 | **v1.50**: **новая §12.6 — класс отказов, невидимый ВСЕМ статическим оракулам.** Полевой замер: четыре падения за сутки на одном iOS-проекте, все четыре нашёл человек на телефоне, все четыре **при зелёной сборке**. Общее свойство, которое канон не знал: **платформа отвечает на нарушение политики смертью процесса, а не кодом ошибки** — нет ключа в `Info.plist` (сборочная настройка игнорируется молча при `GENERATE_INFOPLIST_FILE = NO`), запрос снимка сверх потолка выхода (NSException), чтение библиотеки под правом «только добавлять» (TCC убивает процесс). Ни одно не ловится `try`, значит не допустить можно только исполнением пути. Прежняя таксономия (`shape` / `behavior` / `ci`) этот класс не покрывала, а исполнение на целевой среде жило только в `observe_signal` — то есть **после** handoff. Механика построена на образце §12.5, но отвечает на другой вопрос: маячок доказывает, что дифф ПРОЧИТАН, а здесь чтение не помогает вовсе — весь этот код автор читал и считал верным, и полевой разбор называет причину прямо: «я рассуждал о правах вместо того, чтобы их проверить». Три части: ① `runtime_paths:` в STATUS — проект объявляет поверхности, чей отказ не виден ни сборке, ни тестам (настраивается под домен, как `RISK_CLASSES`), и **`none` БЕЗ причины объявлением не считается** — то же правило, что `diagnosis: n/a reason=…`, иначе поле вырождается в галочку на первой поставке; ② дифф задел объявленное ⇒ в verify-report блок «## Исполнение рисковых путей» со строкой на КАЖДЫЙ путь: чем исполнял (в backticks), что увидел, `at=<дата>`; ③ breaker `max_runtime_paths` (дефолт 1) — «одна правка — одна установка» механически. Последнее принципиально: **это правило в поле было написано и нарушено тем же автором через несколько часов**, а объёмные breaker'ы §3.4 такого не видят — две правки в две подсистемы на десяток строк проходят их не заметив. Канон говорит о себе то же самое в DoD §3.2 п.10: «правило без гейта, живёт пока его читают». Лестница как у §12.5 и `deferred`: предупреждение на verify, отказ на handoff. **Требование назвать команду — не косметика:** в поле инструмент для такой проверки СУЩЕСТВОВАЛ и был выброшен (подвис не сам по себе — процесс убивали по таймауту посреди отправки), и слабую проверку заменили на никакую; записанная команда делает следующий раз воспроизводимым. **Прямо сказано, чего механизм не даёт:** доказательства, что прогон был, здесь нет — есть доказательство, что про каждую задетую поверхность сделано конкретное утверждение с датой; это ловит не ложь, а ПРОПУСК, и пропуск ровно то, что случилось все четыре раза (путь не исполнялся НИ РАЗУ, а не исполнялся плохо). Отдельной врезкой: **сборка оракулом не является** — шаг «проект собрался» отвечает про компиляцию и ни на один вопрос про поведение; проверять надо артефакт, который поедет (`plutil -p` по бандлу, `codesign -d --entitlements`, параметры пришедшего кадра), и **два падения из четырёх ловились на хосте, без устройства**. **Дефект в собственной правке поймал собственный тест:** проверка «поверхность названа» искала только сегменты пути длиннее трёх символов, и у `ios/UI/` таких нет вовсе — удовлетворить её было НЕЧЕМ, то есть гейт был непроходим (§4.3b, такое снимают за неделю вместе с пользой). Сьют: **458 тестов** (+11) |
 | 2026-08-04 | **v1.49**: **процедура развёртывания §7.2 впервые под регрессией, а не под честным словом.** Дыра была названа в бэклоге прямым текстом: сьют держал поведение СКРИПТОВ, а саму процедуру проверял только живой полигон — полигоны одноразовые, поэтому следующее развёртывание начинало с нуля и повторяло уже закрытые находки (класс «файл выпал из процедуры молча» ловили четырежды). Теперь `tests/test_deployment_procedure.py`: таблица шага 1 сверяется с деревом §2.3 в ОБЕ стороны, каждая обязательная строка разворачивается в одноразовый git-репозиторий, шаг 3 переводит блок `agent-permissions` в `.claude/settings.json` разбором самого гейта, дальше приёмка — `delivery_check` без трейсбека, `.gitkeep` под git, доктор. Отдельно проверено, что пропуск `pre-commit install` доктор зовёт ложью (DEAD), а бедность стенда прогон не роняет. Три обратных прогона: убрать строку таблицы, подменить номер приложения, вписать несуществующий файл — каждый роняет свой тест. **Первый же прогон нашёл настоящее: три файла дерева** (`eval-smoke.md`, `evals/smoke/README.md`, `archive/<slug>/observed.md`) **не были в инвентаре извлечения**, потому что обход шёл по «### A.N», а A.9 отдаёт два файла под одним номером — ровно тот класс, про который §7.2 написал свою врезку |
 | 2026-08-03 | **v1.48** (lab-12): **проверка происхождения ожидания обвиняла честную работу — и научила арку себя обходить.** `_first_commit_with` искал id примера через `-S`, то есть как ПОДСТРОКУ: короткий `A2` совпадал внутри `DATA2_FIXTURE` в legacy-тесте, закоммиченном задолго до поставки, и §3.1d печатала «примеры появились в истории ПОЗЖЕ ссылающихся на них тестов». Это обвинение в худшем процессном грехе (ожидание придумано после кода) на работе, где порядок был соблюдён. Снять его исполнитель не мог ничем, кроме переименования id — арка A так и сделала (A1–A6 → E1–E6), порвав связь с id, **подписанными заказчиком**, ради тишины гейта. Арка B оставила id и предсказала свой ложный warning заранее. Теперь id ищется как ТОКЕН: явный класс символов с якорями. ⚠ **Очевидная правка `\b` сделала бы проверку МЁРТВОЙ:** замерено — `-S'\bA2\b' --pickaxe-regex` в git не находит ничего, и прогон «сломано → падает» этого не показал бы, потому что падало бы в обоих случаях. Тот же класс, что `\b` в awk и `^\+` в ugrep. Поэтому тест проверяет ЖИВУЧЕСТЬ отдельно, и он ловит подстановку наивного `\b` — проверено. **Дефект в собственной фикстуре:** первая версия клала спеку заранее, `git add -A` уносил её тем же коммитом, что и тест, порядок становился «не проверить» — и тест на живучесть прошёл бы по неверной причине |
