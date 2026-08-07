@@ -1,6 +1,0 @@
-{
-  "check_ci_status.sh": {
-    "reason": "правка пришла раньше канона: `:\\**` в разборе ci-oracles и `gh auth token` вместо сетевого `auth status`",
-    "changed": "no_ci_evidence() — регулярка; ветка проверки авторизации"
-  }
-}
