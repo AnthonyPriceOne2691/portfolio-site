@@ -1,7 +1,7 @@
 # Active delivery status
 
 - **slug:** contour-bootstrap
-- **stack:** delivery@1.54, cqg@1.90, okf@absent
+- **stack:** delivery@1.54, cqg@1.91, okf@absent
 - **class:** M
 - **kind:** bootstrap
 - **repro_test:** n/a reason=не bugfix, продуктового кода ещё нет
@@ -43,7 +43,7 @@
 - **new_dependency:** astro reason=генератор статики, решение design §8.1 (минимум JS на выходе, markdown-контент из коробки); альтернатива Next.js отклонена там же as «не брать на MVP» by=agent:claude-code
 - **new_dependency:** @astrojs/check reason=проверка типов TS и .astro в `npm run build`; на этом стеке занимает роль mypy, которого в карте ролей нет by=agent:claude-code
 - **new_dependency:** typescript reason=peer-зависимость @astrojs/check, без неё проверка типов не запускается by=agent:claude-code
-- **new_dependency:** eslint reason=инструмент TS-половины гейта сложности (CQG §3, cqg@1.90); пороги навязывает гейт флагом --rule, конфиг проекта даёт только парсер by=agent:claude-code
+- **new_dependency:** eslint reason=инструмент TS-половины гейта сложности (CQG §3, cqg@1.91); пороги навязывает гейт флагом --rule, конфиг проекта даёт только парсер by=agent:claude-code
 - **new_dependency:** typescript-eslint reason=парсер TS для eslint; без него espree печатает «Parsing error» и гейт краснеет на всех файлах, не проверив ни одного by=agent:claude-code
 - **new_dependency:** dependency-cruiser reason=инструмент роли «направление зависимостей» на TS (CQG §3.6); замена import-linter, которого на этом стеке нет by=agent:claude-code
 - **new_dependency:** jscpd reason=роль DRY стояла в карте ролей как подключённая, а инструмента не было — таблица утверждала покрытие, которого нет; дешевле поставить, чем понижать заявление by=agent:claude-code

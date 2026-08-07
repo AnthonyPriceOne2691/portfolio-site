@@ -195,10 +195,54 @@ class LayoutChecks:
     # начиналось с готового ответа, а не с раскопок.
     ADAPTED = "scripts/lint/adapted.json"
 
+    #: Конфиги и workflow'ы, которые поставляет канон, — путь → (маркер, язык).
+    #: Маркер у скрипта выводится из имени, у конфига — нет, поэтому таблица.
+    #:
+    #: ⚠ Их сверка появилась позже скриптов (`cqg@1.91`) и стоила затёртой
+    #: адаптации: накат разложил канонный `quality.yml` поверх настроенного, `env`
+    #: вернулся к дефолтам `backend/features`/`frontend` на проекте, где
+    #: python-половины нет вовсе, а фронт в корне. Сверка смотрела только
+    #: `scripts/lint/*`, поэтому не сказал никто — а §5.5 ради этого и написана.
+    #: Конфиги адаптируют ШТАТНО (§6: значения живут в `env:`/`entry:`), значит
+    #: расхождение тут нормально — но объявленное, а не молчаливое.
+    CANON_CONFIGS = {
+        ".pre-commit-config.yaml": ("### `.pre-commit-config.yaml`", "yaml"),
+        ".github/workflows/quality.yml": ("### 8.3. Workflow (GitHub Actions)", "yaml"),
+        ".github/workflows/main-guard.yml":
+            ("**④ Красное на `main` не остаётся незамеченным.**", "yaml"),
+    }
+
+    def _compare_with_snapshot(self, text: str, rel: str, marker: str, lang: str,
+                               declared: dict) -> None:
+        """Одно сравнение «файл проекта против снимка канона»."""
+        live = self.root / rel
+        if not live.is_file() or marker not in text:
+            return                       # файла нет или канон его не поставляет
+        body = _block_after(text, marker, lang)
+        if body is None:
+            return
+        name = rel.rsplit("/", 1)[-1]
+        spec = declared.get(rel) or declared.get(name)
+        point = f"расхождение с каноном {name}"
+        if body.strip() == live.read_text(encoding="utf-8", errors="replace").strip():
+            if spec:
+                self.add(WEAK, point, "объявлен адаптированным, а тело СОВПАДАЕТ "
+                                      "с каноном — объявление устарело и мешает "
+                                      "обновлению")
+            return
+        if isinstance(spec, dict) and str(spec.get("reason", "")).strip():
+            self.add(WEAK, point, "адаптирован намеренно: " + str(spec["reason"])[:90])
+            return
+        self.add(WEAK, point,
+                 "тело отличается от снимка канона, а объявления нет. "
+                 "Либо устарел (обнови из payload'а), либо адаптирован "
+                 f"под стек (объяви в {self.ADAPTED} с причиной) — "
+                 "иначе обновление начнётся с раскопок и затрёт правку")
+
     def check_divergence_from_canon(self) -> None:
         snap = self.root / "docs" / "canon" / "CODE_QUALITY_GATES.md"
         d = self.root / "scripts" / "lint"
-        if not snap.is_file() or not d.is_dir():
+        if not snap.is_file():
             return                       # снимка канона нет — сверять не с чем
         text = snap.read_text(encoding="utf-8", errors="replace")
 
@@ -210,33 +254,15 @@ class LayoutChecks:
             except (OSError, ValueError) as exc:
                 self.add(SKIP, self.ADAPTED, f"не разобран ({exc}) — адаптации "
                                              "объявлены и не прочитаны")
-        for script in sorted(d.glob("*")):
-            if not script.is_file() or script.suffix not in (".sh", ".py"):
-                continue
-            marker = f"### `scripts/lint/{script.name}`"
-            if marker not in text:
-                continue                 # свой гейт проекта — не наше дело
-            lang = "python" if script.suffix == ".py" else "bash"
-            body = _block_after(text, marker, lang)
-            if body is None:
-                continue
-            same = body.strip() == script.read_text(
-                encoding="utf-8", errors="replace").strip()
-            spec = declared.get(script.name)
-            point = f"расхождение с каноном {script.name}"
-            if same:
-                if spec:
-                    self.add(WEAK, point, "объявлен адаптированным, а тело "
-                                          "СОВПАДАЕТ с каноном — объявление "
-                                          "устарело и мешает обновлению")
-                continue
-            if isinstance(spec, dict) and str(spec.get("reason", "")).strip():
-                self.add(WEAK, point, "адаптирован намеренно: "
-                                      + str(spec["reason"])[:90])
-            else:
-                self.add(WEAK, point,
-                         "тело отличается от снимка канона, а объявления нет. "
-                         "Либо устарел (обнови из payload'а), либо адаптирован "
-                         f"под стек (объяви в {self.ADAPTED} с причиной) — "
-                         "иначе обновление начнётся с раскопок и затрёт правку")
+        if d.is_dir():
+            for script in sorted(d.glob("*")):
+                if not script.is_file() or script.suffix not in (".sh", ".py"):
+                    continue
+                lang = "python" if script.suffix == ".py" else "bash"
+                self._compare_with_snapshot(
+                    text, f"scripts/lint/{script.name}",
+                    f"### `scripts/lint/{script.name}`", lang, declared)
+
+        for rel, (marker, lang) in sorted(self.CANON_CONFIGS.items()):
+            self._compare_with_snapshot(text, rel, marker, lang, declared)
 
