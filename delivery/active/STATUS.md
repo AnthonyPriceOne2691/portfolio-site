@@ -6,11 +6,11 @@
 - **kind:** feature
 - **repro_test:** n/a reason=не bugfix, новая функциональность
 - **diagnosis:** n/a reason=не bugfix
-- **phase:** specify
+- **phase:** implement
 - **builder:** agent:claude-code
 - **verifier:** process:ci
-- **human_ok_spec:** no
-- **human_ok_examples:** none
+- **human_ok_spec:** yes (by=human:anthony, at=2026-08-07)
+- **human_ok_examples:** B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11
 - **human_ok_plan:** n/a (class M)
 - **shape-oracles:** cqg-deployed
 - **behavior-oracles:** weak — дёшево: словарь UI-строк и резолвер языка
