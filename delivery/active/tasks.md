@@ -1,33 +1,27 @@
 # Tasks
 
-- [x] T1. `git init`, дерево `delivery/` из §7.2, `delivery_check.py`,
-      `delivery_metrics.py`, `.claude/settings.json`
-- [x] T2. Constitution под продукт (правила, которые здесь несущие: публичный
-      репо, ноль NDA-следов, EN как источник истины, проект = контент)
-- [x] T3. STATUS: `kind: bootstrap`, версии канонов, оракулы по факту (weak)
-- [x] T4. Спека с acceptance-примерами A1–A7 и планом с отклонёнными вариантами
-- [x] T5. **Подпись человека под примерами** (§3.3 stop-gate) — до кода
-- [x] T6. Каркас Astro: package.json, конфиг, tsconfig, index.astro,
-      content.config.ts со схемой zod (design §8.2.1) + демо-контент EN+RU
-- [x] T7. `npm install`, проверить A1–A3 (сборка падает на битом frontmatter)
-- [x] T8. CQG: скрипты Приложения A + конфиг Приложения B дословно
-- [x] T9. Адаптация под стек: маски расширений, пути в `entry:` каждого хука,
-      карта ролей в `STACK-ACCEPTANCE.md` (что исключено и почему)
-- [x] T10. Baseline'ы с нуля, `pre-commit install`, проверка A4–A5
-- [x] T11. CI §8.3 + гейт мержа §8.5 (`merge_guard.sh`, `check_ci_status.sh`,
-      pre-push, `main-guard`). Все четыре проверены ИСПОЛНЕНИЕМ, а не наличием
-      файла: CI зелёный на PR (#3–#5) и на main (#6); `main-guard` дал `skipped`
-      на зелёном, как задуман; pre-push гоняет гейты на каждом пуше; гейт мержа
-      слил ветку squash'ем после прогона на СЛИТОМ состоянии.
-      ⚠ Первое живое применение нашло в самом гейте мержа две дыры — разбор
-      STATUS не читал значение вовсе и `gh auth status` путал сеть с
-      авторизацией; обе починены и фальсифицированы
-- [x] T12. `contour_doctor.py` — проверка A6, `DEAD 0`
-- [x] T13. Приёмка §6, `STACK-ACCEPTANCE.md`, честные отметки weak/absent
-- [x] T14. Публичный репозиторий на GitHub + первый зелёный прогон CI.
-      Раскатан 07.08 (`AnthonyPriceOne2691/portfolio-site`), история проверена
-      на секреты и NDA-следы до публикации. Первые попытки прогона упирались в
-      **major outage Actions у GitHub** — прогоны не создавались вовсе, включая
-      пробу из шести строк; исключено, что дело в проекте (видимость, квота,
-      содержимое workflow — поочерёдно). После восстановления: #3–#5 зелёные на
-      PR, #6 зелёный на main
+- [ ] T0. **Подпись человека под спекой и примерами B1–B8** (§3.3 stop-gate) —
+      до кода. Вместе с ней — четыре Open questions спеки: цифра тестов,
+      «5 → 1», CV в nav, `@astrojs/sitemap`
+- [ ] T1. `.astro` под линтер и форматтер: `eslint-plugin-astro` +
+      `prettier-plugin-astro`, маски хуков. Долг прошлой поставки, назван в её
+      verify-report; на каркасе цена нулевая, после Home — уже нет
+- [ ] T2. Оракул языковых пар в `content.config.ts`: нет RU-пары у slug →
+      сборка падает с именем slug (B4)
+- [ ] T3. `src/styles/global.css` — токены §7.1.2, focus-стейты,
+      `prefers-reduced-motion`; контраст акцента проверить числом
+- [ ] T4. `src/layouts/Base.astro` — head, meta/OG §8.5, hreflang, JSON-LD
+      `Person`, skip-link (B8)
+- [ ] T5. `Nav.astro`, `Footer.astro`, переключатель EN/RU, `404.astro` (B5)
+- [ ] T6. Контент: 4 проекта × EN + RU по §5.1–5.4 и схеме §8.2.1
+- [ ] T7. `[slug].astro` по скелету §4.4 + `/projects` + кольцо «Next →»;
+      слоты медиа деградируют (B2, B3). Решение по `@astrojs/sitemap` — строкой
+      `new_dependency:` в STATUS, если берём
+- [ ] T8. Home по §4.2: hero + contract-gate + impact strip + featured +
+      3 карточки + How I work + Contact
+- [ ] T9. Первые тесты: словарь UI-строк и резолвер языка, реляционный оракул
+      §6.5 (для любой страницы и языка переключатель даёт существующий путь)
+- [ ] T10. Доступность и адаптив: клавиатура, reduced-motion, 360 px (B6, B7)
+- [ ] T11. Бюджет: каркас < 300 KB, LCP < 1.5 s — замерить на голой вёрстке
+- [ ] T12. Verify: `eval-smoke.md` по B1–B8, зелёный CI, мерж через
+      `merge_guard.sh`
