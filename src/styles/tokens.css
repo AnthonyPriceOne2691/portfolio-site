@@ -86,14 +86,34 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+/*
+ * ⚠ Префиксное свойство живёт в ОТДЕЛЬНОМ блоке, и это не стиль, а обход
+ * минификатора. В одном правиле он считает `backdrop-filter` и
+ * `-webkit-backdrop-filter` дублем и оставляет ровно одно: сначала в сборке
+ * пропадало стандартное (в Firefox не было бы блюра), после перестановки —
+ * префиксное (не было бы в Safari до 18). Разные блоки схлопнуть нельзя.
+ * Поймал headless-тест B6, а не глаз: локально в Safari всё выглядело верно.
+ */
+@supports (-webkit-backdrop-filter: blur(1px)) {
+  .glass {
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .glass {
     background: #ffffff;
     backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+  }
+}
+
+@supports (-webkit-backdrop-filter: blur(1px)) {
+  @media (prefers-reduced-transparency: reduce) {
+    .glass {
+      -webkit-backdrop-filter: none;
+    }
   }
 }
 

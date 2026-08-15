@@ -1,0 +1,86 @@
+---
+/**
+ * Каркас страницы: мета-слой, стекло, навигация (design v0.8 §8.5).
+ *
+ * Превью ссылки — НУЛЕВОЙ экран портфолио: рекрутёр видит карточку в Telegram
+ * или hh раньше, чем сам сайт. Поэтому og/hreflang/JSON-LD собираются здесь
+ * централизованно, а не по страницам: забытый тег на одной странице — это
+ * не «мелочь вёрстки», а сломанное первое касание. Пример B8 это проверяет.
+ */
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+import {
+  DEFAULT_LOCALE,
+  pathForLocale,
+  useTranslations,
+  type Locale,
+} from "../i18n/ui";
+import "../styles/tokens.css";
+import "../styles/global.css";
+
+interface Props {
+  locale: Locale;
+  title: string;
+  description: string;
+}
+
+const { locale, title, description } = Astro.props;
+const t = useTranslations(locale);
+const path = Astro.url.pathname;
+const site = Astro.site ?? new URL("https://example.pages.dev");
+const abs = (p: string) => new URL(p, site).href;
+
+// hreflang-пары строятся из ОДНОЙ функции, что и переключатель в шапке.
+// Разъехаться они не могут по построению — а не потому, что кто-то помнит.
+const alternates = [
+  { hreflang: "ru", href: abs(pathForLocale(path, "ru")) },
+  { hreflang: "en", href: abs(pathForLocale(path, "en")) },
+  { hreflang: "x-default", href: abs(pathForLocale(path, DEFAULT_LOCALE)) },
+];
+
+const person = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Anton Aspidov",
+  jobTitle: "AI Automation / LLM Application Engineer",
+  url: abs("/"),
+  sameAs: [
+    "https://github.com/AnthonyPriceOne2691",
+    "https://www.linkedin.com/in/anton-aspidov",
+  ],
+};
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={abs(path)} />
+    {
+      alternates.map((a) => (
+        <link rel="alternate" hreflang={a.hreflang} href={a.href} />
+      ))
+    }
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={abs(path)} />
+    <meta property="og:image" content={abs("/og.png")} />
+    <meta property="og:locale" content={locale === "ru" ? "ru_RU" : "en_US"} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script type="application/ld+json" set:html={JSON.stringify(person)} />
+  </head>
+  <body>
+    <a class="skip" href="#main">{t("nav.skip")}</a>
+    <Nav locale={locale} />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer locale={locale} />
+  </body>
+</html>
