@@ -12,13 +12,20 @@
  *      `backdrop-filter` деградировал в заливку. Второе особенно важно на
  *      стекле: именно блюр просаживает скролл на слабых Android.
  *
- * Тест ходит по СОБРАННОМУ `dist/` через file://, а не по dev-серверу: судить
- * надо то, что уедет на хостинг.
+ * Тест поднимает СОБРАННЫЙ `dist/` статическим сервером и ходит по http://:
+ * судить надо то, что уедет на хостинг.
+ *
+ * ⚠ Раньше здесь был `file://`, и это была тихая дыра. Astro подключает стили
+ * АБСОЛЮТНЫМ путём `/_astro/…`; под `file://` он резолвится в корень файловой
+ * системы, а не в `dist/`, — страницы открывались БЕЗ CSS вовсе. Проверка
+ * «нет горизонтального скролла» на неверстанной странице проходит всегда:
+ * тест был зелёным именно потому, что ничего не проверял. Нашлось при замере
+ * ширины карточки, а не прогоном — прогон был зелёным.
  */
 import { strict as assert } from "node:assert";
+import { createServer } from "node:http";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import test, { after, before } from "node:test";
-import { pathToFileURL } from "node:url";
 
 import { chromium } from "playwright";
 
@@ -33,15 +40,43 @@ const PAGES = [
 ];
 const WIDTHS = [360, 390, 414];
 
+const MIME = {
+  ".html": "text/html",
+  ".css": "text/css",
+  ".js": "text/javascript",
+  ".svg": "image/svg+xml",
+  ".xml": "application/xml",
+};
+
 let browser;
+let server;
+let origin;
+
 before(async () => {
+  server = createServer((req, res) => {
+    const path = decodeURIComponent(req.url.split("?")[0]);
+    const file = new URL("." + path, DIST);
+    try {
+      const ext = path.slice(path.lastIndexOf("."));
+      res.writeHead(200, {
+        "content-type": MIME[ext] ?? "application/octet-stream",
+      });
+      res.end(readFileSync(file));
+    } catch {
+      res.writeHead(404).end("not found");
+    }
+  });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  origin = `http://127.0.0.1:${server.address().port}`;
   browser = await chromium.launch();
 });
+
 after(async () => {
   await browser?.close();
+  await new Promise((r) => server?.close(r));
 });
 
-const url = (rel) => pathToFileURL(new URL(rel, DIST).pathname).href;
+const url = (rel) => `${origin}/${rel}`;
 
 test("B7: ни одна страница не даёт горизонтального скролла на телефоне", async () => {
   for (const rel of PAGES) {
@@ -52,6 +87,18 @@ test("B7: ни одна страница не даёт горизонтальн�
     for (const width of WIDTHS) {
       const page = await browser.newPage({ viewport: { width, height: 800 } });
       await page.goto(url(rel));
+      // Без этой строки весь тест — театр: неверстанная страница не
+      // переполняется никогда. Проверяем, что CSS реально применился.
+      const styled = await page.evaluate(
+        () =>
+          getComputedStyle(document.documentElement)
+            .getPropertyValue("--measure")
+            .trim() !== "",
+      );
+      assert.ok(
+        styled,
+        `${rel}: стили не применились — тест проверял бы пустоту`,
+      );
       const overflow = await page.evaluate(() => {
         const d = document.documentElement;
         // Виновника называем сразу: «где-то шире» — бесполезный диагноз.
