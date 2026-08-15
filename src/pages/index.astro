@@ -1,9 +1,9 @@
 ---
-import { getCollection } from 'astro:content';
+import { getCollection } from "astro:content";
 
 // Заглушка каркаса: доказывает, что коллекция читается и схема применяется.
 // Настоящая Home (hero, impact strip, featured, сетка) — поставка MVP, design 4.2.
-const projects = (await getCollection('en'))
+const projects = (await getCollection("en"))
   .filter((p) => !p.data.draft)
   .sort((a, b) => a.data.order - b.data.order);
 ---
@@ -22,13 +22,16 @@ const projects = (await getCollection('en'))
   <body>
     <main>
       <h1>Anton Aspidov</h1>
-      <p>AI Automation / LLM Application Engineer — I put LLMs under contract.</p>
+      <p>
+        AI Automation / LLM Application Engineer — I put LLMs under contract.
+      </p>
 
       <ul>
         {
           projects.map((p) => (
             <li>
-              <strong>{p.data.title}</strong> — {p.data.oneLiner} ({p.data.metric})
+              <strong>{p.data.title}</strong> — {p.data.oneLiner} (
+              {p.data.metric})
             </li>
           ))
         }

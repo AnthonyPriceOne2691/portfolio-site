@@ -59,10 +59,13 @@ repos:
   - repo: local
     hooks:
       - id: eslint
-        name: ESLint (TypeScript) — вне снимка ошибок
+        name: ESLint (TypeScript + Astro) — вне снимка ошибок
         language: system
-        types_or: [ts, tsx]
-        files: ^src/
+        # ⚠ `types_or` про `.astro` НЕ знает — pre-commit такого типа не имеет,
+        # поэтому отбор только регуляркой. С прежним `types_or: [ts, tsx]` весь
+        # код проекта проходил мимо линтера, а гейт печатал «просмотрено 1 файл»
+        # и выглядел работающим (долг прошлой поставки, cqg@1.91).
+        files: ^src/.*\.(ts|tsx|mts|astro)$
         # Файлы, стоящие в снимке ошибок, здесь ПРОПУСКАЮТСЯ: их судит ратчет
         # (`eslint-error-ratchet`, только вниз). Иначе два хука противоречили бы
         # друг другу — ратчет разрешает легаси-долг, а этот валил бы на нём всегда,
@@ -79,10 +82,12 @@ repos:
         pass_filenames: false
 
       - id: prettier
-        name: Prettier (TypeScript / JSON / CSS)
+        name: Prettier (Astro / TS / CSS / JSON / MD)
         language: system
-        types_or: [ts, tsx, javascript, json, css]
-        files: ^src/
+        # Та же причина, что у eslint выше: `.astro` в `types_or` не выразим.
+        # Markdown добавлен намеренно — контент проектов это markdown, и без
+        # него форматтер не видел бы половину того, что правят чаще всего.
+        files: ^src/.*\.(ts|tsx|mts|astro|css|json|md)$
         entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && npx --no-install prettier --check "$@"' --
         pass_filenames: true
 

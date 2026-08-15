@@ -7,5 +7,9 @@
   ".github/workflows/quality.yml": {
     "reason": "односоставный npm-проект без python: env под стек + шаг установки ставит только инструменты контура",
     "changed": "блок env (LINT_TS_SRC=src, LINT_FE_DIR=.); шаг «Install backend deps» -> «Install contour deps» (канонный создавал backend/.venv, из-за чего python-половина deps-audit аудитила оснастку гейтов, py_total 6); список в шаге «Инструменты гейтов на месте» -> фронтовые + detect-secrets в PATH (канонный ждал ruff/mypy в venv, оба объявлены n/a). Остальное из канона"
+  },
+  "scripts/delivery_base.py": {
+    "reason": "lock-файлы исключены из circuit breaker: сгенерированное, а не авторское",
+    "changed": "BREAKER_EXCLUDE дополнен package-lock.json / yarn.lock / pnpm-lock.yaml / poetry.lock. Замер: 564 из 870 строк поставки давал package-lock от четырёх devDependency, лимит 800 пробивался до первой строки вёрстки. Риск новых зависимостей судит check_new_dependency.py, а прежний счёт создавал стимул НЕ объявлять зависимость — так в проекте и появился транзитивный prettier"
   }
 }
