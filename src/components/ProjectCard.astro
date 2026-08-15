@@ -10,6 +10,7 @@
  */
 import type { CollectionEntry } from "astro:content";
 import StatusBadge from "./StatusBadge.astro";
+import VideoFrame from "./VideoFrame.astro";
 import { link, type Locale } from "../i18n/ui";
 
 interface Props {
@@ -25,15 +26,27 @@ const d = entry.data;
   class:list={["card", "glass", { wide }]}
   href={link(`/projects/${entry.id}/`, locale)}
 >
-  <span class="lead">
-    <span class="metric">{d.metric}</span>
-    <StatusBadge status={d.status} locale={locale} />
-  </span>
   <span class="body">
+    <span class="lead">
+      <span class="metric">{d.metric}</span>
+      <StatusBadge status={d.status} locale={locale} />
+    </span>
     <span class="title">{d.title}</span>
     <span class="one">{d.oneLiner}</span>
     <span class="stack">{d.stack.slice(0, 5).join(" · ")}</span>
   </span>
+  {
+    wide && (
+      <span class="media">
+        <VideoFrame
+          proof={d.proof}
+          title={d.title}
+          locale={locale}
+          variant="card"
+        />
+      </span>
+    )
+  }
 </a>
 
 <style>
@@ -82,26 +95,43 @@ const d = entry.data;
   /* Альбомная раскладка — только когда есть куда её разложить. На узком
      экране карточка остаётся колонкой: горизонтальная на 360 px дала бы
      горизонтальный скролл, а его сторожит пример B7. */
+  /* Фрейм под видео. На узком экране он идёт НАД текстом во всю ширину:
+     класть его сбоку на 360 px значило бы получить горизонтальный скролл,
+     который сторожит пример B7. */
+  .media {
+    display: block;
+    width: 100%;
+    order: -1;
+  }
+
   @media (min-width: 46rem) {
     .card.wide {
       flex-direction: row;
-      align-items: center;
+      align-items: stretch;
       gap: 1.75rem;
-      padding: 1.4rem 1.6rem;
+      padding: 1.5rem 1.6rem;
+      /* Выше по вертикали — просьба владельца 15.08. Не фиксированная высота:
+         `min-height` растёт под длинный one-liner и не режет текст. */
+      min-height: 13rem;
     }
-    .card.wide .lead {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.45rem;
-      min-width: 11rem;
-      flex-shrink: 0;
+    .card.wide .body {
+      flex: 1 1 auto;
+      justify-content: center;
+      gap: 0.5rem;
     }
     .card.wide .metric {
       font-size: 1.6rem;
       line-height: 1.1;
     }
     .card.wide .stack {
-      margin-top: 0.15rem;
+      margin-top: 0.4rem;
+    }
+    .card.wide .media {
+      order: 0;
+      flex: 0 0 auto;
+      width: clamp(13rem, 26%, 19rem);
+      display: flex;
+      align-items: center;
     }
   }
 </style>
