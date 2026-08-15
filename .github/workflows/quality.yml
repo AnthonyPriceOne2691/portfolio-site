@@ -146,6 +146,20 @@ jobs:
           pip install pre-commit
           pre-commit run --all-files --show-diff-on-failure --verbose
 
+      # Оракул артефакта (§6.5a): единственная проверка, судящая ПРОДУКТ.
+      # Сборка здесь же, потому что без свежего dist/ судить нечего.
+      # Браузер для headless-проверок раскладки (B6, B7). Ставится ДО сборки:
+      # `npm run build` цепочкой зовёт `npm test`, а там playwright.
+      - name: Install browser for layout tests
+        if: always()
+        run: npx playwright install --with-deps chromium
+
+      - name: Build site + dist oracle
+        if: always()
+        run: |
+          npm run build
+          python3 scripts/lint/check_dist_oracle.py
+
       - name: Gate coverage (все гейты подключены)
         if: always()
         run: bash scripts/lint/check_gate_coverage.sh
