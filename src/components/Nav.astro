@@ -1,0 +1,188 @@
+---
+/**
+ * Навигация (design v0.8 §4.5).
+ *
+ * ⚠ Пункты проектов ГЕНЕРИРУЮТСЯ из коллекции, а не пишутся руками. Иначе
+ * ломается критерий §4.6 «проект = контент, не код» и вместе с ним пример B2:
+ * пятый проект обязан появиться в меню сам, без правки `.astro`.
+ *
+ * ⚠ Бургер на мобиле нужен. Прежняя редакция дизайна обещала «помещается без
+ * бургера» — это было верно для пяти пунктов; с проектами их 8–9, и в строку
+ * на 360 px они честно не влезают.
+ *
+ * Меню работает БЕЗ JS: `<details>` открывается нативно, доступно с клавиатуры
+ * и не ломается, если скрипт не загрузился. Ставить сюда JS ради анимации
+ * значило бы менять работающее на красивое.
+ */
+import { publishedProjects } from "../lib/projects";
+import { link, pathForLocale, useTranslations, type Locale } from "../i18n/ui";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const here = Astro.url.pathname;
+
+const projects = await publishedProjects(locale);
+
+const items = [
+  ...projects.map((p) => ({
+    href: link(`/projects/${p.id}/`, locale),
+    label: p.data.title,
+  })),
+  { href: link("/about/", locale), label: t("nav.about") },
+];
+const other: Locale = locale === "ru" ? "en" : "ru";
+---
+
+<header class="nav glass">
+  <a class="brand" href={link("/", locale)} aria-label={t("nav.home")}
+    >AA<span>.</span></a
+  >
+
+  <details class="menu">
+    <summary aria-label={t("nav.menu")}>
+      <span class="bars" aria-hidden="true"></span>
+      <span class="menu-text">{t("nav.menu")}</span>
+    </summary>
+    <ul>
+      {
+        items.map((i) => (
+          <li>
+            <a
+              href={i.href}
+              aria-current={here === i.href ? "page" : undefined}
+            >
+              {i.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </details>
+
+  <a
+    class="lang"
+    href={pathForLocale(here, other)}
+    hreflang={other}
+    lang={other}
+  >
+    {other.toUpperCase()}
+  </a>
+</header>
+
+<style>
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: var(--nav-h);
+    padding: 0.5rem clamp(0.75rem, 4vw, 2rem);
+    border-radius: 0;
+    border-width: 0 0 1px;
+  }
+  .brand {
+    font-weight: 700;
+    font-size: 1.125rem;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .brand span {
+    color: var(--accent);
+  }
+  .menu {
+    margin-inline-start: auto;
+  }
+  .menu summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    list-style: none;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-sm);
+  }
+  .menu summary::-webkit-details-marker {
+    display: none;
+  }
+  .bars,
+  .bars::before,
+  .bars::after {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+  }
+  .bars {
+    position: relative;
+  }
+  .bars::before,
+  .bars::after {
+    content: "";
+    position: absolute;
+    left: 0;
+  }
+  .bars::before {
+    top: -6px;
+  }
+  .bars::after {
+    top: 6px;
+  }
+  .menu ul {
+    position: absolute;
+    inset-inline-end: clamp(0.75rem, 4vw, 2rem);
+    margin-top: 0.5rem;
+    padding: 0.4rem;
+    list-style: none;
+    min-width: 14rem;
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: var(--glass-shadow);
+  }
+  .menu a {
+    display: block;
+    padding: 0.55rem 0.7rem;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--text);
+  }
+  .menu a:hover,
+  .menu a[aria-current="page"] {
+    background: rgba(0, 96, 223, 0.1);
+    color: var(--accent);
+  }
+  .lang {
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-decoration: none;
+    color: var(--accent);
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Десктоп: список в строку, бургер не нужен. */
+  @media (min-width: 48rem) {
+    .menu summary {
+      display: none;
+    }
+    .menu[open] ul,
+    .menu ul {
+      position: static;
+      display: flex;
+      gap: 0.25rem;
+      margin: 0;
+      padding: 0;
+      min-width: 0;
+      background: none;
+      border: 0;
+      box-shadow: none;
+    }
+  }
+</style>

@@ -1,0 +1,40 @@
+---
+/** Подвал (design v0.8 §4.5): контакты текстом, без формы — статика и спам. */
+import { useTranslations, type Locale } from "../i18n/ui";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const year = new Date().getFullYear();
+---
+
+<footer class="foot">
+  <nav aria-label={t("nav.contact")}>
+    <a href="mailto:hello@example.com">hello@example.com</a>
+    <a href="https://t.me/">Telegram</a>
+    <a href="https://www.linkedin.com/in/anton-aspidov">LinkedIn</a>
+    <a href="https://github.com/AnthonyPriceOne2691">GitHub</a>
+  </nav>
+  <p>© {year} Anton Aspidov · Built with Astro</p>
+</footer>
+
+<style>
+  .foot {
+    max-width: var(--measure);
+    margin: 4rem auto 2rem;
+    padding: 0 clamp(1rem, 5vw, 2rem);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+  .foot nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .foot a {
+    color: var(--accent);
+  }
+</style>

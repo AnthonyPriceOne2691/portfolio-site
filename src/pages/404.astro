@@ -1,0 +1,12 @@
+---
+import Base from "../layouts/Base.astro";
+import { DEFAULT_LOCALE, link, useTranslations } from "../i18n/ui";
+const locale = DEFAULT_LOCALE;
+const t = useTranslations(locale);
+---
+
+<Base locale={locale} title={t("404.title")} description={t("404.title")}>
+  <h1>404</h1>
+  <p>{t("404.title")}</p>
+  <p><a href={link("/", locale)}>{t("404.back")}</a></p>
+</Base>

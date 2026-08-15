@@ -1,0 +1,99 @@
+/*
+ * Базовая типографика и доступность. Цвета сюда НЕ пишутся — только через
+ * токены (`tokens.css`), иначе значение окажется вне теста контраста B9.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family:
+    "Instrument Sans",
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+main {
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding: clamp(1.5rem, 5vw, 3rem) clamp(1rem, 5vw, 2rem);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.5em;
+}
+h1 {
+  font-size: clamp(1.9rem, 6vw, 3rem);
+}
+h2 {
+  font-size: clamp(1.35rem, 4vw, 1.9rem);
+}
+
+a {
+  color: var(--accent);
+}
+a:hover {
+  color: var(--accent-hover);
+}
+
+/* Фокус виден ВСЕГДА и не убирается ради красоты: витрина инженера, которая
+   не открывается с клавиатуры, — антиреклама (конституция, принцип 6). */
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 20;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-radius: 0 0 var(--radius-sm) 0;
+}
+.skip:focus {
+  left: 0;
+}
+
+/* Медиа не рвут раскладку на узких экранах — первая причина
+   горизонтального скролла, который ловит пример B7. */
+img,
+video,
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/*
+ * Уважение к prefers-reduced-motion (пример B6). Правило намеренно широкое:
+ * оно гасит ЛЮБУЮ будущую анимацию, а не перечисленные сейчас. Перечисление
+ * пришлось бы поддерживать, и однажды кто-то добавил бы анимацию мимо списка.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
