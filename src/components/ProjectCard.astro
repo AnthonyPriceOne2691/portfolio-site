@@ -1,5 +1,13 @@
 ---
-/** Карточка проекта (design §4.3). Одна ключевая метрика, не список. */
+/**
+ * Карточка проекта (design v0.9 §4.3). Одна ключевая метрика, не список.
+ *
+ * Два режима. `wide` — альбомная, во всю ширину: метрика уходит влево крупным
+ * блоком, текст вправо. Так карточка читается как строка таблицы результатов,
+ * а не как плитка, и на Home это уместнее — там их всего три и они несут
+ * главный аргумент. Обычная сетка остаётся на `/projects`, где карточек может
+ * стать много.
+ */
 import type { CollectionEntry } from "astro:content";
 import StatusBadge from "./StatusBadge.astro";
 import { link, type Locale } from "../i18n/ui";
@@ -7,42 +15,60 @@ import { link, type Locale } from "../i18n/ui";
 interface Props {
   entry: CollectionEntry<"ru"> | CollectionEntry<"en">;
   locale: Locale;
+  wide?: boolean;
 }
-const { entry, locale } = Astro.props;
+const { entry, locale, wide = false } = Astro.props;
 const d = entry.data;
 ---
 
-<a class="card glass" href={link(`/projects/${entry.id}/`, locale)}>
-  <span class="top">
-    <StatusBadge status={d.status} locale={locale} />
+<a
+  class:list={["card", "glass", { wide }]}
+  href={link(`/projects/${entry.id}/`, locale)}
+>
+  <span class="lead">
     <span class="metric">{d.metric}</span>
+    <StatusBadge status={d.status} locale={locale} />
   </span>
-  <span class="title">{d.title}</span>
-  <span class="one">{d.oneLiner}</span>
-  <span class="stack">{d.stack.slice(0, 4).join(" · ")}</span>
+  <span class="body">
+    <span class="title">{d.title}</span>
+    <span class="one">{d.oneLiner}</span>
+    <span class="stack">{d.stack.slice(0, 5).join(" · ")}</span>
+  </span>
 </a>
 
 <style>
   .card {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.6rem;
     height: 100%;
-    padding: 1.1rem;
+    padding: 1.15rem;
     text-decoration: none;
     color: var(--text);
+    transition: transform 0.18s ease;
   }
-  .top {
+  .card:hover {
+    transform: translateY(-2px);
+  }
+  .lead {
     display: flex;
     align-items: center;
     gap: 0.6rem;
+    flex-wrap: wrap;
   }
   .metric {
     font-weight: 700;
+    font-size: 1.05rem;
+  }
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
   }
   .title {
     font-size: 1.15rem;
     font-weight: 700;
+    line-height: 1.25;
   }
   .one,
   .stack {
@@ -51,5 +77,31 @@ const d = entry.data;
   .stack {
     font-size: 0.85rem;
     margin-top: auto;
+  }
+
+  /* Альбомная раскладка — только когда есть куда её разложить. На узком
+     экране карточка остаётся колонкой: горизонтальная на 360 px дала бы
+     горизонтальный скролл, а его сторожит пример B7. */
+  @media (min-width: 46rem) {
+    .card.wide {
+      flex-direction: row;
+      align-items: center;
+      gap: 1.75rem;
+      padding: 1.4rem 1.6rem;
+    }
+    .card.wide .lead {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.45rem;
+      min-width: 11rem;
+      flex-shrink: 0;
+    }
+    .card.wide .metric {
+      font-size: 1.6rem;
+      line-height: 1.1;
+    }
+    .card.wide .stack {
+      margin-top: 0.15rem;
+    }
   }
 </style>
