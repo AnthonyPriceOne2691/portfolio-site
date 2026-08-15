@@ -22,9 +22,11 @@ interface Props {
   locale: Locale;
   title: string;
   description: string;
+  /** `wide` — витрина (карточки, сетки); по умолчанию колонка для чтения. */
+  width?: "prose" | "wide";
 }
 
-const { locale, title, description } = Astro.props;
+const { locale, title, description, width = "prose" } = Astro.props;
 const t = useTranslations(locale);
 const path = Astro.url.pathname;
 const site = Astro.site ?? new URL("https://example.pages.dev");
@@ -78,7 +80,7 @@ const person = {
   <body>
     <a class="skip" href="#main">{t("nav.skip")}</a>
     <Nav locale={locale} />
-    <main id="main">
+    <main id="main" class:list={[width]}>
       <slot />
     </main>
     <Footer locale={locale} />

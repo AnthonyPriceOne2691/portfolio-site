@@ -31,6 +31,10 @@ main {
   padding: clamp(1.5rem, 5vw, 3rem) clamp(1rem, 5vw, 2rem);
 }
 
+main.wide {
+  max-width: var(--measure-wide);
+}
+
 h1,
 h2,
 h3 {
