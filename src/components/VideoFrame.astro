@@ -25,16 +25,28 @@ interface Props {
   proof: { teaser?: string; poster?: string; video?: string };
   title: string;
   locale: Locale;
+  /**
+   * `card` — маленький фрейм в карточке на главной. Отличается не только
+   * размером: там НЕ играет ничего. Дизайн §6.1 запрещал медиа на Home
+   * («карточки статичные»), и запрет был по делу — четыре плеера на первом
+   * экране это вес и батарея. Владелец попросил фрейм 15.08; компромисс —
+   * фрейм есть, движения нет, полное видео живёт на странице проекта.
+   */
+  variant?: "page" | "card";
 }
-const { proof, title, locale } = Astro.props;
+const { proof, title, locale, variant = "page" } = Astro.props;
 const t = useTranslations(locale);
-const hasFrame = Boolean(proof.teaser || proof.poster || proof.video);
+const isCard = variant === "card";
+// В карточке фрейм рисуется ВСЕГДА: он держит раскладку, пока съёмки нет.
+// На странице проекта пустой блок был бы дырой (пример B3), поэтому там
+// секция не рендерится без медиа.
+const hasFrame = isCard || Boolean(proof.teaser || proof.poster || proof.video);
 ---
 
 {
   hasFrame && (
-    <figure class="frame glass">
-      {proof.teaser ? (
+    <figure class:list={["frame", "glass", { card: isCard }]}>
+      {proof.teaser && !isCard ? (
         <video
           class="teaser"
           poster={proof.poster}
@@ -51,11 +63,12 @@ const hasFrame = Boolean(proof.teaser || proof.poster || proof.video);
           style={proof.poster ? `background-image:url(${proof.poster})` : ""}
         />
       )}
-      {proof.video && (
+      {proof.video && !isCard && (
         <a class="play" href={proof.video}>
           ▶ {t("project.video")}
         </a>
       )}
+      {isCard && !proof.poster && <span class="soon">▶</span>}
     </figure>
   )
 }
@@ -84,6 +97,21 @@ const hasFrame = Boolean(proof.teaser || proof.poster || proof.video);
 </script>
 
 <style>
+  .frame.card {
+    margin: 0;
+    flex: 0 0 auto;
+    width: 100%;
+    border-radius: var(--radius-sm);
+  }
+  .soon {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 1.5rem;
+    color: var(--accent);
+    opacity: 0.55;
+  }
   .frame {
     position: relative;
     margin: 1.5rem 0;
