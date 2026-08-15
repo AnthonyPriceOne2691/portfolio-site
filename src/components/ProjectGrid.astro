@@ -7,16 +7,18 @@ import type { Locale } from "../i18n/ui";
 
 interface Props {
   locale: Locale;
+  /** `wide` — альбомные карточки в одну колонку (Home); `grid` — сетка (/projects). */
+  layout?: "wide" | "grid";
 }
-const { locale } = Astro.props;
+const { locale, layout = "grid" } = Astro.props;
 const projects = await publishedProjects(locale);
 ---
 
-<ul class="grid">
+<ul class:list={["grid", layout]}>
   {
     projects.map((p) => (
       <li>
-        <ProjectCard entry={p} locale={locale} />
+        <ProjectCard entry={p} locale={locale} wide={layout === "wide"} />
       </li>
     ))
   }
@@ -30,8 +32,10 @@ const projects = await publishedProjects(locale);
     display: grid;
     gap: 1rem;
   }
+  /* Альбомные карточки остаются в одну колонку на любой ширине: их форма и
+     есть «шире, чем выше», а во второй колонке они снова стали бы вытянутыми. */
   @media (min-width: 40rem) {
-    .grid {
+    .grid.grid {
       grid-template-columns: repeat(2, 1fr);
     }
   }

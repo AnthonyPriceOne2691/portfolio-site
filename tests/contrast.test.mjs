@@ -28,16 +28,56 @@ function token(name) {
   return m[1].trim();
 }
 
+/**
+ * oklch -> sRGB. Нужен потому, что палитра живёт в oklch (см. tokens.css), а
+ * контраст WCAG считается по sRGB. Формулы Оттоссона: oklch -> oklab -> LMS ->
+ * линейный sRGB -> гамма.
+ *
+ * ⚠ Правильность конвертера проверяется тестом ниже на контрольных цветах.
+ * Без этого он был бы самым опасным местом файла: ошибка здесь не роняет
+ * ничего, а тихо превращает проверку контраста в генератор случайных чисел.
+ */
+function oklchToRgb(L, C, h) {
+  const hr = (h * Math.PI) / 180;
+  const a = C * Math.cos(hr);
+  const b = C * Math.sin(hr);
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.291485548 * b;
+  const l = l_ ** 3;
+  const m = m_ ** 3;
+  const s = s_ ** 3;
+  const lin = [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+  const [r, g, bl] = lin.map((c) => {
+    const v = c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
+    return Math.round(Math.min(1, Math.max(0, v)) * 255);
+  });
+  return { r, g, b: bl, a: 1 };
+}
+
 function parseColor(value) {
   const hex = value.match(/^#([0-9a-f]{6})$/i);
   if (hex) {
     const n = parseInt(hex[1], 16);
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: 1 };
   }
-  const rgba = value.match(/^rgba?\(([^)]+)\)$/i);
-  assert.ok(rgba, `не разобран цвет: ${value}`);
-  const [r, g, b, a = "1"] = rgba[1].split(",").map((s) => s.trim());
-  return { r: +r, g: +g, b: +b, a: +a };
+  const ok = value.match(/^oklch\(\s*([\d.]+)%\s+([\d.]+)\s+([\d.]+)\s*\)$/i);
+  if (ok) return oklchToRgb(+ok[1] / 100, +ok[2], +ok[3]);
+  // И `rgb(255 255 255 / 0.55)`, и `rgba(255,255,255,0.55)`: два написания
+  // живут в одном файле, потому что первое пришло из первоисточника палитры.
+  const rgb = value.match(/^rgba?\(([^)]+)\)$/i);
+  assert.ok(rgb, `не разобран цвет: ${value}`);
+  const parts = rgb[1]
+    .replace(/\//g, " ")
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map(Number);
+  const [r, g, b, a = 1] = parts;
+  return { r, g, b, a };
 }
 
 /** Полупрозрачный слой поверх непрозрачного — то, что реально видит глаз. */
@@ -65,7 +105,7 @@ function contrast(a, b) {
 
 const AA = 4.5;
 // Светлейшая остановка градиента: худший случай для тёмного текста.
-const worstBg = parseColor(token("bg-grad-1"));
+const worstBg = parseColor(token("bg-lightest"));
 const glass = composite(parseColor(token("glass-bg")), worstBg);
 const glassStrong = composite(parseColor(token("glass-bg-strong")), worstBg);
 
@@ -105,4 +145,19 @@ test("инвариант: стекло не делает фон ТЕМНЕЕ г�
   // все расчёты выше молча считают не то, что на экране.
   assert.ok(luminance(glass) >= luminance(worstBg));
   assert.ok(luminance(glassStrong) >= luminance(glass));
+});
+
+test("конвертер oklch верен — проверка на контрольных цветах", () => {
+  // Без этой проверки весь файл выше считает неизвестно что. Эталоны —
+  // общеизвестные соответствия из спецификации CSS Color 4.
+  const near = (got, want, name) =>
+    assert.ok(
+      Math.abs(got.r - want[0]) <= 1 &&
+        Math.abs(got.g - want[1]) <= 1 &&
+        Math.abs(got.b - want[2]) <= 1,
+      `${name}: получили rgb(${got.r},${got.g},${got.b}), ждали rgb(${want.join(",")})`,
+    );
+  near(parseColor("oklch(100% 0 0)"), [255, 255, 255], "белый");
+  near(parseColor("oklch(0% 0 0)"), [0, 0, 0], "чёрный");
+  near(parseColor("oklch(62.8% 0.2577 29.23)"), [255, 0, 0], "красный");
 });
