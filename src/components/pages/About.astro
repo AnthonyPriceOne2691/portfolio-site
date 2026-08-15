@@ -1,0 +1,50 @@
+---
+/** «Обо мне» (design v0.8 §4.5, §10.3). Кнопка CV ведёт на mailto: файл в
+    публичный репозиторий не кладём, пока владелец не прочитает оба PDF. */
+import PageShell from "../PageShell.astro";
+import { useTranslations, type Locale } from "../../i18n/ui";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+---
+
+<PageShell
+  locale={locale}
+  titleKey="about.title"
+  descriptionKey="about.description"
+>
+  <h1>{t("about.title")}</h1>
+  <article class="glass card">
+    <p>{t("about.body")}</p>
+    <p class="how">{t("about.how")}</p>
+    <p>
+      <a
+        class="cv"
+        href={`mailto:hello@example.com?subject=${encodeURIComponent(t("about.cvSubject"))}`}
+      >
+        {t("about.cv")} →
+      </a>
+    </p>
+  </article>
+</PageShell>
+
+<style>
+  .card {
+    padding: clamp(1rem, 4vw, 1.75rem);
+  }
+  .how {
+    color: var(--text-muted);
+  }
+  .cv {
+    display: inline-block;
+    padding: 0.6rem 1.1rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+</style>

@@ -1,0 +1,116 @@
+---
+/**
+ * Фрейм демо-видео на первом экране страницы проекта (design v0.8 §6.1).
+ *
+ * ⚠ Съёмки ещё нет — и это не повод откладывать место под неё. Раскладка
+ * закладывается сейчас, чтобы появление файла было ПОДСТАНОВКОЙ, а не
+ * переделкой страницы.
+ *
+ * Три состояния, и ни одно из них не «пустая дыра» (пример B3):
+ *  1) есть тизер — беззвучный луп с постером;
+ *  2) есть только постер или полное видео — статичная обложка с кнопкой;
+ *  3) нет ничего — секция НЕ рендерится вовсе.
+ *
+ * Ленивость обязательна, и не ради красоты: `preload="none"` плюс подгрузка по
+ * приближению к экрану — это то, что отделяет «страницу с четырьмя автоплеями»
+ * от страницы, которая открывается на мобильном интернете. Именно вес, а не
+ * число посетителей, и был настоящим риском «зависания».
+ *
+ * Версии видео по языкам разводятся сами: RU-файл проекта несёт RU-ссылку,
+ * EN-файл — EN. Никакой логики выбора здесь нет и не нужно.
+ */
+import { useTranslations, type Locale } from "../i18n/ui";
+
+interface Props {
+  proof: { teaser?: string; poster?: string; video?: string };
+  title: string;
+  locale: Locale;
+}
+const { proof, title, locale } = Astro.props;
+const t = useTranslations(locale);
+const hasFrame = Boolean(proof.teaser || proof.poster || proof.video);
+---
+
+{
+  hasFrame && (
+    <figure class="frame glass">
+      {proof.teaser ? (
+        <video
+          class="teaser"
+          poster={proof.poster}
+          preload="none"
+          muted
+          loop
+          playsinline
+          aria-label={title}
+          data-src={proof.teaser}
+        />
+      ) : (
+        <div
+          class="poster"
+          style={proof.poster ? `background-image:url(${proof.poster})` : ""}
+        />
+      )}
+      {proof.video && (
+        <a class="play" href={proof.video}>
+          ▶ {t("project.video")}
+        </a>
+      )}
+    </figure>
+  )
+}
+
+<script>
+  // Тизер начинает грузиться только у экрана и останавливается, когда ушёл:
+  // иначе четыре страницы проектов в фоне жгут батарею и трафик.
+  const frames = document.querySelectorAll<HTMLVideoElement>("video.teaser");
+  if (frames.length && "IntersectionObserver" in window) {
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        const v = e.target as HTMLVideoElement;
+        if (e.isIntersecting) {
+          if (!v.src && v.dataset.src) v.src = v.dataset.src;
+          if (!reduced) void v.play().catch(() => {});
+        } else {
+          v.pause();
+        }
+      }
+    });
+    frames.forEach((v) => io.observe(v));
+  }
+</script>
+
+<style>
+  .frame {
+    position: relative;
+    margin: 1.5rem 0;
+    padding: 0;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+  }
+  .teaser,
+  .poster {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: linear-gradient(135deg, var(--bg-grad-2), var(--bg-grad-3));
+    background-size: cover;
+    background-position: center;
+  }
+  .play {
+    position: absolute;
+    inset-block-end: 0.75rem;
+    inset-inline-start: 0.75rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+</style>

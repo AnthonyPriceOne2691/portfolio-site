@@ -1,0 +1,55 @@
+---
+/** Карточка проекта (design §4.3). Одна ключевая метрика, не список. */
+import type { CollectionEntry } from "astro:content";
+import StatusBadge from "./StatusBadge.astro";
+import { link, type Locale } from "../i18n/ui";
+
+interface Props {
+  entry: CollectionEntry<"ru"> | CollectionEntry<"en">;
+  locale: Locale;
+}
+const { entry, locale } = Astro.props;
+const d = entry.data;
+---
+
+<a class="card glass" href={link(`/projects/${entry.id}/`, locale)}>
+  <span class="top">
+    <StatusBadge status={d.status} locale={locale} />
+    <span class="metric">{d.metric}</span>
+  </span>
+  <span class="title">{d.title}</span>
+  <span class="one">{d.oneLiner}</span>
+  <span class="stack">{d.stack.slice(0, 4).join(" · ")}</span>
+</a>
+
+<style>
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    height: 100%;
+    padding: 1.1rem;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .top {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .metric {
+    font-weight: 700;
+  }
+  .title {
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+  .one,
+  .stack {
+    color: var(--text-muted);
+  }
+  .stack {
+    font-size: 0.85rem;
+    margin-top: auto;
+  }
+</style>

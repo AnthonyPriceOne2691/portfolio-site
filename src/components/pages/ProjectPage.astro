@@ -1,0 +1,105 @@
+---
+/**
+ * Один шаблон на ВСЕ страницы проектов (design v0.8 §4.4, §4.6).
+ *
+ * Ключевой критерий продукта — «проект = контент, не код» (пример B2): пятый
+ * проект добавляется парой md-файлов, и маршрут, меню, кольцо «Next» и sitemap
+ * обновляются сами. Если для нового проекта пришлось трогать этот файл —
+ * шаблон спроектирован неверно.
+ *
+ * Место под видео зарезервировано СЕЙЧАС, хотя съёмки ещё нет: подстановка
+ * файла не должна перекраивать раскладку. Пустого блока при этом не возникает
+ * (пример B3) — без медиа секция не рендерится вовсе, а не показывает дыру.
+ */
+import { render, type CollectionEntry } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import ProofLinks from "../ProofLinks.astro";
+import StatusBadge from "../StatusBadge.astro";
+import VideoFrame from "../VideoFrame.astro";
+import { link, useTranslations, type Locale } from "../../i18n/ui";
+
+interface Props {
+  entry: CollectionEntry<"ru"> | CollectionEntry<"en">;
+  next: CollectionEntry<"ru"> | CollectionEntry<"en">;
+  locale: Locale;
+}
+const { entry, next, locale } = Astro.props;
+const t = useTranslations(locale);
+const { Content } = await render(entry);
+const d = entry.data;
+---
+
+<Base
+  locale={locale}
+  title={`${d.title} — Anton Aspidov`}
+  description={d.oneLiner}
+>
+  <p class="crumb">
+    <a href={link("/projects/", locale)}>← {t("projects.title")}</a>
+  </p>
+
+  <h1>{d.title}</h1>
+  <p class="lede">{d.oneLiner}</p>
+  <p class="meta">
+    <StatusBadge status={d.status} locale={locale} />
+    <span class="metric">{d.metric}</span>
+    <span class="stack">{d.stack.join(" · ")}</span>
+  </p>
+
+  <VideoFrame proof={d.proof} title={d.title} locale={locale} />
+
+  <article class="prose glass"><Content /></article>
+
+  <section class="glass contract">
+    <h2>[✓] {t("project.contract")}</h2>
+    <p>{d.contract}</p>
+  </section>
+
+  <ProofLinks proof={d.proof} locale={locale} />
+
+  <p class="next">
+    <a href={link(`/projects/${next.id}/`, locale)}
+      >{t("project.next")}: {next.data.title} →</a
+    >
+  </p>
+</Base>
+
+<style>
+  .crumb {
+    margin: 0 0 1rem;
+  }
+  .lede {
+    font-size: 1.15rem;
+    color: var(--text-muted);
+    margin-top: -0.25rem;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+  .metric {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .prose,
+  .contract {
+    padding: clamp(1rem, 4vw, 1.75rem);
+    margin: 1.5rem 0;
+  }
+  .contract h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.35rem;
+  }
+  .contract p {
+    margin: 0;
+    color: var(--text-muted);
+  }
+  .next {
+    margin-top: 2rem;
+    font-weight: 600;
+  }
+</style>
