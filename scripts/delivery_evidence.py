@@ -16,23 +16,14 @@ from delivery_base import SKIP_DIR_PARTS, TEST_TEXT_SUFFIXES
 from delivery_decisions import signature_verdict
 from delivery_history import debt_is_not_frozen, expectation_predates_tests
 
-def check_evidence(status: str, args, errors: list[str], warnings: list[str], ctx: ActiveCtx) -> None:
-    """Ожидание раньше кода, утверждения отревьюены, багфикс принёс тест."""
-    phase, klass, spec, tasks, verify, eval_smoke, implement_like = (
-        ctx.phase,
-        ctx.klass,
-        ctx.spec,
-        ctx.tasks,
-        ctx.verify,
-        ctx.eval_smoke,
-        ctx.implement_like)
-    # --- Долг не должен болтаться вечно (§3.5). Проверяется ТОЛЬКО на handoff:
-    # на каждом коммите это блокировало бы работу, не связанную со старым
-    # долгом, и такой гейт отключают через неделю. Работать не мешаем —
-    # не даём объявить сделанным.
-    if phase == "handoff":
-        errors.extend(debt_is_not_frozen())
+def check_archive_obligation(status: str, ctx: ActiveCtx, phase: str,
+                             errors: list[str]) -> None:
+    """Поставка уходит в archive с обязательством проверить (§13.1).
 
+    Шов `check_evidence` (`delivery@1.57`). Отдаёт дальше только `vr` — текст
+    verify-report, — и ниже он не читается: замер, а не догадка.
+    """
+    verify = ctx.verify
     # --- §13.1: поставка уходит в archive вместе с обязательством проверить
     # её в проде. Без этих полей «готово» проверено во всех средах, кроме
     # единственной значимой.
@@ -52,18 +43,7 @@ def check_evidence(status: str, args, errors: list[str], warnings: list[str], ct
             )
         # Уровень наблюдаемости — значение проверяемое, а не декларативное
         # (урок §10.4: самозаявленное `ci-oracles: tooling` при красном CI).
-        level = field(status, "observability")
-        if not is_placeholder(level) and level.strip().startswith(("2", "3")):
-            # Цифра, которой НЕ предшествует латинская буква: так число порога
-            # (`180мс`) отличается от id примера (`A1`) и от имени метрики
-            # (`p95`). Наивный поиск любой цифры проходил на сигнале
-            # «A1 подтверждён, ошибок нет» — то есть по неверной причине.
-            if not re.search(r"(?<![A-Za-z])\d", sig):
-                errors.append(
-                    f"observability: {level.strip()} заявлен, но observe_signal "
-                    "без метрики с числом (§13.3) — уровень 2+ означает замер "
-                    "ДО и порог, а не «мониторинг вроде подключён»"
-                )
+        check_observability_ladder(status, sig, errors)
 
     if phase == "handoff" and verify.is_file():
         vr = read(verify)
@@ -79,6 +59,14 @@ def check_evidence(status: str, args, errors: list[str], warnings: list[str], ct
                 "--base origin/main --write"
             )
 
+
+def check_builder_verifier(status: str, ctx: ActiveCtx, klass: str, phase: str,
+                           errors: list[str]) -> None:
+    """Builder ≠ Verifier (§5.2) — заявление о независимости.
+
+    Единственный из шести блоков, который НИЧЕГО не отдаёт дальше.
+    """
+    verify = ctx.verify
     # --- Builder ≠ Verifier (§5.2): не сама независимость, но явное заявление
     # о ней. Настоящее разделение обеспечивает required review в branch
     # protection (CQG §8.5); здесь ловим «сам построил, сам принял».
@@ -100,6 +88,12 @@ def check_evidence(status: str, args, errors: list[str], warnings: list[str], ct
                 "requires a different agent/model/human, or process:ci"
             )
 
+
+def check_assert_review(status: str, ctx: ActiveCtx, klass: str, phase: str,
+                        errors: list[str], warnings: list[str]) -> None:
+    """Ревью утверждений пропорционально (§3.1d ур. 3, DoD §3.2.7).
+    """
+    verify = ctx.verify
     # --- §3.1d уровень 3 / DoD §3.2.7: ревью утверждений пропорционально
     # непроверяемой части. `n/a` законен, только если КАЖДОЕ утверждение
     # ведёт к примеру, который человек подписал до кода; иначе ожидание
@@ -141,6 +135,21 @@ def check_evidence(status: str, args, errors: list[str], warnings: list[str], ct
             errors += e
             warnings += w
 
+
+def check_expectation_and_oracle(status: str, ctx: ActiveCtx, klass: str,
+                                 phase: str, errors: list[str],
+                                 warnings: list[str]) -> None:
+    """Ожидание раньше кода (§3.1d ур. 1) и реляционный оракул (§6.5 ур. 2).
+
+    Два раздела в одной функции, хотя комментарии обещают два шва: последний
+    блок ВЛОЖЕН в `if` предыдущего, и граница по маркеру его отрывает. Замер
+    сказал это заранее («не парсится отдельно»), а первый заход сигнал
+    проигнорировал — и сломал модуль дважды.
+    """
+    # ⚠ `ctx.tasks` и `ctx.verify` здесь БОЛЬШЕ НЕ БЕРУТСЯ, и пустота этой строки
+    # — сама улика: функция перестала читать документы поставки о себе.
+    spec = ctx.spec
+    eval_smoke, implement_like = ctx.eval_smoke, ctx.implement_like
     # --- §3.1d уровень 1: ожидание обязано появиться РАНЬШЕ кода.
     # Проверяем не качество примеров (это невозможно), а сам факт, что они
     # есть и на них ссылаются тесты: иначе ожидание придумал тот же, кто писал
@@ -149,11 +158,10 @@ def check_evidence(status: str, args, errors: list[str], warnings: list[str], ct
         spec_text = read(spec)
         ex_ids = re.findall(r"(?m)^\s*\|\s*([A-Z]\d+)\s*\|", spec_text)
 
-        # Корпус «где искать ссылки»: smoke + tasks + verify + тексты тестов.
-        # Строится БЕЗУСЛОВНО, потому что его читают ДВЕ независимые проверки —
-        # ссылки на id ниже и реляционный оракул §6.5 дальше.
+        # Корпуса «где искать». Строятся БЕЗУСЛОВНО, потому что их читают ДВЕ
+        # независимые проверки — ссылки на id ниже и реляционный оракул §6.5.
         #
-        # lab-12: он строился внутри else-ветки, и обе ветки с ошибкой роняли
+        # lab-12: корпус строился внутри else-ветки, и обе ветки с ошибкой роняли
         # гейт `UnboundLocalError: haystack` ВМЕСТО того, чтобы напечатать уже
         # сформулированный диагноз. Класс: **проверка, обязанная поставить
         # диагноз, умирает вместо диагноза** — исполнитель видит поломку
@@ -161,7 +169,29 @@ def check_evidence(status: str, args, errors: list[str], warnings: list[str], ct
         # зеркало «гейта, врущего зелёным»: тот молчит, когда должен говорить,
         # этот кричит не о том. Мера — не «инициализировать переменную», а
         # держать сбор данных отдельно от разбора причин.
-        haystack = read(eval_smoke) + read(tasks) + read(verify)
+        #
+        # ⚠ Корпусов ДВА, и это несущее (`delivery@1.72`, поле). Был один, и в
+        # него входили `tasks.md` и `verify-report.md` — то есть ДОКУМЕНТЫ О
+        # ПОСТАВКЕ. §6.5 ищет в корпусе `@given`, поэтому проверка гасилась
+        # УПОМИНАНИЕМ декоратора в прозе отчёта: зелёное получено словом о
+        # свойстве, а не свойством. Поймано так: первая редакция отчёта
+        # процитировала имя искомого декоратора, ОБЪЯСНЯЯ этот самый warning, —
+        # и warning исчез. Ссылки на id держали тот же дефект и заметнее: отчёт
+        # перечисляет id примеров штатно, поэтому «id встречается в тестах»
+        # удовлетворялось таблицей в verify-report.
+        #
+        # Правило к КЛАССУ: корпус проверки не смеет содержать текст, который
+        # ОПИСЫВАЕТ эту проверку, — описание там неотличимо от предмета. Канон
+        # это правило уже произносил в двух шагах отсюда («в них нельзя спрятать
+        # неверное ожидание», §6.5) и рядом же нарушал; ловит расхождение теперь
+        # не глаз, а `test_green_without_the_thing.py`.
+        #
+        # Границы корпусов заданы тем, что проверка СПРАШИВАЕТ. §6.5 спрашивает
+        # про тест — значит только тексты тестов. Ссылки на id канон и сам
+        # описывал как «в тестах ИЛИ eval-smoke» (см. ветку ниже) — значит проза
+        # попала в корпус мимо собственной формулировки: `tasks.md` обещает,
+        # `verify-report.md` отчитывается, а вопрос был про проверку.
+        tests_text = ""
         for root_dir in ("tests", "backend/tests", "src/tests"):
             d = ACTIVE.parent.parent / root_dir
             if not d.is_dir():
@@ -174,68 +204,143 @@ def check_evidence(status: str, args, errors: list[str], warnings: list[str], ct
                     and f.suffix in TEST_TEXT_SUFFIXES
                     and not any(p in SKIP_DIR_PARTS for p in f.parts)
                 ):
-                    haystack += read(f)
+                    tests_text += read(f)
 
-        if not re.search(r"(?im)^#+\s*acceptance\s+examples", spec_text):
-            errors.append(
-                f"class {klass}: spec.md без блока '## Acceptance examples' "
-                "(§3.1d) — конкретные вход→выход, подтверждённые человеком "
-                "ДО кода; проза «работает корректно» подписью не является"
-            )
-        elif not ex_ids:
-            # Грамматика id названа ЯВНО: она не очевидна, а её нарушение
-            # раньше выглядело как «примеров нет» при полной таблице примеров.
-            # lab-12: арка написала id вида `EX1` и получила краш; вторая арка
-            # переименовала свои id, обходя соседнюю проблему, — то есть
-            # неназванное правило заставляло подстраиваться вслепую.
-            errors.append(
-                "spec.md: блок Acceptance examples есть, но примеров с id в "
-                "нём нет (§3.1d). id читается из первой колонки таблицы и "
-                "обязан быть вида ОДНА заглавная латинская буква + цифры "
-                "(`A1`, `E2`); `EX1`, `A.1`, `1` и `случай-1` не считаются"
-            )
-        else:
-            # id должны встречаться в тестах или eval-smoke: связь примера с
-            # проверкой — то, что отличает обещание от отчёта о реализации.
-            missing = [i for i in dict.fromkeys(ex_ids) if i not in haystack]
-            if missing:
-                warnings.append(
-                    "acceptance-примеры без ссылки в тестах/eval-smoke: "
-                    f"{', '.join(missing)} (§3.1d) — пометь тест id примера"
-                )
+        check_examples_and_ids(spec_text, ex_ids,
+                               tests_text + read(eval_smoke), klass, phase,
+                               errors, warnings)
 
-            # Порядок «пример раньше теста» — на verify и дальше: раньше
-            # тестов может просто не быть, и проверка ругалась бы на штатное
-            # состояние фазы implement.
-            if phase in {"verify", "converge", "handoff"}:
-                test_dirs = [d for d in ("tests", "backend/tests", "src/tests")
-                             if (ACTIVE.parent.parent / d).is_dir()]
-                warnings += expectation_predates_tests(ex_ids, test_dirs)
+        check_relational_oracle(tests_text, klass, warnings)
 
-        # --- §6.5 уровень 2: хотя бы один реляционный оракул на M/L.
-        # «Минимум один» стояло в §6.5 практикой и не принуждалось ничем —
-        # та же форма, что F7. Пример со значением (`f(2) == 4`) закрепляет
-        # баг, если ожидание списано с кода, и мутационный гейт его не поймает:
-        # мутант будет честно убит НЕВЕРНЫМ утверждением. Свойство подделать
-        # нельзя, потому что ожидаемого значения в нём нет.
-        #
-        # ⚠ Это проверка НАЛИЧИЯ, и она заполняется галочкой: `@given(...)` с
-        # `assert True` её проходит. Ловит такое не она, а мутационный гейт —
-        # декоративное свойство оставляет мутантов живыми. Поэтому требование
-        # осмысленно ТОЛЬКО при работающем mutation (на macOS —
-        # `brew install coreutils`, CQG §5 шаг 3), и об этом сказано в тексте
-        # ошибки: иначе получим ритуал вместо оракула.
-        if not re.search(r"@given|@hypothesis\.given|fc\.assert|fc\.property",
-                         haystack):
+
+def check_relational_oracle(tests_text: str, klass: str,
+                            warnings: list[str]) -> None:
+    """Хотя бы один реляционный оракул на M/L (§6.5 уровень 2).
+
+    Пятый шов (`delivery@1.57`) — ВНУТРИ функции, а не по её шву: блок вложен
+    в `if` соседнего раздела и берёт корпус параметром.
+
+    ⚠ Параметр называется `tests_text`, а не `haystack`, намеренно: имя корпуса
+    и есть содержание правки `delivery@1.72`. Сюда приходят ТОЛЬКО тексты
+    тестов; проза поставки описывает искомое свойство теми же словами, и под
+    именем «стог» это неразличимо.
+    """
+    # --- §6.5 уровень 2: хотя бы один реляционный оракул на M/L.
+    # «Минимум один» стояло в §6.5 практикой и не принуждалось ничем —
+    # та же форма, что F7. Пример со значением (`f(2) == 4`) закрепляет
+    # баг, если ожидание списано с кода, и мутационный гейт его не поймает:
+    # мутант будет честно убит НЕВЕРНЫМ утверждением. Свойство подделать
+    # нельзя, потому что ожидаемого значения в нём нет.
+    #
+    # ⚠ Это проверка НАЛИЧИЯ, и она заполняется галочкой: `@given(...)` с
+    # `assert True` её проходит. Ловит такое не она, а мутационный гейт —
+    # декоративное свойство оставляет мутантов живыми. Поэтому требование
+    # осмысленно ТОЛЬКО при работающем mutation (на macOS —
+    # `brew install coreutils`, CQG §5 шаг 3), и об этом сказано в тексте
+    # ошибки: иначе получим ритуал вместо оракула.
+    if not re.search(r"@given|@hypothesis\.given|fc\.assert|fc\.property",
+                     tests_text):
+        warnings.append(
+            f"class {klass}: ни одного реляционного оракула (§6.5) — "
+            "не найдено ни `@given` (hypothesis), ни `fc.property` "
+            "(fast-check). Инвариант, round-trip, идемпотентность, "
+            "метаморфное отношение или differential: в них нет ожидаемого "
+            "значения, поэтому в них нельзя спрятать неверное ожидание. "
+            "Один инвариант обычно ловит больше десяти тестов-значений, "
+            "потому что раннер перебирает входы, о которых автор не думал. "
+            "Проверь заодно, что mutation-гейт у тебя не пропускается: "
+            "иначе слабое свойство (`assert result is not None`) пройдёт"
+        )
+
+
+def check_examples_and_ids(spec_text: str, ex_ids: list[str], refs_text: str,
+                           klass: str, phase: str, errors: list[str],
+                           warnings: list[str]) -> None:
+    """Блок примеров есть, id проставлены, id встречаются в тестах.
+
+    Шестой шов (`delivery@1.57`): цепочка `if/elif/else` — это три ответа на
+    один вопрос, и она уносит из вызывающей функции почти всю сложность.
+    """
+    if not re.search(r"(?im)^#+\s*acceptance\s+examples", spec_text):
+        errors.append(
+            f"class {klass}: spec.md без блока '## Acceptance examples' "
+            "(§3.1d) — конкретные вход→выход, подтверждённые человеком "
+            "ДО кода; проза «работает корректно» подписью не является"
+        )
+    elif not ex_ids:
+        # Грамматика id названа ЯВНО: она не очевидна, а её нарушение
+        # раньше выглядело как «примеров нет» при полной таблице примеров.
+        # lab-12: арка написала id вида `EX1` и получила краш; вторая арка
+        # переименовала свои id, обходя соседнюю проблему, — то есть
+        # неназванное правило заставляло подстраиваться вслепую.
+        errors.append(
+            "spec.md: блок Acceptance examples есть, но примеров с id в "
+            "нём нет (§3.1d). id читается из первой колонки таблицы и "
+            "обязан быть вида ОДНА заглавная латинская буква + цифры "
+            "(`A1`, `E2`); `EX1`, `A.1`, `1` и `случай-1` не считаются"
+        )
+    else:
+        # id должны встречаться в тестах или eval-smoke: связь примера с
+        # проверкой — то, что отличает обещание от отчёта о реализации.
+        missing = [i for i in dict.fromkeys(ex_ids) if i not in refs_text]
+        if missing:
             warnings.append(
-                f"class {klass}: ни одного реляционного оракула (§6.5) — "
-                "не найдено ни `@given` (hypothesis), ни `fc.property` "
-                "(fast-check). Инвариант, round-trip, идемпотентность, "
-                "метаморфное отношение или differential: в них нет ожидаемого "
-                "значения, поэтому в них нельзя спрятать неверное ожидание. "
-                "Один инвариант обычно ловит больше десяти тестов-значений, "
-                "потому что раннер перебирает входы, о которых автор не думал. "
-                "Проверь заодно, что mutation-гейт у тебя не пропускается: "
-                "иначе слабое свойство (`assert result is not None`) пройдёт"
+                "acceptance-примеры без ссылки в тестах/eval-smoke: "
+                f"{', '.join(missing)} (§3.1d) — пометь тест id примера"
             )
+
+        # Порядок «пример раньше теста» — на verify и дальше: раньше
+        # тестов может просто не быть, и проверка ругалась бы на штатное
+        # состояние фазы implement.
+        if phase in {"verify", "converge", "handoff"}:
+            test_dirs = [d for d in ("tests", "backend/tests", "src/tests")
+                         if (ACTIVE.parent.parent / d).is_dir()]
+            warnings += expectation_predates_tests(ex_ids, test_dirs)
+
+
+def check_observability_ladder(status: str, sig: str, errors: list[str]) -> None:
+    """Ступень наблюдаемости 2–3 требует своих полей (§13.3).
+
+    Седьмой шов (`delivery@1.57`): вынесен не по длине, а по СЛОЖНОСТИ —
+    `check_archive_obligation` укладывалась в 80 строк, но давала cx 11 при
+    пороге 10. §2.1 меряет обе оси, и вторая тут была решающей.
+    """
+    level = field(status, "observability")
+    if not is_placeholder(level) and level.strip().startswith(("2", "3")):
+        # Цифра, которой НЕ предшествует латинская буква: так число порога
+        # (`180мс`) отличается от id примера (`A1`) и от имени метрики
+        # (`p95`). Наивный поиск любой цифры проходил на сигнале
+        # «A1 подтверждён, ошибок нет» — то есть по неверной причине.
+        if not re.search(r"(?<![A-Za-z])\d", sig):
+            errors.append(
+                f"observability: {level.strip()} заявлен, но observe_signal "
+                "без метрики с числом (§13.3) — уровень 2+ означает замер "
+                "ДО и порог, а не «мониторинг вроде подключён»"
+            )
+
+
+def check_evidence(status: str, args, errors: list[str], warnings: list[str], ctx: ActiveCtx) -> None:
+    """Ожидание раньше кода, утверждения отревьюены, багфикс принёс тест."""
+    phase, klass, spec, tasks, verify, eval_smoke, implement_like = (
+        ctx.phase,
+        ctx.klass,
+        ctx.spec,
+        ctx.tasks,
+        ctx.verify,
+        ctx.eval_smoke,
+        ctx.implement_like)
+    # --- Долг не должен болтаться вечно (§3.5). Проверяется ТОЛЬКО на handoff:
+    # на каждом коммите это блокировало бы работу, не связанную со старым
+    # долгом, и такой гейт отключают через неделю. Работать не мешаем —
+    # не даём объявить сделанным.
+    if phase == "handoff":
+        errors.extend(debt_is_not_frozen())
+
+    check_archive_obligation(status, ctx, phase, errors)
+
+    check_builder_verifier(status, ctx, klass, phase, errors)
+
+    check_assert_review(status, ctx, klass, phase, errors, warnings)
+
+    check_expectation_and_oracle(status, ctx, klass, phase, errors, warnings)
 

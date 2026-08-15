@@ -29,7 +29,7 @@ jobs:
     # §8.7: предохранитель, а не оптимизация — гейты — секунды-минуты; 20 значит «что-то повисло».
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0      # нужен для BASE-диффа: diff-coverage и baseline-ratchet
       # ⚠ Версия ОБЯЗАНА совпадать с локальной. Иначе гейты проверяют один
@@ -43,7 +43,7 @@ jobs:
       # ронял ВСЮ джобу гейтов до первого гейта. Замерено на восьмом развёртывании;
       # тот же класс, что маска гейта, не знающая про `.astro` (cqg@1.69).
       # Пустая строка = кэш выключен, и это штатное значение действия.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"   # ← выровнять с локальной версией проекта
           cache: ${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') != '' && 'pip' || '' }}
@@ -51,7 +51,7 @@ jobs:
       # либо в подкаталоге, либо в корне репозитория. Жёсткий
       # `frontend/package-lock.json` роняет действие на «Some specified paths were
       # not resolved» ровно там, где фронт и есть весь проект.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
@@ -107,25 +107,63 @@ jobs:
       # несущие — фронтовые, и без них eslint/jscpd/layers/prettier уходят в
       # мягкий skip, а джоба выглядит проверенной.
       #
-      # ⚠ `prettier` намеренно в списке, хотя в `package.json` его НЕТ: он
-      # приезжает транзитивно. Гейт формата стоит на пакете, которого никто не
-      # гарантирует — исчезнет у апстрима, и хук умрёт молча. Проверка ловит это
-      # сразу; правильная починка — объявить prettier прямой devDependency
-      # (задача T1 поставки mvp-shell-home).
+      # ⚠ ПОРТ `cqg@2.16`: шаг заменён канонным. Здесь стоял свой список
+      # (detect-secrets + eslint/jscpd/depcruise/prettier), заведённый находкой
+      # ЭТОГО проекта 2026-08-07 — канон тогда ждал питоновский venv на
+      # npm-проекте. Канон находку ВПИТАЛ и обобщил: список выводится из того,
+      # что объявил сам проект (манифесты + `not-applicable.json`), а инструмент
+      # ищется и в venv, и в `node_modules/.bin`, и в PATH.
+      #
+      # ⚠ Названный остаток порта: `prettier` и `depcruise` в канонном списке НЕ
+      # ожидаются. Здесь они стояли не случайно — `prettier` приезжает
+      # ТРАНЗИТИВНО, и гейт формата стоит на пакете, которого никто не
+      # гарантирует. Канонная проверка этого не ловит; задача T1 поставки
+      # mvp-shell-home (объявить prettier прямой devDependency) остаётся.
+      # ⚠ Список НЕ зашит: он выводится из того, что объявил САМ ПРОЕКТ.
+      # Первая редакция (cqg@1.85) ждала `backend/.venv/bin/{ruff,mypy,
+      # detect-secrets}` — и на npm-проекте роняла джобу, хотя ruff и mypy там
+      # объявлены `n/a`, а venv не заводится вовсе. Это девятый рецидив класса
+      # «шаблон канона несёт питоновское допущение», и заведён он был шагом,
+      # который этот самый класс и чинит. Нашло поле (portfolio-site, 2026-08-07).
+      #
+      # Правило: инструмент ожидается, если ЕСТЬ манифест его половины и роль не
+      # объявлена неприменимой в `scripts/lint/not-applicable.json`. Ищем и в
+      # venv, и в `node_modules/.bin`, и в PATH — где лежит, решает менеджер
+      # пакетов, а не канон.
       - name: Инструменты гейтов на месте (иначе пропуск читается как успех)
         run: |
-          missing=""
-          command -v detect-secrets >/dev/null 2>&1 || missing="$missing detect-secrets"
-          for t in eslint jscpd depcruise prettier; do
-            [ -x "node_modules/.bin/$t" ] || missing="$missing $t"
-          done
+          na="scripts/lint/not-applicable.json"
+          skip() { [ -f "$na" ] && grep -q "\"$1\"" "$na"; }
+          have() {
+            for p in "backend/.venv/bin/$1" ".venv/bin/$1" "node_modules/.bin/$1" \
+                     "$LINT_FE_DIR/node_modules/.bin/$1"; do
+              [ -x "$p" ] && return 0
+            done
+            command -v "$1" >/dev/null 2>&1
+          }
+          missing=""; checked=""
+          expect() { skip "$1" || { checked="$checked $1"; have "$1" || missing="$missing $1"; }; }
+          expect detect-secrets
+          # ⚠ Условие идёт через `grep -q .`, а не через код возврата `ls`: `ls A B`
+          # при существующем A и отсутствующем B выходит ЕДИНИЦЕЙ (замер: rc=1),
+          # поэтому прежняя форма `ls **/pyproject.toml **/requirements*.txt`
+          # на pyproject-проекте БЕЗ requirements.txt (uv/poetry — тот же случай,
+          # что lab-11 F9) не ожидала ни ruff, ни mypy. Шаг, заведённый против
+          # тихого пропуска, сам уходил в тихий пропуск.
+          if ls pyproject.toml */pyproject.toml requirements*.txt */requirements*.txt 2>/dev/null | grep -q .; then
+            expect ruff; expect mypy
+          fi
+          if [ -f package.json ] || [ -f "$LINT_FE_DIR/package.json" ]; then
+            expect eslint; expect jscpd
+          fi
           if [ -n "$missing" ]; then
             echo "::error::инструменты гейтов не поставились:$missing"
             echo "Гейты ниже уйдут в честный пропуск, и джоба будет ВЫГЛЯДЕТЬ проверенной."
             echo "Смотри шаг установки: он упал или поставил не туда (§8.3)."
+            echo "Инструмент не нужен на этом стеке — объяви роль в $na (§5.5)."
             exit 1
           fi
-          echo "toolchain: detect-secrets + eslint/jscpd/depcruise/prettier на месте"
+          echo "toolchain: проверено ->$checked (пусто = все роли объявлены n/a)"
 
       # ⚠ `if: always()` на КАЖДОМ независимом гейте — не косметика.
       # Шаг, который не просто падает, а КРАШИТСЯ (mypy INTERNAL ERROR), обрывает
@@ -205,10 +243,10 @@ jobs:
     # §8.7: предохранитель, а не оптимизация — фазовый гейт читает файлы; 10 с запасом.
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0      # breakers и метрики считаются по merge-base..HEAD
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 

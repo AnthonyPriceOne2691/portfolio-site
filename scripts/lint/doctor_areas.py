@@ -14,23 +14,76 @@ import re
 
 from doctor_core import AUTO, DEAD, NOT_GATES, SKIP, SKIP_WORDS, SUCCESS_WORDS, WEAK, run
 
+#: Часть гейта, подключённая РЯДОМ: `. "$SCRIPT_DIR/x.sh"` у shell, `from x import`
+#: у python. Оба написания есть в payload'е — с `cqg@1.82` он режется по планке 300
+#: строк, и у семи гейтов половина кода живёт в соседнем файле.
+_PART_SH = re.compile(r'\$\{?SCRIPT_DIR\}?/([A-Za-z0-9_]+\.sh)')
+#: ⚠ `\b` обязателен: без него `ESLINT_ABS` читается как переменная `LINT_ABS`
+#: (внутри слова «ESLINT» лежит «LINT»), и доктор знал бы имена, которых нет.
+_LINT_VAR = re.compile(r'\bLINT_[A-Z_]+')
+_PART_PY = re.compile(r'(?m)^from\s+([a-z0-9_]+)\s+import\b')
 
-def _covers(token: str, path: str) -> bool:
-    """Покрывает ли токен маски этот путь.
 
-    Три формы, все встречаются в payload'е: `*.py` (расширение где угодно),
-    `dir/**` (поддерево) и `dir/**/*.py` (то и другое). Голый `fnmatch` не
-    годится: `*.py` в нём не совпадает с `pkg/mod.py`, а `**` он не знает вовсе.
+def _komplekt(script) -> str:
+    """Тело гейта ВМЕСТЕ с его частями — комплектом, а не входным файлом.
+
+    Читать один вход нельзя: после разреза `cqg@1.82` вопрос «какие переменные
+    гейт читает» переехал в часть вместе с кодом (у гейта сложности TS-половина
+    целиком в `complexity_halves.sh`), и по входу он выглядел бы не читающим
+    ничего. Тот же приём, что `extract.whole()` в сьюте канона.
     """
-    if token.endswith("/**"):
-        return path.startswith(token[:-2])
-    if "/**/" in token:
-        head, tail = token.split("/**/", 1)
-        return path.startswith(head + "/") and fnmatch.fnmatch(
-            path.rsplit("/", 1)[-1], tail)
-    if "/" in token:
-        return fnmatch.fnmatch(path, token)
-    return fnmatch.fnmatch(path.rsplit("/", 1)[-1], token)
+    head = script.read_text(encoding="utf-8", errors="replace")
+    out = [head]
+    for name in _PART_SH.findall(head) + [m + ".py" for m in _PART_PY.findall(head)]:
+        part = script.parent / name
+        if part.is_file() and part.name != script.name:
+            out.append(part.read_text(encoding="utf-8", errors="replace"))
+    return "\n".join(out)
+
+
+def _own_vars(env: dict, body: str) -> dict:
+    """`LINT_*` из хука, которые гейт ДЕЙСТВИТЕЛЬНО читает (`cqg@2.04`).
+
+    Ложное красное, найденное полем: доктор печатал `DEAD область
+    check_grep_gate.sh — маска гейта не покрывает 18 файл(ов) области:
+    backend/tests/…` при ВЕРНО настроенном гейте. В `entry:` стоял общий на все
+    гейты префикс (`LINT_PY_SRC=… LINT_COV_PKG=… LINT_FE_DIR=… LINT_BE_DIR=…`),
+    и `LINT_BE_DIR` затянул в знаменатель весь backend — при том что предмет
+    гейта `backend/app/**`, а тесты он не смотрит НАМЕРЕННО. Переменную эту
+    `check_grep_gate.sh` не читает вовсе.
+
+    Общий префикс — законная и удобная запись: §6 велит держать значения в
+    `entry:`, и раскладывать их по хукам поштучно она не требует. Значит корни
+    области обязаны браться из переменных гейта, а не из строки хука.
+
+    Признак вычислим и проверяется тем же грепом: имя `LINT_*` в КОДЕ комплекта.
+    Комментарии сняты, и это не микрооптимизация — шестой рецидив класса, ради
+    которого в сьюте живёт `extract.code_only()`: `check_file_length.sh`
+    упоминает `LINT_PY_SRC` в комментарии, который ОБЪЯСНЯЕТ, что гейт его не
+    читает. По комментарию доктор бы этот корень и взял.
+    """
+    code = "\n".join(l for l in body.splitlines() if not l.lstrip().startswith("#"))
+    named = set(_LINT_VAR.findall(code))
+    return {k: v for k, v in env.items() if k in named}
+
+
+def _gate_command(script, text: str, *, multi_rule: bool) -> list[str] | None:
+    """Чем запускать гейт; None — запускать нечем: правил много, а `--rule` нет.
+
+    Шов по данным: наружу блок отдавал одно имя — `cmd`. `wired` посчитан в
+    ветке и в ней же прочитан, поэтому за границу не выносится, а выход из
+    цикла остаётся у вызывающего — здесь он превращается в `None`.
+
+    Многоправильный гейт без `--rule` падает с usage. Область у правил одного
+    скрипта общая, поэтому довольно первого вписанного.
+    """
+    cmd = (["python3"] if script.suffix == ".py" else ["bash"]) + [str(script)]
+    if not multi_rule:
+        return cmd
+    wired = re.findall(rf"{re.escape(script.name)}\s+--rule\s+([A-Za-z0-9_-]+)", text)
+    if not wired:
+        return None
+    return cmd + ["--rule", wired[0]]
 
 
 class AreaChecks:
@@ -98,103 +151,17 @@ class AreaChecks:
         # стенде снимут первым: §4.3b, и ровно об этом предупреждает собственный
         # тест процедуры («доктор, красный на неполном стенде, снимают первым»).
         # Поймано этим тестом, а не полем.
-        code, listing = run(["git", "ls-files"], self.root)
-        files = [l for l in listing.splitlines()
-                 if l.endswith(self.SOURCE_EXT) and not self.CONTOUR_RE.match(l)]
-        if code != 0 or not files:
+        files = self._source_files()
+        if not files:
             self.add(SKIP, "область гейтов",
                      "в репозитории нет исходников вне scripts/lint — слепоту "
                      "судить не на чем (bootstrap: контур есть, кода ещё нет)")
             return
         off_commit: list[str] = []
         for script in sorted(d.glob("check_*")):
-            name = script.name
-            if not script.is_file() or name in NOT_GATES:
-                continue
-            if name not in text:                      # не вписан — не наш случай
-                continue
-            # Вписан, но не на коммите: `stages: [manual]` / `[push]`. Гонять его
-            # здесь нельзя — §8.6 не покрывает эти стадии, а `deps-audit` оттуда
-            # ходит в сеть. Пропускаем МОЛЧА по одному, а списком — вслух ниже:
-            # молчаливый пропуск всех гейтов разом дал бы «лжи нет» на проекте,
-            # где на коммите не проверяется ничего.
-            stages = self._hook_stages(text, name)
-            if stages and not any(s.startswith("commit") or s == "pre-commit"
-                                  for s in stages):
-                off_commit.append(f"{name} ({', '.join(stages)})")
-                continue
-            point = f"область {name}"
-            cmd = (["python3"] if script.suffix == ".py" else ["bash"]) + [str(script)]
-            # Многоправильный гейт без `--rule` падает с usage. Область у правил
-            # одного скрипта общая, поэтому довольно первого вписанного.
-            body = script.read_text(encoding="utf-8", errors="replace")
-            if "--list-rules" in body:
-                wired = re.findall(rf"{re.escape(name)}\s+--rule\s+([A-Za-z0-9_-]+)", text)
-                if not wired:
-                    continue
-                cmd += ["--rule", wired[0]]
-            env = self._hook_env(text, name)
-            code, out = run(cmd, self.root, env=env)
-            m = self.SCANNED_RE.search(out)
-            if not m:
-                # Гейт не отчитывается числом — либо не сканирующий, либо красный
-                # по делу. Молча зачесть за успех нельзя, но и ронять не за что.
-                self.add(SKIP, point, "гейт не печатает «просмотрено N» — "
-                                      "сканирующий ли он, отсюда не видно")
-                continue
-            n = int(m.group(1) or m.group(3))
-            if n:
-                mask_m = self.MASK_RE.search(out)
-                self._judge_area(point, n, (m.group(2) or m.group(4) or "").lower(),
-                                 files, env, multi_rule="--list-rules" in body,
-                                 files_re=self._hook_files_re(text, name),
-                                 mask=(mask_m.group(1).split() if mask_m else []))
-                continue
-
-            # ⚠ Ноль при НАЗВАННОМ пропуске — бедность, а не ложь, и этот случай
-            # обнажила сама правка 1.80. `check_deps_audit.sh` печатает
-            # «○ пропущено: npm audit» и `WARNING — просмотрено 0 манифест(ов)»;
-            # до 1.80 он проваливался в `SKIP` лишь потому, что регулярка не знала
-            # слова «манифест», а как только число стало читаться, честный пропуск
-            # стал бы `DEAD` — то есть проверка на ложь обвинила бы гейт за
-            # бедность окружения (§4.3b). Правило 1.61 сохранено: заявленный успех
-            # БЬЁТ названный пропуск (гейт может шепнуть «пропущено» в теле и
-            # напечатать «: OK» в итоге, а читают итог — это форма F10 и она DEAD).
-            named = next((w for w in SKIP_WORDS if w in out), None)
-            if named and not any(w in out for w in SUCCESS_WORDS):
-                self.add(WEAK, point, f"просмотрено 0 — но пропуск НАЗВАН самим "
-                                      f"гейтом ({named}): бедность окружения, не ложь")
-                continue
-
-            # Ноль бывает ДВУХ природ, и путать их нельзя.
-            #
-            # ① Гейт настроен на НЕСУЩЕСТВУЮЩИЙ путь — это ложь всегда: роль
-            #    объявлена закрытой, а смотреть физически некуда.
-            # ② У правила свой FILTER (`service-no-web` смотрит только в
-            #    `/services/`), и ноль честно значит «предмета здесь нет».
-            #
-            # Первая редакция звала DEAD в обоих случаях и обвинила
-            # `check_grep_gate.sh` на стенде, где каталог был на месте, а у
-            # правила просто не было предмета. Ложное срабатывание — дефект
-            # проверки (§4.3b), и такой доктор снимают раньше, чем он окупится.
-            # Поймано собственным тестом процедуры, а не полем.
-            roots = [v for k, v in env.items() if k.endswith("_SRC") or k.endswith("_DIR")]
-            missing = [r for r in roots if r and not (self.root / r).is_dir()]
-            if missing:
-                self.add(DEAD, point,
-                         "настроен на НЕСУЩЕСТВУЮЩИЙ путь "
-                         f"({', '.join(missing)}) — смотреть некуда, а роль "
-                         "объявлена закрытой (§6: значения живут в `entry:`)")
-            elif "--list-rules" in body:
-                self.add(WEAK, point,
-                         "просмотрено 0 файлов. У правила свой FILTER, поэтому "
-                         "ноль может честно значить «предмета нет» — но может и "
-                         "«маска шаблонная». Отсюда не различить: сверь §6")
-            else:
-                self.add(DEAD, point,
-                         "подключён и смотрит в ПУСТОТУ: просмотрено 0 файлов. "
-                         "Роль объявлена закрытой, а гейт не видит кода — маска "
-                         "или путь остались шаблонными (§6: значения в `entry:`)")
+            label = self._judge_gate(script, text, files)
+            if label:
+                off_commit.append(label)
 
         if off_commit:
             self.add(WEAK, "область: не на коммите",
@@ -202,88 +169,102 @@ class AreaChecks:
                      f"областью НЕ пробованы: {', '.join(off_commit)}. §8.6 их "
                      "не покрывает (сеть/минуты), поэтому доктор их не запускает")
 
-    def _judge_area(self, point: str, n: int, unit: str, files: list[str],
-                    env: dict, *, multi_rule: bool, files_re, mask: list[str]) -> None:
-        """Число просмотренного сверяется с ДЕРЕВОМ (`cqg@1.80`).
+    def _judge_gate(self, script, text: str, files: list[str]) -> str | None:
+        """Один гейт: слеп ли он к коду проекта. → метка «не на коммите» либо None.
 
-        Единственным порогом был НОЛЬ (`if n: AUTO`), а дыра, из которой родилась
-        сама проверка, была ЕДИНИЦЕЙ: `file-length` с дефолтной маской
-        `*.py *.ts *.tsx` на Astro-проекте печатал `OK — просмотрено 1 файл(ов)`
-        при четырёх файлах кода — `.ts` виден, `.astro` невидим. То есть
-        предохранитель, построенный по находке, саму находку бы не поймал: полную
-        слепоту он ловит, а на смешанном стеке опасна ровно ЧАСТИЧНАЯ, и она
-        читается как успех. Обе половины наблюдались в одном отчёте, это замер, а
-        не гипотеза.
+        Шов по данным: из тела цикла наружу уходило РОВНО одно имя — строка для
+        `off_commit`. Всё прочее (`cmd`, `env`, `out`, `n`) живёт одну итерацию,
+        поэтому каждый `continue` честно становится `return None`, а решение
+        «добавлять ли в список» остаётся у вызывающего.
 
-        **Знаменатель — дерево под КОРНЯМИ гейта, но не под его маской
-        расширений.** Корень (`LINT_*_SRC`/`_DIR` из `entry:`) отвечает «где», и
-        сузить его — законное решение проекта. Маска отвечает «на каком языке», и
-        сверять её с самой собой значило бы объявить зелёным ровно тот случай,
-        ради которого проверка написана.
-
-        Вердикт частичной области — `WEAK`, не `DEAD`, и это не мягкость.
-        Приписать гейту весь язык доктор не может: единственное, что он видит, —
-        два числа, а какие именно файлы гейт смотрел, знает только сам гейт.
-        `WEAK` печатает числа и состав дерева, то есть отдаёт человеку ровно ту
-        улику, по которой находка №1 и была найдена глазами.
+        ⚠ Гейт ЗАПУСКАЕТСЯ со всем окружением хука, а СУДИТСЯ по своим
+        переменным (`_own_vars`): передать меньше значило бы мерить не тот путь,
+        а сверять по чужим — обвинять за общий префикс в `entry:` (`cqg@2.04`).
         """
-        # `LINT_FE_DIR=.` — штатная запись npm-проекта без каталога frontend, и
-        # означает она ВЕСЬ репозиторий. Первая редакция считала её корнем с
-        # именем «.», под который не подходит ни один путь из `git ls-files`:
-        # область выходила пустой, сверять становилось не с чем, и проверка
-        # молчала ровно там, где стек смешанный. Поймано полевым прогоном на
-        # portfolio-site, а не чтением.
-        roots = []
-        for k, v in env.items():
-            if not (k.endswith("_SRC") or k.endswith("_DIR")):
-                continue
-            r = v.strip().rstrip("/")
-            r = r[2:] if r.startswith("./") else r
-            if r and r != ".":
-                roots.append(r)
-        area = [f for f in files
-                if (not roots or any(f == r or f.startswith(r + "/") for r in roots))
-                and (files_re is None or files_re.search(f))]
-        # Сравнивать не с чем — два разных случая, и оба остаются прежним AUTO:
-        # единица не файлы (манифесты, модули) либо в области нет ни одного
-        # известного доктору исходника.
-        if not unit.startswith("файл"):
-            self.add(AUTO, point,
-                     f"просмотрено {n} — сверить с деревом нечем (единица: {unit})")
-            return
-        if not area:
-            self.add(AUTO, point, f"просмотрено {n} файл(ов)")
-            return
-        # ⚠ Маска, если гейт её НАЗВАЛ, превращает подозрение в счёт (`cqg@1.88`).
-        # Без неё «просмотрено 1 из 4» одинаково выглядит при узкой маске и при
-        # законном сужении области — доктор мог только спросить (`WEAK`). Теперь
-        # он вычитает: файлы области, которых маска не покрывает, гейт не увидит
-        # НИКОГДА, и это уже не вопрос, а ложь объявленной роли.
-        if mask:
-            blind = [f for f in area if not any(_covers(tok, f) for tok in mask)]
-            if blind:
-                self.add(DEAD, point,
-                         f"маска гейта не покрывает {len(blind)} файл(ов) области: "
-                         f"{', '.join(blind[:3])}{' …' if len(blind) > 3 else ''}. "
-                         f"Маска — «{' '.join(mask)}»; эти файлы гейт не увидит "
-                         "никогда, а роль объявлена закрытой (§6)")
-                return
-        if n >= len(area):
-            self.add(AUTO, point, f"просмотрено {n} из {len(area)} файл(ов) области"
-                                  + (", маска покрывает область" if mask else ""))
-            return
-        hist: dict[str, int] = {}
-        for f in area:
-            ext = "." + f.rsplit(".", 1)[-1]
-            hist[ext] = hist.get(ext, 0) + 1
-        top = ", ".join(f"{e} ×{c}" for e, c in
-                        sorted(hist.items(), key=lambda kv: -kv[1])[:4])
-        if multi_rule:
-            self.add(AUTO, point, f"просмотрено {n} из {len(area)} — у правила свой "
-                                  f"FILTER, частичная область законна ({top})")
-            return
-        self.add(WEAK, point,
-                 f"просмотрено {n} из {len(area)} файл(ов) области: {len(area) - n} "
-                 f"мимо гейта (в дереве {top}) — так выглядела находка №1, где "
-                 "«просмотрено 1» при четырёх файлах читалось как успех. Сверь маску (§6)")
+        name = script.name
+        if not script.is_file() or name in NOT_GATES or name not in text:
+            return None                       # не гейт либо не вписан в конфиг
+        label = self._off_commit_label(text, name)
+        if label:
+            return label
+        point = f"область {name}"
+        body = _komplekt(script)
+        multi_rule = "--list-rules" in body
+        cmd = _gate_command(script, text, multi_rule=multi_rule)
+        if cmd is None:              # многоправильный гейт вписан без `--rule`
+            return None
+        env = self._hook_env(text, name)
+        code, out = run(cmd, self.root, env=env)
+        mine = _own_vars(env, body)
+        scanned = self._scanned(out)
+        if scanned is None:
+            # Гейт не отчитывается числом — либо не сканирующий, либо красный
+            # по делу. Молча зачесть за успех нельзя, но и ронять не за что.
+            self.add(SKIP, point, "гейт не печатает «просмотрено N» — "
+                                  "сканирующий ли он, отсюда не видно")
+            return None
+        n, unit = scanned
+        if not n:
+            self._judge_zero(point, out, mine, multi_rule=multi_rule)
+            return None
+        mask_m = self.MASK_RE.search(out)
+        self._judge_area(point, n, unit, files, mine, multi_rule=multi_rule,
+                         files_re=self._hook_files_re(text, name),
+                         mask=(mask_m.group(1).split() if mask_m else []))
+        return None
+
+    def _scanned(self, out: str) -> tuple[int, str] | None:
+        """«просмотрено N единиц» из вывода гейта; None — числа гейт не назвал.
+
+        Шов по данным: из match'а дальше читаются только две величины — число и
+        единица, сам он границу не пересекает. Поэтому обе формы записи (порядок
+        слов в них РАЗНЫЙ, см. комментарий у `SCANNED_RE`) разбираются в одном
+        месте, а не там, где решают, что с числом делать.
+        """
+        m = self.SCANNED_RE.search(out)
+        if not m:
+            return None
+        return (int(m.group(1) or m.group(3)),
+                (m.group(2) or m.group(4) or "").lower())
+
+    def _source_files(self) -> list[str]:
+        """Исходники проекта вне контура — знаменатель для суждения о слепоте.
+
+        Шов по данным: наружу блок отдавал РОВНО одно имя — `files`. Код
+        возврата git границу не пересекает и схлопывается в пустой список,
+        который вызывающий читает как «слепоту судить не на чем».
+        """
+        code, listing = run(["git", "ls-files"], self.root)
+        if code != 0:
+            return []
+        return [l for l in listing.splitlines()
+                if l.endswith(self.SOURCE_EXT) and not self.CONTOUR_RE.match(l)]
+
+    def _off_commit_label(self, text: str, name: str) -> str | None:
+        """Гейт вписан, но мимо коммит-стадии → строка для списка, иначе None.
+
+        Шов по данным: наружу блок отдавал одно значение — строку для
+        `off_commit`; сами `stages` ниже не читает никто.
+
+        Вписан, но не на коммите: `stages: [manual]` / `[push]`. Гонять его
+        здесь нельзя — §8.6 не покрывает эти стадии, а `deps-audit` оттуда
+        ходит в сеть. Пропускаем МОЛЧА по одному, а списком — вслух в
+        `check_gates_see_code`: молчаливый пропуск всех гейтов разом дал бы
+        «лжи нет» на проекте, где на коммите не проверяется ничего.
+        """
+        stages = self._hook_stages(text, name)
+        if not stages or any(s.startswith("commit") or s == "pre-commit"
+                             for s in stages):
+            return None
+        return f"{name} ({', '.join(stages)})"
+
+    def _missing_roots(self, env: dict) -> list[str]:
+        """Корни гейта, которых в дереве НЕТ, — «смотреть физически некуда».
+
+        Шов по сложности, а не по длине: две вложенные выборки поднимали ветку
+        нуля выше порога §2.1, а наружу отдают одно имя — список пропавших.
+        """
+        roots = [v for k, v in env.items()
+                 if k.endswith("_SRC") or k.endswith("_DIR")]
+        return [r for r in roots if r and not (self.root / r).is_dir()]
 

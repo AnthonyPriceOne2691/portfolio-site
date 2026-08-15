@@ -127,16 +127,25 @@ def names_pyproject(text: str) -> set[str]:
     return {n for n in out if n}
 
 
+def _cargo_section_names(table) -> set[str]:
+    """Имена зависимостей из трёх секций ОДНОЙ таблицы Cargo.toml.
+
+    Шов по сложности, а не по длине: те же три секции читаются и в корне
+    манифеста, и в каждой `[target.*]`, и каждое чтение стоило ветвления —
+    одиннадцать при пороге десять. Наружу выборка отдаёт одно множество имён.
+    """
+    return {n.lower()
+            for key in ("dependencies", "dev-dependencies", "build-dependencies")
+            for n in ((table or {}).get(key) or {})}
+
+
 def names_cargo(text: str) -> set[str]:
     data = _toml(text)
     if data is None:
         return _toml_dep_names_fallback(text)
-    out: set[str] = set()
-    for key in ("dependencies", "dev-dependencies", "build-dependencies"):
-        out.update(n.lower() for n in (data.get(key) or {}))
+    out = _cargo_section_names(data)
     for target in (data.get("target") or {}).values():
-        for key in ("dependencies", "dev-dependencies", "build-dependencies"):
-            out.update(n.lower() for n in ((target or {}).get(key) or {}))
+        out |= _cargo_section_names(target)
     return out
 
 
