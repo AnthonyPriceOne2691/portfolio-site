@@ -1,0 +1,38 @@
+---
+/** Сетка карточек проектов. Общая для Home и `/projects`: обе страницы рисуют
+    одно и то же, и DRY-гейт нашёл это раньше, чем расхождение успело появиться. */
+import ProjectCard from "./ProjectCard.astro";
+import { publishedProjects } from "../lib/projects";
+import type { Locale } from "../i18n/ui";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const projects = await publishedProjects(locale);
+---
+
+<ul class="grid">
+  {
+    projects.map((p) => (
+      <li>
+        <ProjectCard entry={p} locale={locale} />
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .grid {
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+  }
+  @media (min-width: 40rem) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

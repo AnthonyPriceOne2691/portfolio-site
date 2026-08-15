@@ -1,0 +1,44 @@
+---
+/** Ссылки-доказательства. Рендерится только то, что реально есть в frontmatter
+    (пример B3): отсутствующий пруф не оставляет ни битой иконки, ни пустой
+    строки. Схема гарантирует, что хотя бы один пруф найдётся. */
+import { useTranslations, type Locale } from "../i18n/ui";
+
+interface Props {
+  proof: Record<string, string | undefined>;
+  locale: Locale;
+}
+const { proof, locale } = Astro.props;
+const t = useTranslations(locale);
+const links = [
+  proof.github ? { href: proof.github, label: t("proof.github") } : null,
+  proof.case ? { href: proof.case, label: t("proof.case") } : null,
+  proof.video ? { href: proof.video, label: t("project.video") } : null,
+].filter(Boolean) as { href: string; label: string }[];
+---
+
+{
+  links.length > 0 && (
+    <nav class="proof" aria-label={t("project.proof")}>
+      {links.map((l) => (
+        <a class="glass" href={l.href}>
+          {l.label} →
+        </a>
+      ))}
+    </nav>
+  )
+}
+
+<style>
+  .proof {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+  .proof a {
+    padding: 0.6rem 1rem;
+    text-decoration: none;
+    font-weight: 600;
+  }
+</style>

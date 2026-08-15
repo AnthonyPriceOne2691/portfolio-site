@@ -1,0 +1,66 @@
+---
+/** Главная. В этом слайсе — вход в витрину; полноценный hero с фото, тремя
+    цифрами и секцией How I work приходит слайсом 2 (design v0.8 §4.2). */
+import Base from "../../layouts/Base.astro";
+import ProjectGrid from "../ProjectGrid.astro";
+import { link, useTranslations, type Locale } from "../../i18n/ui";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+---
+
+<Base
+  locale={locale}
+  title={t("home.title")}
+  description={t("home.description")}
+>
+  <section class="hero">
+    <!-- Место под фото зарезервировано (design v0.8 §4.2): подстановка файла
+         не должна перекраивать раскладку. -->
+    <div class="photo glass" aria-hidden="true"></div>
+    <div>
+      <h1>Anton Aspidov</h1>
+      <p class="role">{t("home.role")}</p>
+      <p class="pitch">{t("home.pitch")}</p>
+      <p class="status">{t("home.status")}</p>
+    </div>
+  </section>
+
+  <h2>{t("projects.title")}</h2>
+  <ProjectGrid locale={locale} />
+  <p><a href={link("/projects/", locale)}>{t("projects.all")} →</a></p>
+</Base>
+
+<style>
+  .hero {
+    display: grid;
+    gap: 1.25rem;
+    margin-bottom: 2.5rem;
+  }
+  .photo {
+    aspect-ratio: 1;
+    width: min(200px, 60vw);
+    border-radius: 50%;
+  }
+  .role {
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: -0.25rem;
+  }
+  .pitch {
+    font-size: 1.1rem;
+  }
+  .status {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+  }
+  @media (min-width: 40rem) {
+    .hero {
+      grid-template-columns: auto 1fr;
+      align-items: center;
+    }
+  }
+</style>

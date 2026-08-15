@@ -1,0 +1,22 @@
+---
+/** `/projects` — авто-список из коллекции (design §4.1, §4.6). Ничего
+    захардкоженного: добавили пару md — проект здесь появился сам (пример B2). */
+import Base from "../../layouts/Base.astro";
+import ProjectGrid from "../ProjectGrid.astro";
+import { useTranslations, type Locale } from "../../i18n/ui";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+---
+
+<Base
+  locale={locale}
+  title={`${t("projects.title")} — Anton Aspidov`}
+  description={t("home.description")}
+>
+  <h1>{t("projects.title")}</h1>
+  <ProjectGrid locale={locale} />
+</Base>
