@@ -208,6 +208,23 @@ repos:
         pass_filenames: false
         always_run: true
 
+  # -------------------------------------------------------------------------
+  # Оракул артефакта (§6.5a): судит СОБРАННЫЙ сайт, а не исходник.
+  # -------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: dist-oracle
+        name: dist — состав, мета-слой и вес собранных страниц
+        language: system
+        # `manual`, как у deps-audit: хуку нужен свежий `dist/`, а pre-commit
+        # сборку не делает. Настоящее место исполнения — CI, сразу после
+        # `npm run build`. Здесь строка стоит, чтобы gate-coverage видел гейт
+        # подключённым, а не считал его забытым скриптом.
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && python3 scripts/lint/check_dist_oracle.py'
+        stages: [manual]
+        pass_filenames: false
+        always_run: true
+
   # Мета-гейт — ПОСЛЕДНИМ. Проверяет, что все гейты выше вообще подключены:
   # забытый в этом файле скрипт молча не работает (§3, gate-coverage).
   - repo: local
