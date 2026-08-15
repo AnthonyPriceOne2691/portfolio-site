@@ -1,0 +1,25 @@
+---
+/**
+ * Обёртка страницы: берёт на себя вызов Base и разрешение заголовков из
+ * словаря. Вынесена после того, как DRY-гейт нашёл один и тот же блок
+ * «импорт Base + interface Props + деструктуризация + вызов Base» в трёх
+ * страницах сразу. Совпадение было каркасным, но лечится оно тем же способом,
+ * что и любое другое: общим местом.
+ */
+import Base from "../layouts/Base.astro";
+import { useTranslations, type Locale, type UIKey } from "../i18n/ui";
+
+interface Props {
+  locale: Locale;
+  titleKey: UIKey;
+  descriptionKey: UIKey;
+  titleSuffix?: string;
+}
+const { locale, titleKey, descriptionKey, titleSuffix } = Astro.props;
+const t = useTranslations(locale);
+const title = titleSuffix ? `${t(titleKey)} — ${titleSuffix}` : t(titleKey);
+---
+
+<Base locale={locale} title={title} description={t(descriptionKey)}>
+  <slot />
+</Base>
