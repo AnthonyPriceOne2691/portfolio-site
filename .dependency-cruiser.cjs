@@ -11,6 +11,12 @@
  *
  * Слои сайта: content (данные коллекций + схема) — ЛИСТ; pages (представление)
  * читает content, но не наоборот.
+ *
+ * ⚠ Объявлено в `scripts/lint/adapted.json` (обновление до cqg@2.20). До него
+ * адаптация была НЕОБЪЯВЛЕННОЙ: `plan_update.py` останавливался на этом файле
+ * «стоп — незадекларированная адаптация», а доктор о нём молчал вовсе, потому
+ * что `CANON_CONFIGS` его не перечисляет. Адаптировано ТОЛЬКО `forbidden:`;
+ * блок `options:` приведён к канонному (cqg@2.07/2.16, кандидаты tsconfig).
  */
 module.exports = {
   forbidden: [
@@ -38,7 +44,18 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    tsConfig: { fileName: 'tsconfig.json' },
+    // Канонная форма (`cqg@2.16`): путь резолвится от CWD, а гейт зовёт
+    // depcruise из КОРНЯ репозитория — значит зашитый `tsconfig.json` верен
+    // только когда фронт в корне. Здесь он в корне, и раньше зашитая строка
+    // работала; но работала она по совпадению, а не по правилу. Кандидаты
+    // разрешают и раскладку с фронтом в подкаталоге, и `LINT_TSCONFIG`.
+    tsConfig: {
+      fileName: process.env.LINT_TSCONFIG
+        || ['tsconfig.depcruise.json',
+            `${process.env.LINT_FE_DIR || 'frontend'}/tsconfig.json`,
+            'tsconfig.json'].find((p) => require('fs').existsSync(p))
+        || 'tsconfig.json',
+    },
     tsPreCompilationDeps: true,
     exclude: { path: '(\\.test\\.|\\.spec\\.|__tests__)' },
   },

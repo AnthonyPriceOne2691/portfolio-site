@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Ratified:** 2026-08-04
-**Canon stack:** delivery@1.50 · cqg@1.79 · okf@absent
+**Canon stack:** delivery@1.79 · cqg@2.20 · okf@absent
 <!-- okf absent сознательно: у витрины нет канона домена — политик, ADR и метрик
      предметной области. Развернуть его сюда значило бы завести пустой слой. -->
 **CI:** deployed (github-actions)
