@@ -36,13 +36,20 @@
 Здесь вход и сборка; части лежат рядом и грузятся из каталога скрипта:
 
     doctor_core.py       вердикты, палитра, запуск подпроцесса (не знает соседей)
-    doctor_layout.py     каноны, принуждение, инструменты, снимки, чтение хуков
-    doctor_areas.py      видит ли гейт код проекта (1.69) + сверка с деревом (1.80)
+    doctor_layout.py     принуждение, инструменты, снимки, тела конфигов, хуки
+    doctor_versions.py   что ЗАЯВЛЕНО: шапки канонов и записи `stack:` (2.02)
+    doctor_hooks.py      чтение `.pre-commit-config.yaml`
+    doctor_areas.py      видит ли гейт код проекта (1.69): прогон и чтение числа
+    doctor_area_verdicts.py  вердикт о площади: просмотрено N из M (1.80/1.88)
     doctor_canaries.py   данные проб и объявления проекта
     doctor_probes.py     сами пробы исполнением
+    doctor_deployment.py состав контура: что канон объявил против того, что лежит
 
-Развёртывание копирует ВСЕ шесть файлов: без любого из них доктор не стартует —
-и это лучше, чем стартовать без части проверок (§5.0 инвентарь).
+Развёртывание копирует ВСЕ десять файлов: без любого из них доктор не стартует —
+и это лучше, чем стартовать без части проверок (§5.0 инвентарь). Число здесь
+сверяется механикой (`test_ts_stack_coverage`): до `cqg@2.02` стояло «шесть» при
+восьми — счётчик разъехался на `cqg@1.98` и пережил две правки, потому что
+единственным его читателем был глаз.
 """
 
 from __future__ import annotations
@@ -61,18 +68,27 @@ from pathlib import Path
 # «проба оставила дерево как было», а не полем.
 sys.dont_write_bytecode = True
 
+from doctor_area_verdicts import AreaVerdicts
 from doctor_areas import AreaChecks
 from doctor_canaries import CanaryData
 from doctor_core import ABSENT, AUTO, COLOR, DEAD, ORDER, RESET, SKIP, TOOL, WEAK, run
+from doctor_deployment import DeploymentScreen
 from doctor_hooks import HookReaders
 from doctor_layout import LayoutChecks
+from doctor_versions import VersionChecks
 from doctor_probes import ProbeChecks
 
 
-class Doctor(LayoutChecks, HookReaders, AreaChecks, CanaryData, ProbeChecks):
+class Doctor(VersionChecks, LayoutChecks, HookReaders, AreaChecks, AreaVerdicts,
+             CanaryData, ProbeChecks, DeploymentScreen):
     def __init__(self, root: Path) -> None:
         self.root = root
         self.rows: list[tuple[str, str, str]] = []
+        #: Гейты, промолчавшие на своей канарейке. Заполняется пробами и читается
+        #: суждением о площади: маска гейта, который НЕ судит, покрытием не
+        #: считается. Данными, а не разбором собственных напечатанных строк —
+        #: второй парсер своего же вывода это `one-notion-one-place`.
+        self.dead_gates: set[str] = set()
         self.own = self._read_own_canaries()
 
     def add(self, verdict: str, point: str, detail: str) -> None:
@@ -80,21 +96,38 @@ class Doctor(LayoutChecks, HookReaders, AreaChecks, CanaryData, ProbeChecks):
 
 
     # --- вывод ---------------------------------------------------------------
+    def _counts(self) -> dict[str, int]:
+        """Сколько вердиктов каждого класса — один счёт на оба вида вывода.
+
+        Шов по повтору: одна и та же выборка стояла в машинной ветке и в
+        людской, и каждая копия стоила двух ветвлений на пустом месте.
+        """
+        return {k: sum(1 for r in self.rows if r[0] == k) for k in ORDER}
+
+    def _report_json(self, dead: list) -> int:
+        """Машинный вывод: те же строки и тот же код возврата, что у людского.
+
+        Шов по данным: ветка отдаёт наружу одно значение — код возврата; печать
+        и счёт живут внутри неё, а `dead` считает вызывающий, потому что читает
+        его и сам.
+        """
+        print(json.dumps({
+            "verdicts": [{"verdict": v, "point": p, "detail": d}
+                         for v, p, d in self.rows],
+            "counts": self._counts(),
+            "dead": len(dead),
+        }, ensure_ascii=False, indent=2))
+        return 1 if dead else 0
+
     def report(self, as_json: bool) -> int:
         dead = [r for r in self.rows if r[0] == DEAD]
         if as_json:
-            print(json.dumps({
-                "verdicts": [{"verdict": v, "point": p, "detail": d}
-                             for v, p, d in self.rows],
-                "counts": {k: sum(1 for r in self.rows if r[0] == k) for k in ORDER},
-                "dead": len(dead),
-            }, ensure_ascii=False, indent=2))
-            return 1 if dead else 0
+            return self._report_json(dead)
 
         for verdict, point, detail in sorted(self.rows, key=lambda r: (ORDER[r[0]], r[1])):
             print(f"{COLOR[verdict]}{verdict:6}{RESET} {point:44} {detail}")
 
-        counts = {k: sum(1 for r in self.rows if r[0] == k) for k in ORDER}
+        counts = self._counts()
         print(f"\ncontour-doctor: AUTO {counts[AUTO]} · WEAK {counts[WEAK]} · "
               f"ABSENT {counts[ABSENT]} · TOOL {counts[TOOL]} · "
               f"SKIP {counts[SKIP]} · DEAD {counts[DEAD]}")
@@ -128,7 +161,11 @@ def main() -> int:
         root = Path(out.strip()) if code == 0 and out.strip() else Path.cwd()
 
     doc = Doctor(root.resolve())
+    doc.check_deployment_completeness()
+    doc.check_white_spots()
     doc.check_canons()
+    doc.check_stack_records()
+    doc.check_model_surface_claim()
     doc.check_enforcement()
     doc.check_tools()
     doc.check_snapshots()

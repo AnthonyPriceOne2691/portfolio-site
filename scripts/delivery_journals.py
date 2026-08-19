@@ -19,31 +19,13 @@ from delivery_diff import diff_identifiers, diff_stats
 
 
 
-def check_journals(status: str, args, errors: list[str], warnings: list[str], ctx: ActiveCtx) -> None:
-    """Диагноз, эскалация, отклонённые варианты и лента решений."""
-    phase, klass, plan, implement_like = (
-        ctx.phase,
-        ctx.klass,
-        ctx.plan,
-        ctx.implement_like)
-    # kind/behavior читаем один раз — их используют обе проверки ниже.
-    kind = field(status, "kind").lower()
-    behavior = field(status, "behavior-oracles").lower()
+def check_diagnosis(status: str, ctx: ActiveCtx, kind: str, phase: str,
+                    errors: list[str], warnings: list[str]) -> None:
+    """Багфикс обязан показать, КАК искали (§12.1).
 
-    # --- §3.1c: багфикс обязан принести тест, который падал до фикса
-    if kind.startswith("bugfix") and phase in {"verify", "converge", "handoff"}:
-        repro = field(status, "repro_test")
-        if is_placeholder(repro):
-            errors.append(
-                "kind=bugfix at verify+: missing repro_test (§3.1c) — тест, "
-                "который падал до фикса; иначе баг вернётся"
-            )
-        elif repro.lower().startswith("n/a") and "reason=" not in repro.lower():
-            errors.append(
-                "repro_test: n/a без reason= (§3.1c) — «не воспроизводится» "
-                "обычно значит «не пробовал»"
-            )
-
+    Шов `check_journals` (`delivery@1.58`), выбран по данным: ничего не отдаёт
+    дальше, маркер того же отступа, что у соседей.
+    """
     # --- §12.1: багфикс обязан показать, КАК искали, а не только что нашёл.
     # repro_test доказывает, что баг найден; журнал гипотез — что его не будут
     # искать заново с нуля.
@@ -80,6 +62,14 @@ def check_journals(status: str, args, errors: list[str], warnings: list[str], ct
                 "(с <…>) и проза о формате вердиктами не считаются"
             )
 
+
+def check_escalation(status: str, ctx: ActiveCtx, phase: str,
+                     errors: list[str], warnings: list[str]) -> None:
+    """Остановка обязана быть оформлена (§12.3).
+
+    Самый крупный блок (59 строк) и единственный, отдающий дальше имя (`ln` —
+    переменная цикла); ниже оно не читается — замер, а не догадка.
+    """
     # --- §12.3: остановка обязана быть оформлена, иначе восстановление
     # контекста перекладывается на человека — то самое время, которое контур
     # экономит.
@@ -139,6 +129,12 @@ def check_journals(status: str, args, errors: list[str], warnings: list[str], ct
                     "(§12.3) — вариант без цены выбрать нельзя"
                 )
 
+
+def check_rejected_options(ctx: ActiveCtx, klass: str, phase: str,
+                           errors: list[str], warnings: list[str]) -> None:
+    """Отклонённые варианты оставляют след (§12.2a).
+    """
+    plan, implement_like = ctx.plan, ctx.implement_like
     # --- §12.2a: отклонённые варианты. Без следа тот же тупик предлагают
     # снова — и он снова выглядит разумным, потому что причина отказа нигде
     # не записана.
@@ -172,6 +168,12 @@ def check_journals(status: str, args, errors: list[str], warnings: list[str], ct
         if msg_alt:
             (errors if klass == "L" else warnings).append(msg_alt)
 
+
+def check_decisions_format(status: str, args, ctx: ActiveCtx, klass: str, phase: str,
+                           errors: list[str], warnings: list[str]) -> None:
+    """Журнал решений: проверяется ФОРМАТ ленты (§12.2).
+    """
+    implement_like = ctx.implement_like
     # --- §12.2: журнал решений. Проверяется ФОРМАТ: лента без альтернатив
     # неаудируема, а именно аудируемость — весь смысл файла.
     dec_file = ACTIVE / "decisions.md"
@@ -197,18 +199,7 @@ def check_journals(status: str, args, errors: list[str], warnings: list[str], ct
         # Без `--diff-base` берём `HEAD~1`: иначе проверка молчала бы на
         # каждом локальном прогоне, а в CI работала — то есть вела бы себя
         # по-разному там, где решение и принимается.
-        dec_stats = diff_stats(args.diff_base or "HEAD~1")
-        diff_ids = diff_identifiers(dec_stats[4]) if dec_stats else None
-        no_cost = decisions_without_cost(read(dec_file), diff_ids)
-        if no_cost and late:
-            warnings.append(
-                f"decisions.md: {len(no_cost)} решен(ий) без цены — причина не "
-                "названа ни числом, ни ссылкой в изменённый код: "
-                + "; ".join(n[:55] for n in no_cost[:3])
-                + ". «Дешевле» и «проще» проверить нельзя ничем; назови число "
-                "или процитируй то, что менял (файл, функцию, поле) — такое "
-                "не напишешь, не открыв дифф (§12.2a)"
-            )
+        check_decision_cost(args, dec_file, late, errors, warnings)
     elif klass == "L" and late:
         errors.append(
             "class L at verify+: missing active/decisions.md (§12.2)"
@@ -221,6 +212,64 @@ def check_journals(status: str, args, errors: list[str], warnings: list[str], ct
 
     check_artifact_oracle(status, phase, klass, errors, warnings)
     check_weak_names_the_cheap_gap(status, errors, warnings)
+
+
+def check_decision_cost(args, dec_file, late: bool, errors: list[str],
+                        warnings: list[str]) -> None:
+    """Решение без названной цены — отчёт о сделанном, а не выбор (§12.2).
+
+    Девятый шов (`delivery@1.58`) и снова по СЛОЖНОСТИ: `check_decisions_format`
+    укладывалась в 54 строки при cx 15. Поймал не глаз, а собственный оракул
+    «новых функций сверх §2.1 не заводим» (`cqg@1.84`) — правило сработало
+    против того, кто его писал, и это ровно та проверка, ради которой оно есть.
+    """
+    dec_base = args.diff_base or "HEAD~1"
+    dec_stats = diff_stats(dec_base)
+    diff_ids = diff_identifiers(dec_stats[4], dec_base) if dec_stats else None
+    no_cost = decisions_without_cost(read(dec_file), diff_ids)
+    if no_cost and late:
+        warnings.append(
+            f"decisions.md: {len(no_cost)} решен(ий) без цены — причина не "
+            "названа ни числом, ни ссылкой в изменённый код: "
+            + "; ".join(n[:55] for n in no_cost[:3])
+            + ". «Дешевле» и «проще» проверить нельзя ничем; назови число "
+            "или процитируй то, что менял (файл, функцию, поле) — такое "
+            "не напишешь, не открыв дифф (§12.2a)"
+        )
+
+
+def check_journals(status: str, args, errors: list[str], warnings: list[str], ctx: ActiveCtx) -> None:
+    """Диагноз, эскалация, отклонённые варианты и лента решений."""
+    phase, klass, plan, implement_like = (
+        ctx.phase,
+        ctx.klass,
+        ctx.plan,
+        ctx.implement_like)
+    # kind/behavior читаем один раз — их используют обе проверки ниже.
+    kind = field(status, "kind").lower()
+    behavior = field(status, "behavior-oracles").lower()
+
+    # --- §3.1c: багфикс обязан принести тест, который падал до фикса
+    if kind.startswith("bugfix") and phase in {"verify", "converge", "handoff"}:
+        repro = field(status, "repro_test")
+        if is_placeholder(repro):
+            errors.append(
+                "kind=bugfix at verify+: missing repro_test (§3.1c) — тест, "
+                "который падал до фикса; иначе баг вернётся"
+            )
+        elif repro.lower().startswith("n/a") and "reason=" not in repro.lower():
+            errors.append(
+                "repro_test: n/a без reason= (§3.1c) — «не воспроизводится» "
+                "обычно значит «не пробовал»"
+            )
+
+    check_diagnosis(status, ctx, kind, phase, errors, warnings)
+
+    check_escalation(status, ctx, phase, errors, warnings)
+
+    check_rejected_options(ctx, klass, phase, errors, warnings)
+
+    check_decisions_format(status, args, ctx, klass, phase, errors, warnings)
 
     # --- §3.1b: рефакторинг без behavior-oracles = тихая регрессия
     if kind.startswith("refactor") and phase in {"verify", "converge", "handoff"}:
