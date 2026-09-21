@@ -60,6 +60,31 @@ no_ci_evidence() { # $1 = причина, которую увидел гейт
     printf 'ci-status: `ci-oracles: weak` в STATUS соответствует факту (%s)\n' "$1"
     return 0
   fi
+  # Роль, ОБЪЯВЛЕННАЯ неприменимой, — законный выход, и он обязан работать
+  # (`cqg@2.01`). Первая редакция GitLab-ветки советовала «объяви в
+  # `not-applicable.json`», а `no_ci_evidence` этот файл не читал вовсе: совет
+  # обещал выход, которого механика не давала, — тот же класс «невыполнимый
+  # совет», от которого правка и защищала. Хуже: на GitLab с ЖИВЫМ зелёным
+  # пайплайном гейт возвращал 1 при `ci-oracles: deployed`, то есть проект
+  # становился красным на мерже за то, что у контура нет своего скрипта под этот
+  # хостинг. §10.4 определяет `weak` как «CI нет вообще» — на GitLab это неправда,
+  # значит честного значения не существовало ни одного.
+  local na=scripts/lint/not-applicable.json reason=""
+  if [[ -f "$na" ]] && command -v python3 >/dev/null 2>&1; then
+    reason=$(NA="$na" python3 -c 'import json, os, sys
+try:
+    d = json.load(open(os.environ["NA"], encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+v = d.get("check_ci_status.sh") or d.get("ci-status")
+sys.stdout.write(v if isinstance(v, str) else "")' 2>/dev/null)
+  fi
+  if [[ -n "$reason" ]]; then
+    printf 'ci-status: роль объявлена неприменимой (%s) — причина: %s\n' "$1" "$reason"
+    printf '   Объявление живёт в `not-applicable.json`, поэтому попадает в карту\n'
+    printf '   ролей и печатается на каждом прогоне, а не забывается в прозе.\n'
+    return 0
+  fi
   printf '%sERROR%s: в STATUS `ci-oracles: %s`, а CI не подтверждён: %s\n' \
     "$red" "$reset" "$val" "$1" >&2
   printf 'Честное значение — `weak` плюс blocker (Delivery §10.4). Гейт не требует\n' >&2
@@ -77,6 +102,40 @@ if [[ -z "$BRANCH" ]]; then
 fi
 if [[ -z "$BRANCH" ]]; then
   printf '%s⚠ ci-status: не знаю ветку (detached HEAD?) — передай её аргументом%s\n' "$yellow" "$reset" >&2
+  exit 0
+fi
+
+# Хостинг определяется по origin и по конфигу CI, потому что совет зависит от
+# него (`cqg@2.00`). До этого гейт на GitLab-проекте печатал «Установи gh» —
+# совет, который там не выполним: `gh` про Actions, а прогонов Actions на
+# GitLab нет вовсе. Неверный совет хуже отсутствия совета: по нему идут чинить
+# не то, а роль остаётся незакрытой молча.
+#
+# ⚠ Разбор вывода `glab` здесь СОЗНАТЕЛЬНО не написан. Проверить его нечем:
+# полигона на GitLab у контура пока нет, а механика, написанная под
+# непроверенное предположение, — ровно то, за что этот канон краснеет
+# (§3.1a: «правило без прогона живёт, пока его читают»). Вместо этого роль
+# называется незакрытой и даются два законных хода.
+# Спрашиваем СНАЧАЛА remote и только потом файл (`cqg@2.01`). Обратный порядок
+# ломал GitHub-проект, который держит зеркальный `.gitlab-ci.yml`: файл бил
+# remote, и реальная проверка прогонов Actions подменялась предупреждением —
+# ложное «роль не закрыта» там, где она закрыта. Признак «где лежит origin»
+# сильнее признака «какой конфиг лежит рядом».
+HOST="github"
+ORIGIN=$(git config --get remote.origin.url 2>/dev/null || true)
+if printf '%s' "$ORIGIN" | grep -qi 'gitlab'; then
+  HOST="gitlab"
+elif [[ -z "$ORIGIN" && -f .gitlab-ci.yml ]]; then
+  HOST="gitlab"      # origin ещё не заведён — судим по конфигу
+fi
+
+if [[ "$HOST" == "gitlab" ]]; then
+  printf '%s⚠ ci-status: проект на GitLab — роль «прогон CI действительно зелёный» контуром не закрыта.%s\n' \
+    "$yellow" "$reset" >&2
+  printf '   Два законных хода: (1) закрыть роль своим скриптом на `glab ci list`;\n' >&2
+  printf '   (2) объявить её в `scripts/lint/not-applicable.json` с причиной — тогда\n' >&2
+  printf '   она попадёт в карту ролей и будет видна на приёмке, а не забудется.\n' >&2
+  no_ci_evidence "GitLab: роль не закрыта" || exit 1
   exit 0
 fi
 

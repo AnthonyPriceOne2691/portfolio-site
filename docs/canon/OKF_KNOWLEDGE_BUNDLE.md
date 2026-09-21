@@ -8,7 +8,7 @@
 > не «первый файл всего набора». Начинай с
 > [AGENT_STACK.md](AGENT_STACK.md). Как вести фичу — Delivery; форма кода — CQG.
 
-**Canon version:** `okf@1.12` · 2026-07-29 (Changelog — в конце файла). Не путать с
+**Canon version:** `okf@1.17` · 2026-08-13 (Changelog — в конце файла). Не путать с
 `Pinned OKF version` (§0.1) — это версия *upstream-спеки*, а `okf@1.12` — версия
 *этого канона развёртывания*. Обе записываются в проект: `okf_version` во frontmatter
 корневого `index.md`, канон-версия — в `delivery/CONSTITUTION.md` / `STATUS.md` (`stack:`).
@@ -87,8 +87,8 @@ upstream SPEC. Порядок при конфликте: (1) правь этот
 | Приложение B | `okf_validate.py` — формат bundle (в CI) |
 | Приложение C | `okf_sync_gate.py` — гейт code↔canon + freshness (в CI) |
 
-**Стоимость чтения.** Канон — §0–§7 (≈700 строк). Приложения — **bootstrap
-payload** (≈570 строк): при развёртывании и при создании concept'а по шаблону.
+**Стоимость чтения.** Канон — §0–§7 (≈800 строк). Приложения — **bootstrap
+payload** (≈770 строк): при развёртывании и при создании concept'а по шаблону.
 Чтобы **ответить на доменный вопрос**, приложения не нужны вовсе — нужен
 `knowledge/index.md` проекта.
 
@@ -777,8 +777,11 @@ jobs:
     # §8.7 CQG: предохранитель на КАЖДОЙ джобе — дефолт GitHub 6 часов.
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # ⚠ Версии держатся В СОГЛАСИИ с CI-шаблоном CQG §8 и сверяются
+      # `tests/test_action_pins_agree.py`: здесь стояли `v4`/`v5`, снятые с
+      # поддержки, и раннер печатал про них предупреждение в ЗЕЛЁНОМ прогоне.
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: "3.12"}
       - run: python scripts/okf_sync_gate.py --check-stale
 ```
@@ -795,7 +798,7 @@ jobs:
 
 ---
 
-> ## ⬇ Ниже — BOOTSTRAP PAYLOAD (строки ~697–1271)
+> ## ⬇ Ниже — BOOTSTRAP PAYLOAD (строки ~800–1470)
 >
 > Шаблоны concept'ов и исходники двух скриптов. **В обычной работе не читай** —
 > норматив формата и librarian protocol закончились выше (§1–§7). Читай отсюда
@@ -1025,11 +1028,91 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str] | None, str]:
     return meta, text[m.end() :]
 
 
+def check_body_smells(rel: str, path: Path, body: str,
+                      warnings: list[str]) -> None:
+    """Мягкие пределы concept'а: строк в теле и байт в файле (§3.3, атомарность).
+
+    Отдельный шов, потому что это единственный читатель порогов из окружения:
+    пока они жили в `validate_bundle`, каждый следующий разрез тащил бы их
+    через ещё одну сигнатуру. Замер: −4 к цикломатике `check_file`.
+    """
+    max_lines = int(os.environ.get("OKF_MAX_LINES", "600"))
+    max_bytes = int(os.environ.get("OKF_MAX_BYTES", str(80 * 1024)))
+    lines = body.count("\n") + (1 if body and not body.endswith("\n") else 0)
+    size = path.stat().st_size
+    if lines > max_lines:
+        warnings.append(f"{rel}: body ~{lines} lines > soft max {max_lines} (split?)")
+    if size > max_bytes:
+        warnings.append(f"{rel}: {size} bytes > soft max {max_bytes} (split?)")
+
+
+def check_links(rel: str, root: Path, body: str, warnings: list[str]) -> None:
+    """Bundle-абсолютные ссылки ведут в существующий файл (SPEC §6, soft).
+
+    Шов здесь потому, что это единственная проверка, которой нужен КОРЕНЬ
+    bundle'а рядом с телом файла, и единственная, что кладёт цикл внутрь цикла:
+    вынос забирает у `check_file` сразу два ветвления.
+    """
+    for link in re.findall(r"\[[^\]]*\]\((/[^)]+?\.md)\)", body):
+        if not (root / link.lstrip("/")).is_file():
+            warnings.append(f"{rel}: broken bundle link {link}")
+
+
+def check_file(path: Path, root: Path, errors: list[str],
+               warnings: list[str]) -> None:
+    """Один markdown bundle'а: кодировка, зарезервированное имя, frontmatter, type.
+
+    Шов по потоку управления: каждый `continue` тела цикла означал «по этому
+    файлу всё» — и стал ранним `return` помощника, поэтому смысл через границу
+    не изменился, а решение «идти ли дальше» осталось внутри одного файла.
+    Свободными в блоке `ast` называл ровно `path`, `root`, `errors`, `warnings`
+    (пороги ушли в `check_body_smells` — там их единственный читатель).
+    """
+    rel = path.relative_to(root).as_posix()
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        errors.append(f"{rel}: not UTF-8")
+        return
+
+    if path.name in RESERVED:
+        if path.name == "log.md" and not re.search(
+                r"(?m)^## \d{4}-\d{2}-\d{2}\s*$", text):
+            warnings.append(f"{rel}: no ## YYYY-MM-DD headings (SPEC §9 shape)")
+        return
+
+    meta, body = parse_frontmatter(text)
+    if meta is None:
+        errors.append(f"{rel}: missing YAML frontmatter (SPEC §11)")
+        return
+    if not meta.get("type"):
+        errors.append(f"{rel}: frontmatter missing non-empty type (SPEC §11)")
+
+    check_body_smells(rel, path, body, warnings)
+    check_links(rel, root, body, warnings)
+
+
+def check_root_index(root: Path, warnings: list[str]) -> None:
+    """Корень bundle'а: `index.md` существует и называет `okf_version` (SPEC §12).
+
+    Шов проведён по данным: блок судил ОДИН файл и отдавал наружу только строки
+    `warnings` — `ast` показывает свободными ровно `root` и `warnings`, а имя
+    `text` из него ниже никто не читал (в цикле оно связывалось заново). Ветка
+    «файла нет» восстановлена ранним `return`, чтобы охрана условия осталась
+    частью блока, а не превратилась во вложенность.
+    """
+    root_index = root / "index.md"
+    if not root_index.is_file():
+        warnings.append(
+            "missing root index.md (optional in SPEC, required by project profile)")
+        return
+    if "okf_version" not in root_index.read_text(encoding="utf-8"):
+        warnings.append("root index.md has no okf_version (SPEC §12 recommended)")
+
+
 def validate_bundle(root: Path) -> int:
     errors: list[str] = []
     warnings: list[str] = []
-    max_lines = int(os.environ.get("OKF_MAX_LINES", "600"))
-    max_bytes = int(os.environ.get("OKF_MAX_BYTES", str(80 * 1024)))
 
     if not root.is_dir():
         print(f"ERROR: bundle root not a directory: {root}", file=sys.stderr)
@@ -1039,48 +1122,10 @@ def validate_bundle(root: Path) -> int:
     if not md_files:
         errors.append(f"no markdown files under {root}")
 
-    root_index = root / "index.md"
-    if root_index.is_file():
-        text = root_index.read_text(encoding="utf-8")
-        if "okf_version" not in text:
-            warnings.append("root index.md has no okf_version (SPEC §12 recommended)")
-    else:
-        warnings.append("missing root index.md (optional in SPEC, required by project profile)")
+    check_root_index(root, warnings)
 
     for path in md_files:
-        rel = path.relative_to(root).as_posix()
-        name = path.name
-        try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            errors.append(f"{rel}: not UTF-8")
-            continue
-
-        if name in RESERVED:
-            if name == "log.md":
-                if not re.search(r"(?m)^## \d{4}-\d{2}-\d{2}\s*$", text):
-                    warnings.append(f"{rel}: no ## YYYY-MM-DD headings (SPEC §9 shape)")
-            continue
-
-        meta, body = parse_frontmatter(text)
-        if meta is None:
-            errors.append(f"{rel}: missing YAML frontmatter (SPEC §11)")
-            continue
-        if not meta.get("type"):
-            errors.append(f"{rel}: frontmatter missing non-empty type (SPEC §11)")
-
-        lines = body.count("\n") + (1 if body and not body.endswith("\n") else 0)
-        size = path.stat().st_size
-        if lines > max_lines:
-            warnings.append(f"{rel}: body ~{lines} lines > soft max {max_lines} (split?)")
-        if size > max_bytes:
-            warnings.append(f"{rel}: {size} bytes > soft max {max_bytes} (split?)")
-
-        # bundle-absolute links existence (soft)
-        for link in re.findall(r"\[[^\]]*\]\((/[^)]+?\.md)\)", body):
-            target = root / link.lstrip("/")
-            if not target.is_file():
-                warnings.append(f"{rel}: broken bundle link {link}")
+        check_file(path, root, errors, warnings)
 
     for w in warnings:
         print(f"WARNING: {w}")
@@ -1270,29 +1315,12 @@ def changed_files(base: str | None, staged: bool) -> tuple[list[str], list[str]]
     return [f for f in out.splitlines() if f], []
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--base", help="ref to diff against (e.g. origin/main)")
-    ap.add_argument("--staged", action="store_true", help="use staged diff")
-    ap.add_argument("--check-stale", action="store_true", help="stale_after check")
-    args = ap.parse_args()
+def collect_concepts(root, bundle) -> tuple[dict, list]:
+    """Карта `concept → объявленные пути` и список просроченных.
 
-    # Фолбэк на BASE из окружения: гейты CQG получают базу именно так, и
-    # расхождение конвенций (флаг здесь, переменная там) само приводило к
-    # запуску без базы — то есть к зелёному гейту, не проверившему ничего.
-    if not args.base and not args.staged:
-        args.base = os.environ.get("BASE") or None
-
-    root = repo_root()
-    bundle = root / BUNDLE
-    errors: list[str] = []
-    warnings: list[str] = []
-
-    if not bundle.is_dir():
-        print(f"okf_sync_gate: no bundle at {BUNDLE}/ — skip (deploy OKF first)")
-        return 0
-
-    # --- собрать карту concept -> declared paths
+    Шов `main` (`okf@1.13`): блок только СОБИРАЕТ данные и ничего не судит,
+    поэтому отделяется чисто и возвращает ровно две структуры.
+    """
     concepts: dict[str, list[str]] = {}
     stale: list[tuple[str, str]] = []
     today = date.today()
@@ -1312,65 +1340,57 @@ def main() -> int:
             when = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
             if when < today:
                 stale.append((rel, after))
+    return concepts, stale
 
-    if args.check_stale:
-        for rel, when in stale:
-            errors.append(f"{rel}: stale_after {when} is in the past — re-verify or bump")
-        if not stale:
-            print(f"okf_sync_gate: freshness OK ({len(concepts)} mapped concepts)")
-    else:
-        for rel, when in stale:
-            warnings.append(f"{rel}: stale_after {when} is in the past (§7.2)")
 
-        files, issues = changed_files(args.base, args.staged)
-        for i in issues:
-            # ERROR, а не warning: невозможность вычислить дифф в sync-режиме — это
-            # неверная конфигурация обязательного входа, а не отсутствие внешнего
-            # инструмента. Гейт, вышедший 0 и не посмотревший ни одного файла,
-            # хуже отсутствующего (Delivery §3.1a). Найдено развёртыванием: вызов
-            # без --base давал WARNING и exit 0, то есть зелёный гейт, проверивший
-            # ноль. Отдельно от этого база теперь берётся и из окружения BASE —
-            # у гейтов CQG конвенция именно такая, и расхождение конвенций само
-            # приводило к «забыл флаг».
-            errors.append(
-                f"cannot compute diff: {i} — передай --base <ref> (или BASE=<ref>) "
-                "либо --staged; иначе гейт не проверяет ничего"
-            )
-        if not files and not issues:
-            # Пустой дифф = гейт ничего не судит. Это законно (push в саму базу),
-            # но должно быть видно: молчаливый no-op читается как «проверено».
-            warnings.append(
-                f"diff vs '{args.base or 'staged'}' is empty — gate inert this run"
-            )
-        if files:
-            touched_bundle = {f for f in files if f.startswith(f"{BUNDLE}/")}
-            code = [f for f in files if f not in touched_bundle]
-            for rel, declared in sorted(concepts.items()):
-                if rel in touched_bundle:
-                    continue  # concept обновлён — синхронизация заявлена
-                hits = sorted(
-                    {c for c in code for d in declared if covers(d, c)}
-                )[:5]
-                if hits:
-                    errors.append(
-                        f"{rel}: implementation changed but concept untouched -> "
-                        f"{', '.join(hits)}"
-                    )
-            if not concepts:
-                warnings.append(
-                    "no concept declares implementation: — gate is inert; "
-                    "start filling the field (Приложение A.3)"
+def check_concept_sync(files, concepts: dict, errors: list[str],
+                       warnings: list[str]) -> None:
+    """Код тронут, а concept — нет: рассинхрон знания и реализации (§7.2).
+    """
+    if files:
+        touched_bundle = {f for f in files if f.startswith(f"{BUNDLE}/")}
+        code = [f for f in files if f not in touched_bundle]
+        for rel, declared in sorted(concepts.items()):
+            if rel in touched_bundle:
+                continue  # concept обновлён — синхронизация заявлена
+            hits = sorted(
+                {c for c in code for d in declared if covers(d, c)}
+            )[:5]
+            if hits:
+                errors.append(
+                    f"{rel}: implementation changed but concept untouched -> "
+                    f"{', '.join(hits)}"
                 )
+        if not concepts:
+            warnings.append(
+                "no concept declares implementation: — gate is inert; "
+                "start filling the field (Приложение A.3)"
+            )
 
+
+def report(args, root, concepts: dict, errors: list[str],
+           warnings: list[str]) -> int:
+    """Печать итога и код возврата.
+
+    Шов `main` (`okf@1.13`): вывод отделён от суждения — так `main` остаётся
+    диспетчером, а советы не мешают читать логику.
+    """
     for w in warnings:
         print(f"WARNING: {w}")
     for e in errors:
         print(f"ERROR: {e}", file=sys.stderr)
 
     if not errors:
+        # ⚠ Слово `OK` — это то, что уезжает в таблицу прогонов verify-report'а,
+        # и до `okf@1.16` оно было одинаковым у «проверил и сошлось» и у
+        # «проверять было нечем». Пустой дифф теперь ошибка (см. `judge_sync`),
+        # а вторая инертность — карта без единого `implementation:` — законна на
+        # развёртывании и остаётся warning'ом; но в СТРОКЕ ИТОГА она называется,
+        # иначе снова попадёт в отчёт неотличимой от проверки.
+        inert = "" if concepts else " — INERT: 0 concepts mapped, судить нечем"
         print(
             f"okf_sync_gate: OK ({len(concepts)} mapped concepts, "
-            f"{len(warnings)} warning(s))"
+            f"{len(warnings)} warning(s)){inert}"
         )
         return 0
     # Waiver из STATUS — основной механизм: виден в диффе, живёт одну поставку.
@@ -1424,6 +1444,121 @@ def main() -> int:
     return 1
 
 
+def parse_cli() -> argparse.Namespace:
+    """Разбор аргументов вместе с фолбэком на `BASE` из окружения.
+
+    Шов по данным: блок отдаёт наружу ровно одно имя — `args`, свободных имён у
+    него нет вовсе (`ast`), поэтому граница проходит по нему без остатка. Держать
+    фолбэк здесь же обязательно: «чем судить» — часть разбора входа, а не
+    логики, и разъехавшись с ним, гейт снова запускался бы без базы.
+    """
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--base", help="ref to diff against (e.g. origin/main)")
+    ap.add_argument("--staged", action="store_true", help="use staged diff")
+    ap.add_argument("--check-stale", action="store_true", help="stale_after check")
+    args = ap.parse_args()
+
+    # Фолбэк на BASE из окружения: гейты CQG получают базу именно так, и
+    # расхождение конвенций (флаг здесь, переменная там) само приводило к
+    # запуску без базы — то есть к зелёному гейту, не проверившему ничего.
+    if not args.base and not args.staged:
+        args.base = os.environ.get("BASE") or None
+    return args
+
+
+def judge_freshness(concepts: dict, stale: list, errors: list[str]) -> None:
+    """`--check-stale`: просроченный `stale_after` — ошибка, а не предупреждение.
+
+    Половина развилки `main`, вырезанная целиком: `ast` называет свободными
+    ровно `concepts`, `stale`, `errors`, а решение о коде возврата остаётся у
+    `report` — через шов не проходит ни `return`, ни `break`.
+    """
+    for rel, when in stale:
+        errors.append(f"{rel}: stale_after {when} is in the past — re-verify or bump")
+    if not stale:
+        print(f"okf_sync_gate: freshness OK ({len(concepts)} mapped concepts)")
+
+
+def judge_sync(args, concepts: dict, stale: list, errors: list[str],
+               warnings: list[str]) -> None:
+    """Sync-режим: дифф против базы против карты `implementation:` (§4.1).
+
+    Вторая половина той же развилки. Шов здесь потому, что режимы делят только
+    вход и печать: `stale` в этой ветке даёт warning, а в соседней — ошибку, и
+    держать оба смысла в одной функции значило хранить развилку дважды. Замер:
+    `main` 152/37 → 46/10 после `okf@1.13` и → 18/3 здесь.
+    """
+    for rel, when in stale:
+        warnings.append(f"{rel}: stale_after {when} is in the past (§7.2)")
+
+    files, issues = changed_files(args.base, args.staged)
+    for i in issues:
+        # ERROR, а не warning: невозможность вычислить дифф в sync-режиме — это
+        # неверная конфигурация обязательного входа, а не отсутствие внешнего
+        # инструмента. Гейт, вышедший 0 и не посмотревший ни одного файла,
+        # хуже отсутствующего (Delivery §3.1a). Найдено развёртыванием: вызов
+        # без --base давал WARNING и exit 0, то есть зелёный гейт, проверивший
+        # ноль. Отдельно от этого база теперь берётся и из окружения BASE —
+        # у гейтов CQG конвенция именно такая, и расхождение конвенций само
+        # приводило к «забыл флаг».
+        errors.append(
+            f"cannot compute diff: {i} — передай --base <ref> (или BASE=<ref>) "
+            "либо --staged; иначе гейт не проверяет ничего"
+        )
+    if not files and not issues:
+        # Пустой дифф = гейт не судил НИЧЕГО, и это ERROR, а не warning
+        # (`okf@1.16`, поле). Прежняя редакция честно печатала «inert this run»
+        # и выходила 0 — развёртывание прочло зелёное и записало в таблицу
+        # прогонов «okf_sync_gate — OK». Warning против этого не работает: в
+        # отчёте всё равно остаётся строка гейта, и inert от проверенного там
+        # неотличим. Класс здесь был НАЗВАН верно и раньше — прежний комментарий
+        # говорил «молчаливый no-op читается как «проверено»» — и лечился
+        # надписью о самом себе. Знание класса не заменяет вердикта.
+        #
+        # Довод написан ветвью ВЫШЕ и применяется дословно: «гейт, вышедший 0 и
+        # не посмотревший ни одного файла, хуже отсутствующего» (Delivery
+        # §3.1a). Невозможность вычислить дифф и пустой дифф — одна ситуация для
+        # читателя отчёта; вторая половина получила вердикт мягче первой только
+        # потому, что выглядит штатной.
+        #
+        # Законный повод (прогон до коммита, push в саму базу) от этого не
+        # исчезает — он теперь НАЗЫВАЕТСЯ вместо того, чтобы пройти молча.
+        # Ровно так поле и ошиблось: гейт прогнали ДО коммита, дифф против
+        # origin/main был пуст, гейт напечатал inert, и два расхождения нашёл
+        # потом CI. «Локально зелено» и «CI зелёный» разошлись не окружением, а
+        # МОМЕНТОМ прогона, и различить это может только сам гейт.
+        errors.append(
+            f"diff vs '{args.base or 'staged'}' is empty — gate judged NOTHING. "
+            "Прогон до коммита либо база, совпадающая с HEAD: возьми базу, "
+            "против которой поставка мержится (`--base origin/main`), и уже "
+            "ПОСЛЕ коммита. Зелёное здесь читалось бы как «проверено», а "
+            "проверено ноль файлов"
+        )
+    check_concept_sync(files, concepts, errors, warnings)
+
+
+def main() -> int:
+    args = parse_cli()
+
+    root = repo_root()
+    bundle = root / BUNDLE
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not bundle.is_dir():
+        print(f"okf_sync_gate: no bundle at {BUNDLE}/ — skip (deploy OKF first)")
+        return 0
+
+    concepts, stale = collect_concepts(root, bundle)
+
+    if args.check_stale:
+        judge_freshness(concepts, stale, errors)
+    else:
+        judge_sync(args, concepts, stale, errors, warnings)
+
+    return report(args, root, concepts, errors, warnings)
+
+
 if __name__ == "__main__":
     sys.exit(main())
 ```
@@ -1446,6 +1581,9 @@ python scripts/okf_sync_gate.py --check-stale         # freshness (cron/неде
 
 | Дата | Изменение |
 |---|---|
+| 2026-08-13 | **v1.17**: **версия действия GitHub — число, и жило оно в трёх местах с двумя ответами.** Раннер на зелёном прогоне печатал «Node.js 20 is deprecated… forced to run on Node.js 24»: CI-шаблон CQG §8 стоял на `v7`, а шаблон `canon-freshness` здесь и собственный workflow канон-репозитория — на `v4`/`v5`. **Замер, а не догадка** (`gh api repos/actions/*/releases/latest`): актуальны `checkout v7.0.1`, `setup-python v7.0.0`, `setup-node v7.0.0`, `cache v6.1.0`, то есть CQG был прав, а отстали двое. Первый диагноз («поставляемый шаблон несёт старые версии») оказался неточным ровно наполовину, и это стоит записать: чинить собирались не то место. **Класс — тот же, что у счёта гейтов и версий канонов:** README требует «каждое число живёт в одном месте», а версия действия под это правило не попадала ни разу. Неприятен он тем, что отставший пин НЕ КРАСНЕЕТ — он предупреждает, и предупреждение живёт в логе УСПЕШНОГО прогона, где его никто не читает; к моменту, когда форсирование выключат, шаблон уже уехал во все развёртывания. Источником истины назван CI-шаблон CQG: он единственный, что копируется целиком, и правится чаще прочих. Оракул — `tests/test_action_pins_agree.py`, три прогона: согласие версий (на старом каноне красный, называет каждое место с его версией), «источник знает каждое используемое действие» (иначе пин, живущий только здесь, не с чем сверять — так он и отстал) и защита от пустоты (сменится формат — разбор перестанет находить пины и позеленеет ничем). **Прямо сказано, чего оракул не даёт:** он держит СОГЛАСИЕ, а не СВЕЖЕСТЬ — отстань все пины разом, останется зелёным. Свежесть спрашивают у сети, а сьют обязан быть герметичным (`cqg@2.03`); команда сверки записана в шапке теста. **веса эта правка не добавила** — ратчет считает `scripts/**`, а тронуты шаблон workflow и комментарии; названо, чтобы отсутствие цены не читалось как забытая запись. **объём: +4 строк, за что** — три строки предупреждения в шаблоне и эта запись |
+| 2026-08-13 | **v1.16** (полевой отчёт `voice-interview-coach`): **прогон, не посмотревший ни одного файла, больше не зелёный.** `okf_sync_gate` на пустом диффе печатал «inert this run», выходил 0 — и развёртывание записало в таблицу прогонов verify-report'а «`okf_sync_gate --base origin/main` — OK». Гейт прогнали ДО коммита, дифф против `origin/main` был пуст, два расхождения нашёл потом CI; одно (`transcript-durability`) действительно требовало нового правила. **«Локально зелено» и «CI зелёный» разошлись не окружением, а МОМЕНТОМ прогона**, и различить это может только сам гейт. Пустой дифф теперь ERROR — довод не новый, он написан ВЕТВЬЮ ВЫШЕ и применяется дословно: «гейт, вышедший 0 и не посмотревший ни одного файла, хуже отсутствующего» (Delivery §3.1a); невозможность вычислить дифф и пустой дифф — одна ситуация для читателя отчёта, и вторая половина получила вердикт мягче первой только потому, что выглядит штатной. Законный повод (push в саму базу) не исчез, он НАЗЫВАЕТСЯ вместо того, чтобы пройти молча, и текст ошибки называет починку: база, против которой поставка мержится, и ПОСЛЕ коммита. Отдельно — **строка итога**: слово `OK` и есть то, что уезжает в отчёт, поэтому вторая инертность (карта без единого `implementation:`, на развёртывании штатная и оставшаяся warning'ом) теперь печатается как `INERT: 0 concepts mapped`. **Класс здесь был назван верно и раньше** — прежний комментарий говорил «молчаливый no-op читается как «проверено»» — и лечился надписью о самом себе; знание класса не заменяет вердикта. Оракул на класс общий с `delivery@1.72`: `tests/test_green_without_the_thing.py`, форма «пустотой» — четыре прогона, из них три красных на старом каноне, включая отдельный прогон «строки `OK` в выводе нет» (код возврата и строка итога — два разных наблюдения, и поле читало вторую). Цена — в записи `delivery@1.72`: **вес: +30 строк** из общих +83 |
+| 2026-08-10 | **v1.15**: **объявление стоимости чтения исправлено числом по факту** — payload стоял ≈670 при фактических 774. Расхождение сверх допуска ±10% жило незамеченным потому, что оракул `selftest_sizes.py` искал объявление в форме CQG («строк» + процент в скобках), а здесь записана другая форма — то есть проверка молчала не от отсутствия расхождения, а от того, что не видела запись. Механика починена на свойство в `stack-map@1.45` |
 | 2026-07-26 | Initial: OKF v0.2 operational canon; mandatory upstream-check gate; project profile; librarian protocol; templates; soft validator |
 | 2026-07-26 | Review pass: fix okf_version wording in deploy prompt; clarify pillars ≠ SPEC terms; v0.1 legacy note; `generated.by` required; index path wording |
 | 2026-07-26 | Cross-link stack: `AGENT_STACK.md`; §0 scoped to OKF deploy (not whole stack); AGENTS hook updated |
@@ -1454,6 +1592,8 @@ python scripts/okf_sync_gate.py --check-stale         # freshness (cron/неде
 | 2026-07-27 | **v1.4**: Приложение C — `okf_sync_gate.py`, гейт code↔canon (§4.1 стал прибитым, а не соглашением); поле `implementation:` во frontmatter concept'а (A.3) как машиночитаемая карта реализации + `implementation: []` для несвязанных с кодом; `--check-stale` + weekly workflow закрывают §7.2; DoD §5.4 расширен |
 | 2026-07-27 | **v1.5**: `implementation:` дописано в §3.5 (профиль frontmatter) и в hook A.4 — без этого агент, читающий профиль, о поле не узнавал и гейт оставался инертным; убран лишний ``` в конце файла (нашла самопроверка `AGENT_STACK.md` §7); баннер `⬇ BOOTSTRAP PAYLOAD` + «стоимость чтения» |
 | 2026-07-28 | **v1.6**: терминология по словарю `AGENT_STACK.md` §1.1 — «Карта канонов», «Слой контура», часть контура вместо «часть стека» |
+| 2026-08-10 | **v1.14**: **Скрипты OKF под §2.1 целиком.** `okf_validate::validate_bundle` 67/cx21 → 27/cx7 (тело цикла целиком стало `check_file`, каждый `continue` — ранним `return`; пороги `OKF_MAX_LINES`/`OKF_MAX_BYTES` ушли к единственному читателю и перестали течь через сигнатуры), `okf_sync_gate::main` 56/cx13 → 20/cx3 (разбор CLI, суждение о свежести, суждение о синхронности — половины развилки `--check-stale`/sync разошлись явно: `stale` в одной ветке warning, в другой ошибка). Найдено вырезом: лишний ```-фенс во вставке закрывает блок и молча обрезает payload — закрыто оракулом `tests/test_payload_not_truncated.py` (CQG 1.97) |
+| 2026-08-10 | **v1.13**: **`okf_sync_gate.py::main` разрезана: 152 строки → 56, cx 37 → 13.** Три шва: `collect_concepts` (сбор карты и просроченного — блок только СОБИРАЕТ и ничего не судит), `check_concept_sync` (код тронут, а concept нет), `report` (печать итога и код возврата). **Дефект самой правки поймал не глаз, а сьют:** вставка шла в первый попавшийся `def main(` файла, а в OKF их ДВА — три функции уехали в `okf_validate.py` и там же исчезли из своего скрипта; тесты гейта прошли, а тест соседа упал `NameError`. Урок к процедуре: якорь вставки берётся от ЗАГОЛОВКА приложения нужного скрипта, а не по первому совпадению в файле. Второе — `root` остался в `report` свободным именем и уронил ветку waiver'а: счёт свободных имён показывал его, я прочёл невнимательно |
 | 2026-07-29 | **v1.12**: `timeout-minutes` на джобах weekly-workflow'а `--check-stale` — предохранитель §8.7 CQG требует его на КАЖДОЙ джобе (дефолт GitHub — 6 часов), а здесь его не было. **Запись восстановлена 2026-07-31 по истории git:** версия была поднята в `c29f6f6` без строки в журнале, и это обнаружилось только когда появилась проверка «у каждой версии есть запись». До неё три версии подряд (1.10–1.12) существовали как номер в шапке без описания — журнал молчал о том, что менялось |
 | 2026-07-29 | **v1.11** (находка регрессии, не прогона): `okf_validate.py` **принимал пустой `type:`**. В `TYPE_RE` стояло `\s*`, а `\s` включает перевод строки, поэтому на `type:` с пустым значением регулярка уходила на следующую строку и `type:` + `title: t` давало `type == "title: t"`. Валидатор печатал `0 error(s)` там, где SPEC §11 требует непустой `type` — ложное зелёное того же класса, что F17 («OK на стеке, который гейт не поддерживает»). Теперь `[ \t]`. Нашлось при дописывании регрессии на непокрытые скрипты: тест на пустой тип был первым, который вообще задал этот вопрос — четыре полевых развёртывания и `stack_selftest` проходили мимо, потому что валидный bundle такого файла не содержит |
 | 2026-07-29 | **v1.10** (полевая находка F10): `okf_sync_gate` при невозможности вычислить дифф в sync-режиме теперь **ошибка, а не warning** — прежде запуск без `--base` печатал предупреждение и выходил **0**, то есть зелёный гейт, не посмотревший ни одного файла (Delivery §3.1a: такой гейт хуже отсутствующего). Отдельно снято расхождение конвенций, которое к этому и приводило: гейты CQG получают базу через переменную `BASE`, а этот — через флаг, поэтому привычка `BASE=… python scripts/okf_sync_gate.py` давала молча зелёный прогон. Теперь `BASE` из окружения читается как фолбэк. Проверено полем: без базы exit 1 с указанием, что передать; с базой — работает |

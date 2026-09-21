@@ -40,6 +40,20 @@ def copy_with_parts(script: Path, dst_dir: Path) -> None:
             shutil.copy(part, dst_dir / part.name)
 
 
+def probe_cmd(script: Path, target: Path | None = None,
+              rule: str | None = None) -> list[str]:
+    """Чем запускать гейт в пробе: интерпретатор по расширению плюс `--rule`.
+
+    Шов по ПОВТОРУ: одну и ту же тройку (питон/баш, путь, правило) собирали
+    четыре пробы, и каждый экземпляр стоил двух ветвлений функции, которая
+    судит совсем о другом. `target` — путь В ПОЛИГОНЕ, если проба копирует гейт
+    к себе; без него гейт запускается там, где лежит.
+    """
+    cmd = ["python3"] if script.suffix == ".py" else ["bash"]
+    cmd += [str(script if target is None else target)]
+    return cmd + ["--rule", rule] if rule else cmd
+
+
 class ProbeChecks:
     def check_canaries(self) -> None:
         d = self.root / "scripts" / "lint"
@@ -56,32 +70,42 @@ class ProbeChecks:
                 continue
             if not name.startswith("check_"):
                 continue
-            # Объявленная проектом канарейка идёт ПЕРВОЙ — раньше пробы
-            # честного пропуска. До cqg@1.67 порядок был обратным, и для
-            # tool-зависимого гейта до `_probe_declared` дело не доходило
-            # НИКОГДА: объявление принималось и молча не исполнялось. Проект,
-            # положивший канарейку, тем самым утверждает, что инструмент у него
-            # есть и класс нарушения ему известен, — это сильнее, чем проверка
-            # «а честно ли гейт пропускает, когда инструмента нет».
-            if name in self.own:
-                for rule, path, body in self.own[name]:
-                    self._probe_declared(script, path, body, rule)
-                continue
-            if name in TOOL_DEPENDENT:
-                self._probe_honest_skip(script, TOOL_DEPENDENT[name])
-                continue
-            if name in DIRECT_SETUP:
-                self._probe_state(script, DIRECT_SETUP[name])
-                continue
-            rules = self._rules_of(script)
-            if rules:
-                for rule in rules:
-                    self._probe(script, rule)
-            else:
-                # Односложный гейт: `--rule` он не принимает, канарейка ищется по
-                # имени скрипта. Прежняя версия отправляла такие в SKIP целиком —
-                # то есть доктор не пробовал file-length и сложность вообще.
-                self._probe(script, None)
+            self._probe_script(script)
+
+    def _probe_script(self, script: Path) -> None:
+        """Чем пробовать ЭТОТ гейт: своей канарейкой, честным пропуском, состоянием.
+
+        Шов по данным: выбор ветки не отдаёт наружу ни одного имени — каждая
+        проба печатает вердикт сама, поэтому `continue` тела цикла честно
+        становится `return`, а обход остаётся у `check_canaries`.
+
+        Объявленная проектом канарейка идёт ПЕРВОЙ — раньше пробы честного
+        пропуска. До cqg@1.67 порядок был обратным, и для tool-зависимого гейта
+        до `_probe_declared` дело не доходило НИКОГДА: объявление принималось и
+        молча не исполнялось. Проект, положивший канарейку, тем самым
+        утверждает, что инструмент у него есть и класс нарушения ему известен, —
+        это сильнее, чем проверка «а честно ли гейт пропускает без инструмента».
+        """
+        name = script.name
+        if name in self.own:
+            for rule, path, body in self.own[name]:
+                self._probe_declared(script, path, body, rule)
+            return
+        if name in TOOL_DEPENDENT:
+            self._probe_honest_skip(script, TOOL_DEPENDENT[name])
+            return
+        if name in DIRECT_SETUP:
+            self._probe_state(script, DIRECT_SETUP[name])
+            return
+        rules = self._rules_of(script)
+        if not rules:
+            # Односложный гейт: `--rule` он не принимает, канарейка ищется по
+            # имени скрипта. Прежняя версия отправляла такие в SKIP целиком —
+            # то есть доктор не пробовал file-length и сложность вообще.
+            self._probe(script, None)
+            return
+        for rule in rules:
+            self._probe(script, rule)
 
     def _probe_state(self, script: Path, setup) -> None:
         """Канарейка — СОСТОЯНИЕ репозитория, а не файл с нарушением в коде."""
@@ -97,8 +121,7 @@ class ProbeChecks:
             run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
                  "commit", "-qm", "base"], lab)
             extra_args, extra_env = setup(lab)
-            cmd = (["python3"] if script.suffix == ".py" else ["bash"]) \
-                + [str(lab / "scripts" / "lint" / script.name)] + extra_args
+            cmd = probe_cmd(script, lab / "scripts" / "lint" / script.name) + extra_args
             code, out = run(cmd, lab, env={"LINT_PY_SRC": "backend/features",
                                            **extra_env})
             if code != 0:
@@ -144,8 +167,7 @@ class ProbeChecks:
             run(["git", "add", "-A"], lab)
             run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
                  "commit", "-qm", "change"], lab)
-            cmd = (["python3"] if script.suffix == ".py" else ["bash"]) \
-                + [str(lab / "scripts" / "lint" / script.name)]
+            cmd = probe_cmd(script, lab / "scripts" / "lint" / script.name)
             code, out = run(cmd, lab, env={"PATH": BARE_PATH, "BASE": "b0",
                                            "LINT_PY_SRC": "backend/features",
                                            "MUTATION_NO_BUDGET": "0"})
@@ -192,39 +214,11 @@ class ProbeChecks:
         """
         point = f"канарейка {script.name}" + (f":{rule}" if rule else "") + " (своя)"
         target = self.root / path
-        cmd = (["python3"] if script.suffix == ".py" else ["bash"]) + [str(script)]
-        if rule:
-            cmd += ["--rule", rule]
+        cmd = probe_cmd(script, rule=rule)
 
-        # Канарейка бывает ДВУХ видов, и оба законны: новый файл (нарушение,
-        # которого в дереве нет) и ПОДМЕНА существующего (вендоренная копия
-        # канона — находка 7). Первая редакция пробы в дереве отказывалась
-        # трогать существующий файл и тем сломала второй вид — поймано
-        # собственным сьютом, а не полем. Поэтому: содержимое сохраняем и
-        # возвращаем, созданное — удаляем.
         clean = target.exists()
-        backup = target.read_text(encoding="utf-8") if clean else None
-        made: list[Path] = []
-        d = target.parent
-        while not d.exists() and d != self.root:
-            made.append(d)
-            d = d.parent
-        try:
-            before_code, before_out = run(cmd, self.root)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(content, encoding="utf-8")
-            after_code, after_out = run(cmd, self.root)
-        finally:
-            if backup is None:
-                if target.exists():
-                    target.unlink()
-                for d in made:                  # только свои, снизу вверх
-                    try:
-                        d.rmdir()
-                    except OSError:
-                        break
-            else:
-                target.write_text(backup, encoding="utf-8")
+        (before_code, before_out), (after_code, after_out) = self._run_with_canary(
+            cmd, target, content)
 
         # Гейт, судящий по `git ls-files`, некоммитнутой канарейки не увидит, и
         # его зелёное здесь ничего не значит. Отличаем это от настоящего DEAD:
@@ -245,8 +239,47 @@ class ProbeChecks:
         elif any(w in after_out for w in SKIP_WORDS):
             self.add(WEAK, point, after_out.strip().splitlines()[0][:80])
         else:
+            self.dead_gates.add(script.name)
             self.add(DEAD, point, "МОЛЧИТ на объявленной канарейке (exit 0): "
                                   f"{after_out.strip()[:60]!r}")
+
+    def _run_with_canary(self, cmd: list[str], target: Path, content: str):
+        """Два прогона гейта — БЕЗ канарейки и С ней — и дерево, как было.
+
+        Шов по данным: наружу блок отдаёт ровно две пары «код, вывод»; `backup`
+        и `made` границу не пересекают, и это несущее свойство — восстановление
+        обязано стоять там же, где порча, в `finally` рядом с ней.
+
+        Канарейка бывает ДВУХ видов, и оба законны: новый файл (нарушение,
+        которого в дереве нет) и ПОДМЕНА существующего (вендоренная копия
+        канона — находка 7). Первая редакция пробы в дереве отказывалась
+        трогать существующий файл и тем сломала второй вид — поймано
+        собственным сьютом, а не полем. Поэтому: содержимое сохраняем и
+        возвращаем, созданное — удаляем.
+        """
+        backup = target.read_text(encoding="utf-8") if target.exists() else None
+        made: list[Path] = []
+        d = target.parent
+        while not d.exists() and d != self.root:
+            made.append(d)
+            d = d.parent
+        try:
+            before = run(cmd, self.root)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+            after = run(cmd, self.root)
+        finally:
+            if backup is None:
+                if target.exists():
+                    target.unlink()
+                for d in made:                  # только свои, снизу вверх
+                    try:
+                        d.rmdir()
+                    except OSError:
+                        break
+            else:
+                target.write_text(backup, encoding="utf-8")
+        return before, after
 
     def _probe(self, script: Path, rule: str | None) -> None:
         point = f"канарейка {script.name}" + (f":{rule}" if rule else "")
@@ -274,10 +307,7 @@ class ProbeChecks:
             run(["git", "add", "-A"], lab)
             run(["git", "-c", "user.email=d@d", "-c", "user.name=d",
                  "commit", "-qm", "canary"], lab)
-            cmd = (["python3"] if script.suffix == ".py" else ["bash"]) \
-                + [str(lab / "scripts" / "lint" / script.name)]
-            if rule:
-                cmd += ["--rule", rule]
+            cmd = probe_cmd(script, lab / "scripts" / "lint" / script.name, rule)
             code, out = run(cmd, lab, env={"LINT_PY_SRC": "backend/features"})
             named_skip = any(w in out for w in
                              ("пропущен", "не судит", "не проверен", "нет каталога"))
@@ -286,6 +316,7 @@ class ProbeChecks:
             elif named_skip:
                 self.add(WEAK, point, out.strip().splitlines()[0][:80])
             else:
+                self.dead_gates.add(script.name)
                 self.add(DEAD, point,
                          f"МОЛЧИТ на своём же нарушении (exit 0): {out.strip()[:70]!r}")
 

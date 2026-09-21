@@ -27,59 +27,82 @@
 FE_DIR=${LINT_FE_DIR:-frontend}
 TS_SRC=${LINT_TS_SRC:-$FE_DIR/src}
 
-ts_mutation() {
-  local STRYKER changed n cfg runner runners out rc report line score
+# Есть ли чем и что мутировать. Наружу уходят три имени — `STRYKER`, `changed`,
+# `n`; они локальны у `ts_mutation`, и помощник видит их динамической областью
+# bash — тем же приёмом, которым `undecided` в `mutation_verdict.sh` читает `out`
+# и `rc`.
+#
+# ⚠ Код возврата тут — РЕШЕНИЕ, а не вердикт гейта: 1 значит «пропуск уже назван
+# вслух, судить нечем», и выход остаётся у вызывающего (`|| return 0`). Возврат
+# нулём означал бы «продолжай», то есть прогон Stryker'а без Stryker'а.
+ts_stryker_setup() {
   STRYKER="$FE_DIR/node_modules/.bin/stryker"
   [[ -x "$STRYKER" ]] || STRYKER="node_modules/.bin/stryker"
   [[ -x "$STRYKER" ]] || STRYKER=$(command -v stryker 2>/dev/null || true)
   if [[ -z "$STRYKER" ]]; then
     printf '%s⚠ mutation: Stryker не найден — TS-половина пропущена.\n' "$yellow"
     printf 'Установка: npm i -D @stryker-mutator/core @stryker-mutator/<runner>-runner%s\n' "$reset"
-    return 0
+    return 1
   fi
   if ! git rev-parse --verify --quiet "$BASE" >/dev/null; then
     printf '%s⚠ mutation: ref %s недоступен — TS-половина пропущена%s\n' "$yellow" "$BASE" "$reset"
-    return 0
+    return 1
   fi
   # Тесты из населения исключаются: мутировать надо продуктовый код. Маска шире
   # дефолта Stryker намеренно — проекты зовут каталог и `test`, и `tests`, и `__tests__`.
   changed=$(git diff --name-only "$BASE"...HEAD -- "$TS_SRC" 2>/dev/null \
     | grep -E '\.(ts|tsx|js|jsx|mts|cts)$' \
-    | grep -vE '(^|/)__tests__/|(^|/)tests?/|\.(test|spec)\.' || true)
+    | grep -vE '(^|/)(test|tests|__tests__|spec|specs)/|(^|/)conftest\.py$|(^|/)test[_-]|[_-](test|spec)\.|(Test|Tests|Spec|Specs)\.|\.(test|spec)\.' || true)
   if [[ -z "$changed" ]]; then
     printf '%smutation: изменённых prod-файлов нет (BASE=%s, смотрел в %s)%s\n' \
       "$green" "$BASE" "$TS_SRC" "$reset"
-    return 0
+    return 1
   fi
   n=$(printf '%s\n' "$changed" | wc -l | tr -d ' ')
   printf 'mutation/ts: %s файл(ов), бюджет %ss, цель ≥%s%% убитых\n' "$n" "$BUDGET_SEC" "$MIN_KILLED"
+  return 0
+}
 
-  # Конфиг проекта, если он есть, Stryker находит сам — тогда гейт добавляет только
-  # область и репортёр. Если конфига нет, нужен раннер, и угадывать его нельзя:
-  # берём тот, что реально установлен, и только когда он ОДИН. Два раннера — это
-  # выбор проекта, а не гейта; ноль — честный пропуск с командой установки.
+# Чем запускать Stryker: конфиг проекта либо единственный установленный раннер.
+# Наружу уходят два имени — `cfg` и `runner`; `runners` за границу не выходит и
+# потому объявлен здесь. Возврат 1 — «пропуск назван, дальше не судим».
+#
+# Конфиг проекта, если он есть, Stryker находит сам — тогда гейт добавляет только
+# область и репортёр. Если конфига нет, нужен раннер, и угадывать его нельзя:
+# берём тот, что реально установлен, и только когда он ОДИН. Два раннера — это
+# выбор проекта, а не гейта; ноль — честный пропуск с командой установки.
+ts_stryker_config() {
+  local runners
   cfg=""
   for c in stryker.config.json stryker.config.mjs stryker.config.cjs stryker.config.js \
            .stryker.conf.json .stryker.conf.js "$FE_DIR/stryker.config.json"; do
     [[ -f "$c" ]] && { cfg="$c"; break; }
   done
   runner=""
-  if [[ -z "$cfg" ]]; then
-    runners=$(ls -d "$FE_DIR"/node_modules/@stryker-mutator/*-runner node_modules/@stryker-mutator/*-runner \
-                2>/dev/null | sed -E 's#.*/([a-z0-9]+)-runner$#\1#' | sort -u)
-    if [[ -z "$runners" ]]; then
-      printf '%s⚠ mutation: ни конфига Stryker, ни раннера — TS-половина не судит.\n' "$yellow"
-      printf 'Поставь раннер под свой сьют: npm i -D @stryker-mutator/vitest-runner%s\n' "$reset"
-      return 0
-    fi
-    if [[ $(printf '%s\n' "$runners" | wc -l | tr -d ' ') -gt 1 ]]; then
-      printf '%s⚠ mutation: раннеров несколько (%s) — какой брать, решает ПРОЕКТ.\n' \
-        "$yellow" "$(printf '%s' "$runners" | tr '\n' ',')"
-      printf 'Заведи stryker.config.json с полем testRunner — гейт его подхватит.%s\n' "$reset"
-      return 0
-    fi
-    runner="$runners"
+  if [[ -n "$cfg" ]]; then
+    return 0
   fi
+  runners=$(ls -d "$FE_DIR"/node_modules/@stryker-mutator/*-runner node_modules/@stryker-mutator/*-runner \
+              2>/dev/null | sed -E 's#.*/([a-z0-9]+)-runner$#\1#' | sort -u)
+  if [[ -z "$runners" ]]; then
+    printf '%s⚠ mutation: ни конфига Stryker, ни раннера — TS-половина не судит.\n' "$yellow"
+    printf 'Поставь раннер под свой сьют: npm i -D @stryker-mutator/vitest-runner%s\n' "$reset"
+    return 1
+  fi
+  if [[ $(printf '%s\n' "$runners" | wc -l | tr -d ' ') -gt 1 ]]; then
+    printf '%s⚠ mutation: раннеров несколько (%s) — какой брать, решает ПРОЕКТ.\n' \
+      "$yellow" "$(printf '%s' "$runners" | tr '\n' ',')"
+    printf 'Заведи stryker.config.json с полем testRunner — гейт его подхватит.%s\n' "$reset"
+    return 1
+  fi
+  runner="$runners"
+  return 0
+}
+
+ts_mutation() {
+  local STRYKER changed n cfg runner out rc report score
+  ts_stryker_setup || return 0
+  ts_stryker_config || return 0
 
   out=$(mktemp)
   # Бюджет держим тем же способом, что python-половина: 124 от timeout — это

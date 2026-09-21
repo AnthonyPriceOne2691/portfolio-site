@@ -54,6 +54,49 @@ def _first_commit_with(text: str, *paths: str) -> str:
     return revs[-1] if revs else ""
 
 
+def _expectation_verdict(ex: str, test_paths: list[str],
+                         order: dict[str, int]) -> str:
+    """`after` | `unknown` | `""` — что история говорит про ОДИН id.
+
+    Шов по данным: наружу блок отдавал только корзину, в которую лёг id, —
+    `s_rev`/`t_rev` ниже не читает никто. Вердикт возвращается словом, а `continue`
+    остаётся у вызывающего: выход через границу шва сменил бы смысл (было 41/12).
+    """
+    s_rev = _first_commit_with(ex, "delivery/active/spec.md")
+    t_rev = _first_commit_with(ex, *test_paths)
+    if not s_rev or not t_rev:
+        return ""  # id ещё не в истории — поставка не закоммичена, не наше дело
+    if s_rev == t_rev:
+        return "unknown"
+    # Меньший индекс = НОВЕЕ. Пример новее теста — ожидание дописали после.
+    return "after" if order.get(s_rev, 0) < order.get(t_rev, 0) else ""
+
+
+def _expectation_warnings(after: list[str], unknown: list[str],
+                          total: int) -> list[str]:
+    """Формулировки §3.1d по двум корзинам вердиктов.
+
+    Шов по данным: сверху блок читает ровно три имени, вниз отдаёт готовые
+    строки. Текст здесь длиннее самой проверки — и это её длина, а не смысл.
+    """
+    msgs = []
+    if after:
+        msgs.append(
+            "§3.1d: примеры появились в истории ПОЗЖЕ ссылающихся на них тестов: "
+            f"{', '.join(after)}. Ожидание, придуманное после реализации, — это "
+            "описание реализации, и все гейты ниже проверяют его согласие с самим "
+            "собой. Такой пример надо переписать от задачи, а не от кода"
+        )
+    if unknown:
+        msgs.append(
+            f"§3.1d: у {len(unknown)} из {total} примеров "
+            f"порядок не проверить — пример и тест приехали одним коммитом "
+            f"({', '.join(unknown[:5])}). Это не нарушение, но и не доказательство: "
+            "коммить спеку отдельным коммитом до кода, тогда порядок виден"
+        )
+    return msgs
+
+
 def expectation_predates_tests(ex_ids: list[str], test_paths: list[str]) -> list[str]:
     """[(предупреждения)] — порядок «пример раньше теста» по истории.
 
@@ -67,34 +110,15 @@ def expectation_predates_tests(ex_ids: list[str], test_paths: list[str]) -> list
         git("-C", str(ROOT), "rev-list", "--topo-order", "HEAD").split())}
     if not order:
         return []
-    spec_rel = "delivery/active/spec.md"
+    ids = list(dict.fromkeys(ex_ids))
     after, unknown = [], []
-    for ex in dict.fromkeys(ex_ids):
-        s_rev = _first_commit_with(ex, spec_rel)
-        t_rev = _first_commit_with(ex, *test_paths)
-        if not s_rev or not t_rev:
-            continue  # id ещё не в истории — поставка не закоммичена, не наше дело
-        if s_rev == t_rev:
-            unknown.append(ex)
-        elif order.get(s_rev, 0) < order.get(t_rev, 0):
-            # Меньший индекс = НОВЕЕ. Пример новее теста — ожидание дописали после.
+    for ex in ids:
+        verdict = _expectation_verdict(ex, test_paths, order)
+        if verdict == "after":
             after.append(ex)
-    msgs = []
-    if after:
-        msgs.append(
-            "§3.1d: примеры появились в истории ПОЗЖЕ ссылающихся на них тестов: "
-            f"{', '.join(after)}. Ожидание, придуманное после реализации, — это "
-            "описание реализации, и все гейты ниже проверяют его согласие с самим "
-            "собой. Такой пример надо переписать от задачи, а не от кода"
-        )
-    if unknown:
-        msgs.append(
-            f"§3.1d: у {len(unknown)} из {len(dict.fromkeys(ex_ids))} примеров "
-            f"порядок не проверить — пример и тест приехали одним коммитом "
-            f"({', '.join(unknown[:5])}). Это не нарушение, но и не доказательство: "
-            "коммить спеку отдельным коммитом до кода, тогда порядок виден"
-        )
-    return msgs
+        elif verdict == "unknown":
+            unknown.append(ex)
+    return _expectation_warnings(after, unknown, len(ids))
 
 
 # --- Долг во времени (§3.5) -------------------------------------------------
@@ -179,6 +203,34 @@ def archive_samples() -> list[str]:
     return sorted(set(revs), key=lambda r: -order.get(r, 0))
 
 
+def _debt_stuck(now: dict[str, int], window: list[str]) -> list[str]:
+    """Вечные жильцы: записи, прожившие ВСЁ окно и ни разу не полегчавшие.
+
+    Шов по данным: блок читает сверху только `now` и `window`, а вниз отдаёт
+    готовое сообщение — `samples_debt`/`stuck` за границей не нужны никому. Это
+    вторая, независимая от суммы величина, и она же половина сложности (57/11).
+
+    Вечный жилец — не всякий долгожитель. Сумму можно уронить, растопив лёгкие
+    записи, а тяжёлые оставив гнить, — поэтому меряется и возраст. Но запись,
+    которую честно чистят по частям (40 -> 34 -> ... -> 10), тоже живёт всё окно,
+    и ругаться на неё — верный способ добиться того, чтобы проверку отключили.
+    Признак гниения — вес не уменьшился ни разу.
+    """
+    samples_debt = [debt_at(r) for r in window]
+    stuck = sorted(
+        p for p in now
+        if all(p in s for s in samples_debt) and now[p] >= samples_debt[0][p]
+    )
+    if not stuck:
+        return []
+    return [
+        f"debt: {len(stuck)} записей живут все {DEBT_WINDOW} поставок подряд — "
+        f"это уже не «известное нарушение», а вечный жилец: "
+        + ", ".join(stuck[:5])
+        + ("…" if len(stuck) > 5 else "")
+    ]
+
+
 def debt_is_not_frozen() -> list[str]:
     """Долг обязан таять, и у него не должно быть вечных жильцов.
 
@@ -191,8 +243,29 @@ def debt_is_not_frozen() -> list[str]:
     """
     now = debt_at("HEAD")
     if not now:
-        return []  # долга нет — таять нечему, и это нормальное состояние
+        print("debt: снимков долга на HEAD не прочитано — таять нечему")
+        return []
+    # Каталоги архива на диске против найденных ревизий закрытия. Расхождение
+    # означает «не смогли прочитать историю», а не «поставок нет», и **до
+    # `delivery@1.66` оба случая выглядели одинаково — молчанием**: проверка
+    # выходила через `return []`, то есть отвечала «всё хорошо» там, где данные
+    # не прочитались. Замер, из которого правило родилось: CI ронял этот класс
+    # тестов, показывая 0 или 2 поставки при пяти каталогах на диске, а локально
+    # всё было зелёным — и понять, ЧТО именно не прочиталось, было нечем.
+    dirs = sorted(p.name for p in ARCHIVE.iterdir() if p.is_dir()) if ARCHIVE.is_dir() else []
     samples = archive_samples()
+    print(
+        f"debt: каталогов в archive/ {len(dirs)}, ревизий закрытия найдено "
+        f"{len(samples)}, окно {DEBT_WINDOW}, в долге {len(now)} записей "
+        f"весом {sum(now.values())}"
+    )
+    if len(dirs) != len(samples):
+        print(
+            f"debt: у {len(dirs) - len(samples)} каталог(ов) из {len(dirs)} не "
+            "найден коммит-добавитель — историю прочитать не удалось. Это дефект "
+            "ЧТЕНИЯ, а не отсутствие поставок: проверка не судит и говорит об этом "
+            f"вслух. Каталоги: {', '.join(dirs) or 'нет'}"
+        )
     if len(samples) < DEBT_WINDOW:
         print(
             f"debt: накоплено {len(samples)} закрытых поставок из {DEBT_WINDOW} — "
@@ -204,7 +277,12 @@ def debt_is_not_frozen() -> list[str]:
     window = samples[-DEBT_WINDOW:]
     oldest = debt_at(window[0])
     if not oldest:
-        return []  # на начале окна долга не было — мерить нечего
+        print(
+            f"debt: на начале окна ({window[0][:7]}) снимков долга не прочитано — "
+            "мерить нечего. Если снимки на той ревизии ЕСТЬ, это дефект чтения, "
+            "а не «долга тогда не было»"
+        )
+        return []
 
     errors: list[str] = []
     was, is_now = sum(oldest.values()), sum(now.values())
@@ -217,24 +295,7 @@ def debt_is_not_frozen() -> list[str]:
             "поставке либо назови причину в blockers и перенеси срок"
         )
 
-    # Вечный жилец: запись, прожившая ВСЁ окно И НЕ СДВИНУВШАЯСЯ. Сумму можно
-    # уронить, растопив лёгкие записи, а тяжёлые оставив гнить, — поэтому меряется
-    # и возраст. Но «прожила окно» само по себе жильцом не делает: запись, которую
-    # честно чистят по частям (40 -> 34 -> ... -> 10), тоже живёт всё окно, и
-    # ругаться на неё — верный способ добиться того, чтобы проверку отключили.
-    # Признак гниения — вес не уменьшился ни разу.
-    samples_debt = [debt_at(r) for r in window]
-    stuck = sorted(
-        p for p in now
-        if all(p in s for s in samples_debt) and now[p] >= samples_debt[0][p]
-    )
-    if stuck:
-        errors.append(
-            f"debt: {len(stuck)} записей живут все {DEBT_WINDOW} поставок подряд — "
-            f"это уже не «известное нарушение», а вечный жилец: "
-            + ", ".join(stuck[:5])
-            + ("…" if len(stuck) > 5 else "")
-        )
+    errors.extend(_debt_stuck(now, window))
     return errors
 
 

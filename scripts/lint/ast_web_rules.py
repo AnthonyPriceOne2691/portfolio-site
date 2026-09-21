@@ -126,6 +126,42 @@ def _offloaded(fn: ast.AST) -> bool:
     return False
 
 
+def _loop_body(node: ast.AST) -> list[ast.AST] | None:
+    """Тело ЦИКЛА, если узел — цикл; None — не цикл, смотреть нечего.
+
+    Шов по данным: из ветвления наружу выходило одно имя — `loop_body`, а
+    ветка `else` не значила ничего, кроме «цикла тут нет». Comprehension
+    отдаётся целиком: его «тело» — он сам.
+    """
+    if isinstance(node, (ast.For, ast.AsyncFor, ast.While)):
+        return list(node.body)
+    if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+        return [node]
+    return None
+
+
+def _cpu_calls_in(inner: ast.AST, src_lines: list[str]) -> list[int]:
+    """Строки CPU-вызовов из `_CPU_CALLS` внутри узла, кроме помеченных `# cpu-ok:`.
+
+    Шов по сложности: отбор вызовов стоил правилу половины ветвлений, а наружу
+    отдаёт один список номеров строк — больше из этой глубины ничего не идёт.
+    """
+    out: list[int] = []
+    for call in ast.walk(inner):
+        if not isinstance(call, ast.Call):
+            continue
+        f = call.func
+        if not (isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name)):
+            continue
+        if (f.value.id, f.attr) not in _CPU_CALLS:
+            continue
+        line = src_lines[call.lineno - 1] if call.lineno <= len(src_lines) else ""
+        if _CPU_OK_MARKER in line:
+            continue
+        out.append(call.lineno)
+    return out
+
+
 def find_cpu_in_async(tree: ast.AST, src_lines: list[str]) -> list[int]:
     """CPU-работа в ЦИКЛЕ внутри `async def` — голодание event loop.
 
@@ -150,26 +186,11 @@ def find_cpu_in_async(tree: ast.AST, src_lines: list[str]) -> list[int]:
         if not isinstance(fn, ast.AsyncFunctionDef) or _offloaded(fn):
             continue
         for node in ast.walk(fn):
-            loop_body: list[ast.AST]
-            if isinstance(node, (ast.For, ast.AsyncFor, ast.While)):
-                loop_body = list(node.body)
-            elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
-                loop_body = [node]
-            else:
+            body = _loop_body(node)
+            if body is None:
                 continue
-            for inner in loop_body:
-                for call in ast.walk(inner):
-                    if not isinstance(call, ast.Call):
-                        continue
-                    f = call.func
-                    if not (isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name)):
-                        continue
-                    if (f.value.id, f.attr) not in _CPU_CALLS:
-                        continue
-                    line = src_lines[call.lineno - 1] if call.lineno <= len(src_lines) else ""
-                    if _CPU_OK_MARKER in line:
-                        continue
-                    out.append(call.lineno)
+            for inner in body:
+                out += _cpu_calls_in(inner, src_lines)
     return sorted(set(out))
 
 
