@@ -1,100 +1,183 @@
 ---
 /**
- * Карточка проекта (design v0.9 §4.3). Одна ключевая метрика, не список.
+ * Карточка проекта на главной (design v0.9 §4.3). Одна ключевая метрика, не список.
  *
- * Два режима. `wide` — альбомная, во всю ширину: метрика уходит влево крупным
- * блоком, текст вправо. Так карточка читается как строка таблицы результатов,
- * а не как плитка, и на Home это уместнее — там их всего три и они несут
- * главный аргумент. Обычная сетка остаётся на `/projects`, где карточек может
- * стать много.
+ * Карточка РАСКРЫВАЕТСЯ: свёрнутая — это витринная строка (метрика, заголовок,
+ * одна фраза, фрейм сбоку), раскрытая — полный кейс, контракт и пруфы. Отдельной
+ * страницы-списка проектов нет, витрина — это главная, поэтому «подробнее»
+ * должно открываться здесь же, а не уводить со страницы.
+ *
+ * ⚠ Взято `<details>`, а не кнопка с `aria-expanded`, и это не вкус: раскрытие
+ * работает БЕЗ JS — нативно, с клавиатуры, с правильной ролью для скринридера.
+ * JS ниже добавляет только анимацию; не загрузился — карточка всё равно
+ * открывается, просто мгновенно. Тот же приём, что у меню в шапке.
+ *
+ * ⚠ Фрейм живёт в `<summary>` и потому ОБЯЗАН остаться неинтерактивным.
+ * `<summary>` — это кнопка: нативные контролы видео внутри неё ловили бы клик
+ * на себя и одновременно сворачивали карточку. Полное демо поэтому уходит
+ * ссылкой в раскрытую часть — тем более что `proof.video` по схеме внешний URL
+ * (может быть YouTube), который плеером не встроить в принципе.
  */
-import type { CollectionEntry } from "astro:content";
+import { render, type CollectionEntry } from "astro:content";
+import ProofLinks from "./ProofLinks.astro";
 import StatusBadge from "./StatusBadge.astro";
 import VideoFrame from "./VideoFrame.astro";
-import { link, type Locale } from "../i18n/ui";
+import { useTranslations, type Locale } from "../i18n/ui";
 
 interface Props {
   entry: CollectionEntry<"ru"> | CollectionEntry<"en">;
   locale: Locale;
-  wide?: boolean;
 }
-const { entry, locale, wide = false } = Astro.props;
+const { entry, locale } = Astro.props;
+const t = useTranslations(locale);
+const { Content } = await render(entry);
 const d = entry.data;
+
+/*
+ * Плеер встраивается только для СВОЕГО файла.
+ *
+ * Внешняя ссылка (YouTube, Vimeo) в `<video>` не играет — там нужен их плеер в
+ * `<iframe>`, а это чужой скрипт, куки и вес на каждой карточке. Для неё
+ * остаётся обычная ссылка в пруфах: поведение выбирается по содержимому
+ * frontmatter, а не отдельным флагом, который забудут переставить.
+ */
+const OWN_VIDEO = /^\/.+\.(mp4|webm|ogv)$/i;
+const demo =
+  d.proof.video && OWN_VIDEO.test(d.proof.video) ? d.proof.video : null;
+// Плеер уже в карточке — пункт «Смотреть демо» рядом с ним был бы ссылкой на
+// то, что и так на экране.
+const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
 ---
 
-<a
-  class:list={["card", "glass", { wide }]}
-  href={link(`/projects/${entry.id}/`, locale)}
->
-  <span class="body">
-    <span class="lead">
-      <span class="metric">{d.metric}</span>
-      <StatusBadge status={d.status} locale={locale} />
-    </span>
-    <span class="title">{d.title}</span>
-    <span class="one">{d.oneLiner}</span>
-    <span class="stack">{d.stack.slice(0, 5).join(" · ")}</span>
-  </span>
-  {
-    wide && (
-      <span class="media">
-        <VideoFrame
-          proof={d.proof}
-          title={d.title}
-          locale={locale}
-          variant="card"
-        />
+<!-- `data-hover-play-scope` — область, наведение на которую оживляет тизер во
+     фрейме (см. `VideoFrame`). Объявлена здесь, потому что «карточка» — это
+     понятие ЭТОГО компонента: фрейм про неё знать не должен. --><!-- `name` делает карточки взаимоисключающими СИЛАМИ БРАУЗЕРА — это запасной
+     путь для случая, когда скрипт не загрузился: аккордеон всё равно
+     аккордеон. Когда JS есть, он этот атрибут снимает (см. скрипт). -->
+<details class="card glass" id={entry.id} name="projects" data-hover-play-scope>
+  <summary class="head">
+    <span class="body">
+      <span class="lead">
+        <span class="metric">{d.metric}</span>
+        <StatusBadge status={d.status} locale={locale} />
       </span>
-    )
-  }
-</a>
+      <span class="title">{d.title}</span>
+      <span class="one">{d.oneLiner}</span>
+      <span class="stack">{d.stack.slice(0, 5).join(" · ")}</span>
+    </span>
+    <span class="media">
+      <VideoFrame proof={d.proof} />
+    </span>
+  </summary>
+
+  <div class="panel">
+    <div class="panel-inner">
+      {
+        demo && (
+          <video
+            class="demo"
+            src={demo}
+            poster={d.proof.poster}
+            controls
+            preload="none"
+            playsinline
+          />
+        )
+      }
+
+      <div class="prose"><Content /></div>
+
+      <section class="contract">
+        <h3>[✓] {t("project.contract")}</h3>
+        <p>{d.contract}</p>
+      </section>
+
+      <p class="full-stack">
+        <span class="label">{t("project.stack")}:</span>
+        {d.stack.join(" · ")}
+      </p>
+
+      <ProofLinks proof={proofLinks} locale={locale} />
+    </div>
+  </div>
+</details>
+
+<script>
+  import "../scripts/card-accordion";
+</script>
 
 <style>
+  /* Переход по якорю ставит состояние мгновенно — см. разбор в скрипте.
+     Класс живёт ровно один кадр. */
+  .card.instant,
+  .card.instant .media {
+    transition: none;
+  }
   .card {
+    /* Якорь из меню не должен приземлять карточку ПОД липкую шапку. */
+    scroll-margin-top: calc(var(--nav-h) + 1rem);
+    padding: 1.25rem;
+    color: var(--text);
+    transition:
+      margin 0.42s cubic-bezier(0.22, 0.61, 0.36, 1),
+      box-shadow 0.28s ease,
+      border-color 0.28s ease;
+  }
+  .head {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    height: 100%;
-    padding: 1.15rem;
-    text-decoration: none;
-    color: var(--text);
-    transition: transform 0.18s ease;
+    gap: 0.9rem;
+    cursor: pointer;
+    /* Штатный треугольник `<details>` убирается в двух местах: спецификация
+       и WebKit расходятся в том, чем он рисуется. */
+    list-style: none;
   }
-  .card:hover {
-    transform: translateY(-2px);
+  .head::-webkit-details-marker {
+    display: none;
+  }
+  .card:hover,
+  .card:focus-within {
+    border-color: var(--surface-border-strong);
+    box-shadow: var(--lift-shadow), var(--glass-inner);
   }
   .lead {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    justify-content: space-between;
+    gap: 0.75rem;
     flex-wrap: wrap;
   }
   .metric {
-    font-weight: 700;
-    font-size: 1.05rem;
+    font-weight: 800;
+    font-size: clamp(1.35rem, 3vw, 1.85rem);
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+    text-wrap: balance;
   }
   .body {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.45rem;
+    min-width: 0;
   }
   .title {
-    font-size: 1.15rem;
+    min-width: 0;
+    font-size: 1.2rem;
     font-weight: 700;
-    line-height: 1.25;
+    line-height: 1.2;
   }
   .one,
   .stack {
     color: var(--text-muted);
+  }
+  .one {
+    line-height: 1.5;
   }
   .stack {
     font-size: 0.85rem;
     margin-top: auto;
   }
 
-  /* Альбомная раскладка — только когда есть куда её разложить. На узком
-     экране карточка остаётся колонкой: горизонтальная на 360 px дала бы
-     горизонтальный скролл, а его сторожит пример B7. */
   /* Фрейм под видео. На узком экране он идёт НАД текстом во всю ширину:
      класть его сбоку на 360 px значило бы получить горизонтальный скролл,
      который сторожит пример B7. */
@@ -102,36 +185,139 @@ const d = entry.data;
     display: block;
     width: 100%;
     order: -1;
+    transition: width 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .media :global(.frame) {
+    transition:
+      transform 0.32s ease,
+      box-shadow 0.32s ease,
+      border-color 0.32s ease;
+  }
+  .card:hover .media :global(.frame),
+  .card:focus-within .media :global(.frame) {
+    transform: translate3d(4px, -2px, 0) scale(1.015);
+    box-shadow: var(--lift-shadow-media), var(--glass-inner);
   }
 
+  /* --- раскрытая часть --- */
+  /* `overflow: hidden` здесь не косметика: по нему анимируется высота, и без
+     него содержимое вылезало бы поверх соседней карточки во время движения. */
+  .panel {
+    overflow: hidden;
+  }
+  .panel-inner {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--surface-border-soft);
+  }
+  /* Соотношение задано ДО загрузки файла: панель раскрывается анимацией по
+     `scrollHeight`, и плеер без заранее известной высоты сбивал бы замер. */
+  .demo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin: 0 0 1.25rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--preview-frame-border);
+    background: var(--video-bg);
+    box-shadow: var(--preview-frame-shadow);
+  }
+  .prose :global(p) {
+    margin: 0 0 0.75rem;
+  }
+  .prose :global(ul) {
+    margin: 0 0 0.75rem;
+    padding-inline-start: 1.1rem;
+  }
+  .prose :global(li) {
+    margin-bottom: 0.3rem;
+  }
+  .contract {
+    margin: 1.25rem 0;
+    padding: 0.9rem 1.1rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface-soft);
+    border: 1px solid var(--surface-border-soft);
+  }
+  .contract h3 {
+    font-size: 1rem;
+    margin: 0 0 0.3rem;
+  }
+  .contract p {
+    margin: 0;
+    color: var(--text-muted);
+  }
+  .full-stack {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .full-stack .label {
+    font-weight: 600;
+  }
+  .more {
+    margin: 0.75rem 0 0;
+    font-weight: 600;
+  }
+
+  /* Альбомная раскладка — только когда есть куда её разложить. Ниже 46rem
+     карточка остаётся колонкой: горизонтальная на 360 px дала бы
+     горизонтальный скролл, а его сторожит пример B7. */
   @media (min-width: 46rem) {
-    .card.wide {
+    .head {
       flex-direction: row;
       align-items: stretch;
-      gap: 1.75rem;
-      padding: 1.5rem 1.6rem;
-      /* Выше по вертикали — просьба владельца 15.08. Не фиксированная высота:
-         `min-height` растёт под длинный one-liner и не режет текст. */
-      min-height: 13rem;
+      gap: 1.9rem;
     }
-    .card.wide .body {
+    .card {
+      padding: 1.55rem 1.7rem;
+    }
+    .head .body {
       flex: 1 1 auto;
       justify-content: center;
-      gap: 0.5rem;
+      gap: 0.6rem;
+      /* Высота живёт ЗДЕСЬ, а не на карточке: на `<details>` она прибавилась бы
+         к раскрытой панели и оставляла бы под ней пустоту. */
+      min-height: 11.5rem;
     }
-    .card.wide .metric {
-      font-size: 1.6rem;
-      line-height: 1.1;
+    .metric {
+      font-size: clamp(1.9rem, 2.3vw, 2.5rem);
+      max-width: 17ch;
     }
-    .card.wide .stack {
-      margin-top: 0.4rem;
+    .title {
+      font-size: 1.3rem;
     }
-    .card.wide .media {
+    .stack {
+      margin-top: 0.5rem;
+    }
+    .media {
       order: 0;
       flex: 0 0 auto;
-      width: clamp(13rem, 26%, 19rem);
+      width: clamp(14.5rem, 28%, 20.5rem);
       display: flex;
       align-items: center;
+    }
+    /* Раскрыли — фрейм становится главным: смотреть теперь важнее, чем читать
+       строку витрины. */
+    .card[open] .media {
+      width: clamp(18rem, 38%, 27rem);
+    }
+  }
+
+  /*
+   * ⚠ Выход за поля колонки — только здесь и не раньше.
+   *
+   * Карточка и так во всю ширину `--measure-wide` (68rem), «шире» ей расти
+   * некуда: любое расширение — это выход за контейнер, то есть кандидат в
+   * горизонтальный скролл (пример B7). Порог 76rem подобран так, чтобы запас
+   * был гарантирован: 68rem колонки плюс 2×1.5rem выхода = 71rem, и до 76rem
+   * остаётся ещё пять на полосу прокрутки и поля окна. Ниже порога карточка
+   * при раскрытии просто не двигается по горизонтали — и это правильнее, чем
+   * отъехать за край экрана.
+   */
+  @media (min-width: 76rem) {
+    .card[open] {
+      margin-inline: -1.5rem;
     }
   }
 </style>

@@ -21,11 +21,36 @@ const CSS = readFileSync(
   "utf8",
 );
 
-/** Значение CSS-переменной из tokens.css. Источник правды один — файл. */
-function token(name) {
-  const m = CSS.match(new RegExp(`--${name}:\\s*([^;]+);`));
-  assert.ok(m, `в tokens.css нет переменной --${name}`);
-  return m[1].trim();
+/** Блок объявлений по селектору. Источник правды один — файл. */
+function block(selector) {
+  const start = CSS.indexOf(selector);
+  assert.ok(start >= 0, `в tokens.css нет блока ${selector}`);
+  const open = CSS.indexOf("{", start);
+  const close = CSS.indexOf("\n}", open);
+  assert.ok(open >= 0 && close > open, `блок ${selector} не закрыт`);
+  return CSS.slice(open, close);
+}
+
+const BLOCKS = {
+  light: block(":root"),
+  dark: block('html[data-theme="dark"]'),
+};
+export const THEMES = Object.keys(BLOCKS);
+
+/**
+ * Значение переменной В ТЕМЕ.
+ *
+ * ⚠ Тёмная тема переопределяет НЕ ВСЮ палитру — чего она не тронула,
+ * наследуется из `:root` ровно так же, как в браузере. Без этого наследования
+ * проверка тёмной темы шла бы по половине цветов и молча пропускала вторую.
+ */
+function token(name, theme = "light") {
+  const re = new RegExp(`--${name}:\\s*([^;]+);`);
+  const own = BLOCKS[theme].match(re);
+  if (own) return own[1].trim();
+  const base = BLOCKS.light.match(re);
+  assert.ok(base, `в tokens.css нет переменной --${name}`);
+  return base[1].trim();
 }
 
 /**
@@ -104,48 +129,109 @@ function contrast(a, b) {
 }
 
 const AA = 4.5;
-// Светлейшая остановка градиента: худший случай для тёмного текста.
-const worstBg = parseColor(token("bg-lightest"));
-const glass = composite(parseColor(token("glass-bg")), worstBg);
-const glassStrong = composite(parseColor(token("glass-bg-strong")), worstBg);
 
-const pairs = [
-  ["text на стекле", token("text"), glass],
-  ["text-muted на стекле", token("text-muted"), glass],
-  ["accent на стекле (ссылки)", token("accent"), glass],
-  ["text на плотном стекле", token("text"), glassStrong],
-  ["text прямо на градиенте", token("text"), worstBg],
-  ["status-production на стекле", token("status-production"), glass],
-  ["status-local-demo на стекле", token("status-local-demo"), glass],
-  ["status-poc на стекле", token("status-poc"), glass],
-];
+/*
+ * ⚠ Перебираются ОБЕ темы, и это не «заодно проверим тёмную».
+ * Пока здесь читался только `:root`, тёмная тема была вне проверки целиком:
+ * она переворачивает акцент в светлый, а `--text-on-accent` оставался белым —
+ * кнопки CTA («Запросить резюме», «Смотреть демо») держали 1.68:1, и сборка
+ * при этом была зелёной. Тест видел ровно ту половину палитры, где всё хорошо.
+ */
+for (const theme of THEMES) {
+  const tk = (name) => token(name, theme);
 
-for (const [name, fg, bg] of pairs) {
-  test(`контраст: ${name} >= ${AA}:1`, () => {
-    const ratio = contrast(parseColor(fg), bg);
+  // Самая СВЕТЛАЯ точка холста — худший случай в обеих темах, но по разным
+  // причинам: в светлой на ней тонет тёмный текст, в тёмной — светлый.
+  const worstBg = parseColor(tk("bg-lightest"));
+  const glass = composite(parseColor(tk("glass-bg")), worstBg);
+  const glassStrong = composite(parseColor(tk("glass-bg-strong")), worstBg);
+  // Бейдж статуса непрозрачен нарочно, поэтому считается от своей заливки,
+  // а не от стекла (см. StatusBadge).
+  const badge = parseColor(tk("badge-bg"));
+
+  /*
+   * ⚠ Худший фон — не сам холст, а холст С ЛИНИЕЙ УЗОРА поверх.
+   *
+   * Узор ослаблен маской там, где читают, но у НИЖНЕГО края он в полную силу —
+   * а внизу лежит подвал, и его текст сидит прямо на холсте, без осветляющего
+   * стекла. Линия редкой сетки вполне может пройти под строкой контактов.
+   * В тёмной теме она светлая, то есть подтягивает фон к цвету текста, и
+   * именно там запас съедается.
+   *
+   * Альфа линии умножается на `--tech-pattern-opacity`: слой целиком приглушён
+   * этим свойством, и считать линию по её собственной прозрачности значило бы
+   * завышать её вклад.
+   */
+  const patternAlpha = Number(tk("tech-pattern-opacity"));
+  assert.ok(
+    Number.isFinite(patternAlpha),
+    "--tech-pattern-opacity не число — расчёт узора считал бы мусор",
+  );
+  const line = parseColor(tk("tech-line-strong"));
+  const onLine = composite(
+    { ...line, a: line.a * patternAlpha },
+    worstBg,
+  );
+
+  const pairs = [
+    ["text на стекле", tk("text"), glass],
+    ["text-muted на стекле", tk("text-muted"), glass],
+    ["accent на стекле (ссылки)", tk("accent"), glass],
+    ["text на плотном стекле", tk("text"), glassStrong],
+    ["text прямо на градиенте", tk("text"), worstBg],
+    // ⚠ Подвал лежит на ХОЛСТЕ, а не на стекле, и это единственное место, где
+    // приглушённый текст остаётся без осветляющей подложки. Пары не было —
+    // проверялся только `text-muted` поверх стекла, то есть заведомо более
+    // лёгкий случай.
+    ["text-muted прямо на градиенте (подвал)", tk("text-muted"), worstBg],
+    ["text-muted на линии узора (подвал)", tk("text-muted"), onLine],
+    ["text на линии узора", tk("text"), onLine],
+    ["status-production на стекле", tk("status-production"), glass],
+    ["status-local-demo на стекле", tk("status-local-demo"), glass],
+    ["status-poc на стекле", tk("status-poc"), glass],
+    ["status-production на бейдже", tk("status-production"), badge],
+    ["status-local-demo на бейдже", tk("status-local-demo"), badge],
+    ["status-poc на бейдже", tk("status-poc"), badge],
+  ];
+
+  for (const [name, fg, bg] of pairs) {
+    test(`контраст (${theme}): ${name} >= ${AA}:1`, () => {
+      const ratio = contrast(parseColor(fg), bg);
+      assert.ok(
+        ratio >= AA,
+        `${name} [${theme}]: ${ratio.toFixed(2)}:1 — ниже порога ${AA}:1. ` +
+          `Правь токены в src/styles/tokens.css, а не подгоняй порог.`,
+      );
+    });
+  }
+
+  test(`контраст (${theme}): текст на акценте держит порог (кнопки CTA)`, () => {
+    const ratio = contrast(parseColor(tk("text-on-accent")), parseColor(tk("accent")));
     assert.ok(
       ratio >= AA,
-      `${name}: ${ratio.toFixed(2)}:1 — ниже порога ${AA}:1. ` +
-        `Правь токены в src/styles/tokens.css, а не подгоняй порог.`,
+      `text-on-accent на accent [${theme}]: ${ratio.toFixed(2)}:1. ` +
+        `Акцент и текст на нём переворачиваются ВМЕСТЕ: светлый акцент ` +
+        `тёмной темы требует тёмного текста, а не унаследованного белого.`,
+    );
+  });
+
+  test(`инвариант (${theme}): стекло уводит фон ОТ цвета текста`, () => {
+    // Метаморфное отношение, и оно шире прежнего «стекло светлее градиента»:
+    // то было верно только для светлой темы, в тёмной плёнка ЗАТЕМНЯЕТ. Смысл
+    // же один в обеих — поверх стекла текст обязан читаться не хуже, чем прямо
+    // на холсте. Перестанет быть так — значит --glass-bg поехал в сторону
+    // текста, и все расчёты выше считают не то, что видно на экране.
+    const text = parseColor(tk("text"));
+    assert.ok(
+      contrast(text, glass) >= contrast(text, worstBg),
+      `[${theme}] стекло ухудшает читаемость вместо того, чтобы улучшать`,
+    );
+    assert.ok(
+      contrast(text, glassStrong) >= contrast(text, glass),
+      `[${theme}] плотное стекло контрастнее обычного не стало`,
     );
   });
 }
-
-test("белый текст на акценте держит порог (кнопки CTA)", () => {
-  const ratio = contrast(
-    parseColor(token("text-on-accent")),
-    parseColor(token("accent")),
-  );
-  assert.ok(ratio >= AA, `text-on-accent на accent: ${ratio.toFixed(2)}:1`);
-});
-
-test("инвариант: стекло не делает фон ТЕМНЕЕ градиента", () => {
-  // Метаморфное отношение: белая полупрозрачная плёнка обязана осветлять.
-  // Если однажды окажется иначе — значит --glass-bg перестал быть белым, и
-  // все расчёты выше молча считают не то, что на экране.
-  assert.ok(luminance(glass) >= luminance(worstBg));
-  assert.ok(luminance(glassStrong) >= luminance(glass));
-});
 
 test("конвертер oklch верен — проверка на контрольных цветах", () => {
   // Без этой проверки весь файл выше считает неизвестно что. Эталоны —

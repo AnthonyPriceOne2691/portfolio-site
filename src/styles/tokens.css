@@ -25,24 +25,101 @@
   --canvas-base-2: oklch(91% 0.04 255);
 
   /* Светлейшая точка холста — с ней сравнивается ВЕСЬ текст поверх стекла.
-     Не среднее: провалится угол, а не середина экрана. */
-  --bg-lightest: oklch(94% 0.03 285);
+     Берём с запасом ярче реального, потому что поверх пятен теперь плавает
+     ещё и мягкое свечение. Лучше считать строже, чем однажды проморгать угол. */
+  --bg-lightest: oklch(95% 0.03 285);
 
   /* --- стекло --- */
-  /* 0.55 — заметно прозрачнее прежних 0.72: владелец просил «жиже». Цена
-     названа и проверена тестом: на такой заливке текст обязан быть темнее,
-     поэтому `--text` ушёл в oklch(24%). */
-  --glass-bg: rgb(255 255 255 / 0.55);
-  --glass-bg-strong: rgb(255 255 255 / 0.72);
-  --glass-bg-quiet: rgb(255 255 255 / 0.32);
-  --glass-border: rgb(255 255 255 / 0.7);
+  /* Стекло стало «жиже» не только прозрачностью, но и слоёностью: отдельно
+     заливка, отдельно блик, отдельно холодный фиолетовый отлив. Иначе блоки
+     читались бы как полупрозрачные карточки, а не как налитое стекло. */
+  --glass-bg: rgb(255 255 255 / 0.52);
+  --glass-bg-strong: rgb(255 255 255 / 0.74);
+  --glass-bg-quiet: rgb(255 255 255 / 0.28);
+  --glass-border: rgb(255 255 255 / 0.78);
+  --glass-edge: rgb(255 255 255 / 0.94);
+  --glass-highlight: rgb(255 255 255 / 0.52);
+  --glass-tint: rgb(107 91 214 / 0.08);
+  --glass-layer-1: rgb(255 255 255 / 0.74);
+  --glass-layer-2: rgb(255 255 255 / 0.42);
+  --glass-layer-3: rgb(255 255 255 / 0.24);
+  --glass-sheen-1: rgb(255 255 255 / 0.34);
+  --glass-sheen-2: rgb(255 255 255 / 0.12);
+  --glass-overlay-border: rgb(255 255 255 / 0.18);
+  --glass-overlay-end: rgb(107 91 214 / 0.04);
+  --glass-fallback-1: rgb(255 255 255 / 0.88);
+  --glass-fallback-2: rgb(255 255 255 / 0.78);
+  --glass-fallback-3: rgb(255 255 255 / 0.72);
   --glass-shadow:
-    0 24px 60px -28px rgb(30 25 60 / 0.28), 0 2px 8px -4px rgb(30 25 60 / 0.1),
-    0 0 0 0.5px rgb(30 25 60 / 0.07);
-  /* Внутренний блик по верхней кромке — то, что делает стекло «налитым», а не
-     просто полупрозрачным прямоугольником. Приём из первоисточника. */
-  --glass-inner: inset 0 1px 0 0 rgb(255 255 255 / 0.9);
+    0 26px 72px -36px rgb(35 28 78 / 0.24),
+    0 8px 20px -16px rgb(35 28 78 / 0.12), 0 0 0 0.5px rgb(255 255 255 / 0.18);
+  /* Внутренний блик по верхней кромке и нижняя линза дают ощущение объёма:
+     без них «liquid» не читается, остаётся просто матовое стекло. */
+  --glass-inner:
+    inset 0 1px 0 0 var(--glass-edge),
+    inset 0 18px 24px -22px rgb(255 255 255 / 0.8),
+    inset 0 -24px 34px -30px rgb(107 91 214 / 0.08);
   --glass-blur: 32px;
+
+  /* --- поверхности и кнопки --- */
+  --surface-soft: rgb(255 255 255 / 0.24);
+  --surface-mid: rgb(255 255 255 / 0.38);
+  --surface-strong: rgb(255 255 255 / 0.5);
+  --surface-border-soft: rgb(255 255 255 / 0.42);
+  --surface-border: rgb(255 255 255 / 0.58);
+  --surface-border-strong: rgb(255 255 255 / 0.7);
+  --preview-frame-bg: rgb(255 255 255 / 0.18);
+  --preview-frame-border: rgb(255 255 255 / 0.34);
+  --preview-frame-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.48),
+    0 18px 36px -30px rgb(35 28 78 / 0.16);
+
+  /* --- органы управления: кнопки темы/языка, «назад», бейдж --- */
+  /* Отдельно от `--surface-*`, потому что это не подложка блока, а элемент,
+     который живёт ПОВЕРХ стекла и должен читаться на нём в обеих темах. */
+  --control-bg: rgb(255 255 255 / 0.44);
+  --control-bg-quiet: rgb(255 255 255 / 0.22);
+  --control-border: rgb(255 255 255 / 0.56);
+  --control-border-quiet: rgb(255 255 255 / 0.42);
+  --control-active-bg: rgb(107 91 214 / 0.1);
+  /* Бейдж статуса непрозрачен нарочно (см. StatusBadge): цветной текст на
+     полупрозрачном стекле не добирает 4.5:1. */
+  --badge-bg: #ffffff;
+  --rule: rgb(38 30 82 / 0.22);
+  /* Подложка плеера. Одинакова в обеих темах НАМЕРЕННО: это леттербокс по
+     краям кадра, и он должен быть темнее видео, а не светлее интерфейса. */
+  --video-bg: oklch(14% 0.015 265);
+  /* Замена стеклу там, где блюр выключен: `prefers-reduced-transparency` и
+     `@supports not (backdrop-filter)`. В тёмной теме белый был бы вспышкой. */
+  --glass-opaque: #ffffff;
+  --glass-sheen-top: rgb(255 255 255 / 0.28);
+  --glass-overlay-top: rgb(255 255 255 / 0.08);
+
+  /* --- подъём на hover: тень карточки и её медиа-фрейма --- */
+  --lift-shadow:
+    0 30px 72px -42px rgb(35 28 78 / 0.24),
+    0 12px 24px -18px rgb(35 28 78 / 0.12);
+  --lift-shadow-media:
+    0 24px 48px -30px rgb(35 28 78 / 0.34),
+    0 8px 20px -18px rgb(35 28 78 / 0.18);
+  /* Затемнение по низу видео-фрейма: под ним пойдёт постер, и подпись поверх
+     светлого кадра иначе теряется. */
+  --frame-veil: rgb(20 16 44 / 0.28);
+
+  /* --- техно-узор холста --- */
+  /* ⚠ В светлой теме линии ТЁМНЫЕ, а не белые. Белым по светлому холсту узор
+     не рисуется, а выцветает: он был технически на месте и практически
+     невидим. Чертёж читается тушью по бумаге, а не бумагой по бумаге. */
+  --canvas-core-glow: rgb(255 255 255 / 0.18);
+  --tech-line: rgb(38 30 82 / 0.045); /* частая сетка, 24px */
+  --tech-line-strong: rgb(38 30 82 / 0.085); /* редкая сетка, 96px */
+  --tech-dot: rgb(107 91 214 / 0.3); /* узлы на пересечениях */
+  --tech-glow-1: rgb(255 255 255 / 0.24);
+  --tech-glow-2: rgb(107 91 214 / 0.1);
+  --tech-glow-3: rgb(97 196 255 / 0.08);
+  --tech-glow-4: rgb(255 171 217 / 0.08);
+  --tech-pattern-opacity: 0.9;
+  --tech-glow-opacity: 0.26;
 
   /* --- текст --- */
   --text: oklch(24% 0.03 285);
@@ -61,6 +138,7 @@
   --status-production: oklch(44% 0.13 165);
   --status-local-demo: oklch(42% 0.17 285);
   --status-poc: oklch(48% 0.13 75);
+  --color-scheme: light;
 
   /* --- размеры --- */
   --radius: 1.25rem;
@@ -73,88 +151,94 @@
   --measure-wide: 68rem;
 }
 
-/*
- * Холст. Пятна дают «абстрактный узор» без единой картинки: четыре радиальных
- * градиента складываются в неповторяющееся пятно света, а не в плитку.
- * `fixed` — чтобы при скролле не ехали швы на длинных страницах.
- */
-body {
-  background:
-    radial-gradient(90% 90% at 10% 0%, var(--canvas-1) 0%, transparent 60%),
-    radial-gradient(80% 80% at 95% 5%, var(--canvas-2) 0%, transparent 55%),
-    radial-gradient(100% 100% at 70% 100%, var(--canvas-3) 0%, transparent 60%),
-    radial-gradient(70% 70% at 25% 95%, var(--canvas-4) 0%, transparent 55%),
-    linear-gradient(160deg, var(--canvas-base-1) 0%, var(--canvas-base-2) 100%);
-  background-attachment: fixed;
-  color: var(--text);
-}
-
-/*
- * Узор поверх холста: сетка едва различимых точек. Инлайновым SVG, а не
- * файлом, — вес: ~300 байт против запроса и картинки, бюджет страницы (B10)
- * не двигается. В `::before` с `fixed` — узор не должен скроллиться вместе с
- * текстом, иначе рябит в глазах.
- */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.5;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23ffffff' fill-opacity='.55'/%3E%3Ccircle cx='18' cy='18' r='.8' fill='%236b5bd6' fill-opacity='.12'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-}
-
-.glass {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  box-shadow: var(--glass-shadow), var(--glass-inner);
-  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
-}
-
-/*
- * ⚠ Префиксное свойство живёт в ОТДЕЛЬНОМ блоке, и это не стиль, а обход
- * минификатора. В одном правиле он считает `backdrop-filter` и
- * `-webkit-backdrop-filter` дублем и оставляет ровно одно: сначала в сборке
- * пропадало стандартное (в Firefox не было бы блюра), после перестановки —
- * префиксное (не было бы в Safari до 18). Разные блоки схлопнуть нельзя.
- * Поймал headless-тест B6, а не глаз: локально в Safari всё выглядело верно.
- */
-@supports (-webkit-backdrop-filter: blur(1px)) {
-  .glass {
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
-  }
-}
-
-/*
- * Деградация стекла. Две причины, обе названы в design §7.1.2:
- *  1) `prefers-reduced-transparency` — прямая просьба пользователя;
- *  2) `backdrop-filter` дорог: на слабых Android он просаживает скролл, и это
- *     ровно то «зависание», которое владелец приписывал числу посетителей.
- * Замена — непрозрачная заливка. Выглядит почти так же, стоит ноль.
- */
-@media (prefers-reduced-transparency: reduce) {
-  .glass {
-    background: #ffffff;
-    backdrop-filter: none;
-  }
-  body::before {
-    display: none;
-  }
-}
-
-@supports (-webkit-backdrop-filter: blur(1px)) {
-  @media (prefers-reduced-transparency: reduce) {
-    .glass {
-      -webkit-backdrop-filter: none;
-    }
-  }
-}
-
-@supports not (backdrop-filter: blur(1px)) {
-  .glass {
-    background: var(--glass-bg-strong);
-  }
+html[data-theme="dark"] {
+  --canvas-1: oklch(30% 0.07 285);
+  --canvas-2: oklch(34% 0.06 235);
+  --canvas-3: oklch(28% 0.06 320);
+  --canvas-4: oklch(24% 0.04 220);
+  --canvas-base-1: oklch(17% 0.025 270);
+  --canvas-base-2: oklch(12% 0.02 240);
+  /* Тот же смысл, что и в светлой теме, но худший случай здесь — самая
+     СВЕТЛАЯ точка холста: текст-то теперь светлый, и проваливается он ровно
+     там, где фон подсвечен пятном. Берём с запасом ярче реального. */
+  --bg-lightest: oklch(38% 0.06 240);
+  --glass-bg: rgb(18 24 41 / 0.48);
+  --glass-bg-strong: rgb(20 27 46 / 0.78);
+  --glass-bg-quiet: rgb(16 22 38 / 0.28);
+  --glass-border: rgb(185 208 255 / 0.18);
+  --glass-edge: rgb(228 236 255 / 0.16);
+  --glass-highlight: rgb(175 205 255 / 0.16);
+  --glass-tint: rgb(111 144 255 / 0.16);
+  --glass-layer-1: rgb(36 48 78 / 0.54);
+  --glass-layer-2: rgb(18 24 41 / 0.42);
+  --glass-layer-3: rgb(11 15 28 / 0.24);
+  --glass-sheen-1: rgb(185 208 255 / 0.12);
+  --glass-sheen-2: rgb(255 255 255 / 0.04);
+  --glass-overlay-border: rgb(185 208 255 / 0.12);
+  --glass-overlay-end: rgb(111 144 255 / 0.09);
+  --glass-fallback-1: rgb(27 36 61 / 0.94);
+  --glass-fallback-2: rgb(22 30 52 / 0.9);
+  --glass-fallback-3: rgb(18 24 41 / 0.88);
+  --glass-shadow:
+    0 28px 72px -36px rgb(4 7 16 / 0.64), 0 12px 24px -18px rgb(4 7 16 / 0.4),
+    0 0 0 0.5px rgb(175 205 255 / 0.14);
+  --glass-inner:
+    inset 0 1px 0 0 var(--glass-edge),
+    inset 0 16px 24px -22px rgb(185 208 255 / 0.08),
+    inset 0 -28px 40px -34px rgb(111 144 255 / 0.14);
+  --surface-soft: rgb(16 22 38 / 0.32);
+  --surface-mid: rgb(22 30 52 / 0.44);
+  --surface-strong: rgb(28 38 64 / 0.58);
+  --surface-border-soft: rgb(185 208 255 / 0.14);
+  --surface-border: rgb(185 208 255 / 0.2);
+  --surface-border-strong: rgb(205 223 255 / 0.24);
+  --preview-frame-bg: rgb(14 20 34 / 0.34);
+  --preview-frame-border: rgb(185 208 255 / 0.14);
+  --preview-frame-shadow:
+    inset 0 1px 0 rgb(205 223 255 / 0.14), 0 20px 40px -28px rgb(4 7 16 / 0.46);
+  --control-bg: rgb(36 48 78 / 0.52);
+  --control-bg-quiet: rgb(24 32 54 / 0.38);
+  --control-border: rgb(185 208 255 / 0.2);
+  --control-border-quiet: rgb(185 208 255 / 0.14);
+  --control-active-bg: rgb(111 144 255 / 0.18);
+  --badge-bg: oklch(19% 0.025 265);
+  --rule: rgb(176 206 255 / 0.26);
+  --video-bg: oklch(11% 0.012 260);
+  --glass-opaque: oklch(16% 0.02 262);
+  --glass-sheen-top: rgb(185 208 255 / 0.1);
+  --glass-overlay-top: rgb(185 208 255 / 0.05);
+  --lift-shadow:
+    0 30px 72px -42px rgb(4 7 16 / 0.72), 0 12px 24px -18px rgb(4 7 16 / 0.46);
+  --lift-shadow-media:
+    0 24px 48px -30px rgb(4 7 16 / 0.7), 0 8px 20px -18px rgb(4 7 16 / 0.5);
+  --frame-veil: rgb(4 7 16 / 0.44);
+  --canvas-core-glow: rgb(111 144 255 / 0.12);
+  --tech-line: rgb(176 206 255 / 0.05);
+  --tech-line-strong: rgb(176 206 255 / 0.085);
+  --tech-dot: rgb(138 178 255 / 0.34);
+  --tech-glow-1: rgb(111 144 255 / 0.12);
+  --tech-glow-2: rgb(121 168 255 / 0.14);
+  --tech-glow-3: rgb(84 216 255 / 0.08);
+  --tech-glow-4: rgb(176 139 255 / 0.1);
+  --tech-pattern-opacity: 0.9;
+  --tech-glow-opacity: 0.3;
+  --text: oklch(92% 0.015 265);
+  /* ⚠ Светлее, чем «зеркальный» аналог светлой темы, и не ради вкуса.
+     Приглушённый текст подвала лежит ПРЯМО НА ХОЛСТЕ, без осветляющего стекла,
+     да ещё и там, где узор в полную силу: светлая линия сетки подтягивает фон
+     к цвету текста. На 77% пара давала 4.07:1 — ниже AA, и заметил это не
+     глаз, а тест B9 после того, как узор стал видимым. */
+  --text-muted: oklch(81% 0.02 265);
+  /* ⚠ Переворачивается вместе с акцентом, иначе получается белое по светло-
+     голубому — 1.7:1 на кнопках CTA («Запросить резюме», «Смотреть демо»).
+     В тёмной теме акцент СВЕТЛЫЙ, значит текст на нём обязан быть тёмным. */
+  --text-on-accent: oklch(18% 0.025 265);
+  --accent: oklch(83% 0.09 250);
+  --accent-hover: oklch(88% 0.08 250);
+  --accent-tint: oklch(72% 0.08 250);
+  --focus-ring: oklch(83% 0.09 250);
+  --status-production: oklch(83% 0.09 165);
+  --status-local-demo: oklch(80% 0.11 275);
+  --status-poc: oklch(86% 0.1 90);
+  --color-scheme: dark;
 }

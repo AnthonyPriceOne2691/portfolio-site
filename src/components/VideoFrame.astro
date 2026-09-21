@@ -1,123 +1,157 @@
 ---
 /**
- * Фрейм демо-видео на первом экране страницы проекта (design v0.8 §6.1).
+ * Фрейм демо-видео в карточке проекта (design v0.8 §6.1).
  *
  * ⚠ Съёмки ещё нет — и это не повод откладывать место под неё. Раскладка
  * закладывается сейчас, чтобы появление файла было ПОДСТАНОВКОЙ, а не
- * переделкой страницы.
+ * переделкой карточки. Пустой дыры при этом не возникает (пример B3): без
+ * медиа фрейм показывает заглушку, а не битый элемент.
  *
- * Три состояния, и ни одно из них не «пустая дыра» (пример B3):
- *  1) есть тизер — беззвучный луп с постером;
- *  2) есть только постер или полное видео — статичная обложка с кнопкой;
- *  3) нет ничего — секция НЕ рендерится вовсе.
+ * Тизер играет ТОЛЬКО под курсором (или при раскрытой карточке). Дизайн §6.1
+ * запрещал медиа на Home — запрет был по делу: четыре автоплея на первом экране
+ * это вес и батарея. Владелец попросил сначала фрейм, потом воспроизведение;
+ * запрет снят не целиком, а заменён на условие. С `preload="none"` это ДЕШЕВЛЕ
+ * прежнего автоплея: пока карточку не тронули, с диска не качается ни байта.
  *
- * Ленивость обязательна, и не ради красоты: `preload="none"` плюс подгрузка по
- * приближению к экрану — это то, что отделяет «страницу с четырьмя автоплеями»
- * от страницы, которая открывается на мобильном интернете. Именно вес, а не
- * число посетителей, и был настоящим риском «зависания».
+ * ⚠ Фрейм обязан остаться НЕИНТЕРАКТИВНЫМ. Он живёт внутри `<summary>`, а это
+ * кнопка: нативные контролы видео ловили бы клик на себя и одновременно
+ * сворачивали карточку. Полное демо поэтому уходит ссылкой в раскрытую часть
+ * (`ProofLinks`) — тем более что `proof.video` по схеме внешний URL, который
+ * плеером не встроить в принципе.
  *
  * Версии видео по языкам разводятся сами: RU-файл проекта несёт RU-ссылку,
  * EN-файл — EN. Никакой логики выбора здесь нет и не нужно.
  */
-import { useTranslations, type Locale } from "../i18n/ui";
-
 interface Props {
   proof: { teaser?: string; poster?: string; video?: string };
-  title: string;
-  locale: Locale;
-  /**
-   * `card` — маленький фрейм в карточке на главной. Отличается не только
-   * размером: там НЕ играет ничего. Дизайн §6.1 запрещал медиа на Home
-   * («карточки статичные»), и запрет был по делу — четыре плеера на первом
-   * экране это вес и батарея. Владелец попросил фрейм 15.08; компромисс —
-   * фрейм есть, движения нет, полное видео живёт на странице проекта.
-   */
-  variant?: "page" | "card";
 }
-const { proof, title, locale, variant = "page" } = Astro.props;
-const t = useTranslations(locale);
-const isCard = variant === "card";
-// В карточке фрейм рисуется ВСЕГДА: он держит раскладку, пока съёмки нет.
-// На странице проекта пустой блок был бы дырой (пример B3), поэтому там
-// секция не рендерится без медиа.
-const hasFrame = isCard || Boolean(proof.teaser || proof.poster || proof.video);
+const { proof } = Astro.props;
 ---
 
-{
-  hasFrame && (
-    <figure class:list={["frame", "glass", { card: isCard }]}>
-      {proof.teaser && !isCard ? (
-        <video
-          class="teaser"
-          poster={proof.poster}
-          preload="none"
-          muted
-          loop
-          playsinline
-          aria-label={title}
-          data-src={proof.teaser}
-        />
-      ) : (
-        <div
-          class="poster"
-          style={proof.poster ? `background-image:url(${proof.poster})` : ""}
-        />
-      )}
-      {proof.video && !isCard && (
-        <a class="play" href={proof.video}>
-          ▶ {t("project.video")}
-        </a>
-      )}
-      {isCard && !proof.poster && <span class="soon">▶</span>}
-    </figure>
-  )
-}
+<figure class="frame glass">
+  {
+    proof.teaser ? (
+      <video
+        class="teaser"
+        poster={proof.poster}
+        preload="none"
+        muted
+        loop
+        playsinline
+        data-src={proof.teaser}
+        data-hover-play
+        aria-hidden="true"
+      />
+    ) : (
+      <div
+        class="poster"
+        style={proof.poster ? `background-image:url(${proof.poster})` : ""}
+      />
+    )
+  }
+  {!proof.poster && !proof.teaser && <span class="soon">▶</span>}
+</figure>
 
 <script>
-  // Тизер начинает грузиться только у экрана и останавливается, когда ушёл:
-  // иначе четыре страницы проектов в фоне жгут батарею и трафик.
-  const frames = document.querySelectorAll<HTMLVideoElement>("video.teaser");
-  if (frames.length && "IntersectionObserver" in window) {
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        const v = e.target as HTMLVideoElement;
-        if (e.isIntersecting) {
-          if (!v.src && v.dataset.src) v.src = v.dataset.src;
-          if (!reduced) void v.play().catch(() => {});
-        } else {
-          v.pause();
-        }
-      }
-    });
-    frames.forEach((v) => io.observe(v));
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  for (const v of document.querySelectorAll<HTMLVideoElement>(
+    "video[data-hover-play]",
+  )) {
+    // Реагирует ВСЯ карточка, а не один фрейм: курсор идёт к заголовку, и
+    // требовать попадания в маленькое видео сбоку значило бы, что эффекта
+    // почти никто не увидит. Область объявлена разметкой (`ProjectCard`), а не
+    // угадана через `closest("details")`: иначе перенос фрейма в другой
+    // контейнер тихо отключал бы воспроизведение.
+    const scope = v.closest("[data-hover-play-scope]") ?? v;
+    // Раскрытая карточка «прикалывает» воспроизведение: её открыли нарочно,
+    // и гасить фрейм, когда курсор ушёл на текст кейса, значит отнимать ровно
+    // то, за чем открывали.
+    const disclosure = scope instanceof HTMLDetailsElement ? scope : null;
+    const pinned = () => disclosure?.open === true;
+
+    /** Файл подставляется в последний момент — до этого `preload="none"` молчит. */
+    const play = () => {
+      if (reduced) return;
+      // В карточке идёт полное демо — тизер молчит (флаг ставит `ProjectCard`).
+      if (scope instanceof HTMLElement && scope.dataset.demoPlaying) return;
+      if (!v.src && v.dataset.src) v.src = v.dataset.src;
+      // `play()` отвергается сам по себе (политика автовоспроизведения, вкладка
+      // в фоне) — это не ошибка, и падать из-за неё нечему.
+      void v.play().catch(() => {});
+    };
+
+    const stop = () => {
+      if (pinned()) return;
+      v.pause();
+      // Назад на первый кадр: иначе при следующем наведении карточка
+      // продолжает с середины и выглядит недосмотренной.
+      try {
+        v.currentTime = 0;
+      } catch {}
+    };
+
+    scope.addEventListener("pointerenter", play);
+    scope.addEventListener("pointerleave", stop);
+    // Клавиатурный фокус равнозначен наведению: иначе эффект существует
+    // только для мыши.
+    scope.addEventListener("focusin", play);
+    scope.addEventListener("focusout", stop);
+    // Раскрыли — фрейм заводится сам, свернули — гаснет.
+    disclosure?.addEventListener("toggle", () => (pinned() ? play() : stop()));
   }
 </script>
 
 <style>
-  .frame.card {
+  .frame {
+    position: relative;
     margin: 0;
+    padding: 0;
     flex: 0 0 auto;
     width: 100%;
-    border-radius: var(--radius-sm);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    border-radius: calc(var(--radius) - 0.2rem);
+    border: 1px solid var(--preview-frame-border);
+    background: var(--preview-frame-bg);
+    box-shadow: var(--preview-frame-shadow);
   }
   .soon {
     position: absolute;
     inset: 0;
     display: grid;
     place-items: center;
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     color: var(--accent);
-    opacity: 0.55;
+    opacity: 0.8;
   }
-  .frame {
-    position: relative;
-    margin: 1.5rem 0;
-    padding: 0;
-    overflow: hidden;
-    aspect-ratio: 16 / 9;
+  .frame::before,
+  .frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .frame::before {
+    background:
+      linear-gradient(
+        145deg,
+        var(--glass-sheen-1) 0%,
+        transparent 30%,
+        transparent 66%,
+        var(--glass-sheen-2) 100%
+      ),
+      radial-gradient(
+        90% 70% at 50% 0%,
+        var(--glass-sheen-top) 0%,
+        transparent 72%
+      );
+  }
+  .frame::after {
+    inset: auto 0 0;
+    height: 42%;
+    background: linear-gradient(180deg, transparent 0%, var(--frame-veil) 100%);
   }
   .teaser,
   .poster {
@@ -125,20 +159,24 @@ const hasFrame = isCard || Boolean(proof.teaser || proof.poster || proof.video);
     width: 100%;
     height: 100%;
     object-fit: cover;
-    background: linear-gradient(135deg, var(--bg-grad-2), var(--bg-grad-3));
+    background:
+      radial-gradient(
+        120% 120% at 20% 10%,
+        var(--glass-highlight) 0%,
+        transparent 52%
+      ),
+      linear-gradient(
+        135deg,
+        var(--canvas-2),
+        var(--canvas-1) 54%,
+        var(--canvas-3)
+      );
     background-size: cover;
     background-position: center;
-  }
-  .play {
-    position: absolute;
-    inset-block-end: 0.75rem;
-    inset-inline-start: 0.75rem;
-    padding: 0.5rem 0.9rem;
-    border-radius: 999px;
-    background: var(--accent);
-    color: var(--text-on-accent);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
+    filter: saturate(1.02) contrast(1.02);
+    transform: scale(1.001);
+    transition:
+      transform 0.32s ease,
+      filter 0.32s ease;
   }
 </style>

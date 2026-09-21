@@ -3,7 +3,7 @@
     цифрами и секцией How I work приходит слайсом 2 (design v0.8 §4.2). */
 import PageShell from "../PageShell.astro";
 import ProjectGrid from "../ProjectGrid.astro";
-import { link, useTranslations, type Locale } from "../../i18n/ui";
+import { useTranslations, type Locale } from "../../i18n/ui";
 
 interface Props {
   locale: Locale;
@@ -30,9 +30,13 @@ const t = useTranslations(locale);
     </div>
   </section>
 
-  <h2>{t("projects.title")}</h2>
-  <ProjectGrid locale={locale} layout="wide" />
-  <p><a href={link("/projects/", locale)}>{t("projects.all")} →</a></p>
+  <section class="projects">
+    <div class="section-head">
+      <h2>{t("projects.title")}</h2>
+      <p>{t("home.projectsHint")}</p>
+    </div>
+    <ProjectGrid locale={locale} />
+  </section>
 </PageShell>
 
 <style>
@@ -57,6 +61,25 @@ const t = useTranslations(locale);
   .status {
     color: var(--text-muted);
     font-size: 0.95rem;
+  }
+  .projects {
+    display: grid;
+    /* Воздух между подсказкой и первой карточкой: подсказка относится ко всему
+       списку, и без паузы она читается как подпись к первой из них. */
+    gap: 1.75rem;
+  }
+  .section-head {
+    display: grid;
+    gap: 0.25rem;
+  }
+  /* ⚠ Без `max-width`. Подсказка короткая и обязана лечь в ОДНУ строку: в две
+     она выглядит абзацем и перетягивает внимание с карточек, ради которых
+     написана. Ограничение в 52ch ломало её пополам на любом широком экране.
+     На узком перенос всё равно случится — и это правильно, там строки нет. */
+  .section-head p {
+    margin: 0;
+    color: var(--text-muted);
+    text-wrap: pretty;
   }
   @media (min-width: 40rem) {
     .hero {

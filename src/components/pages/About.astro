@@ -1,14 +1,30 @@
 ---
-/** «Обо мне» (design v0.8 §4.5, §10.3). Кнопка CV ведёт на mailto: файл в
-    публичный репозиторий не кладём, пока владелец не прочитает оба PDF. */
+/**
+ * «Обо мне» (design v0.8 §4.5, §10.3).
+ *
+ * ⚠ Резюме СКАЧИВАЕТСЯ файлом. Прежде кнопка вела на `mailto:` — файл
+ * намеренно не клали в публичный репозиторий, пока владелец не прочитает оба
+ * PDF. Решение владельца изменилось: кнопка стала обычной «скачать».
+ *
+ * ⚠ Самого файла в репозитории НЕТ. Пока он не появится в `public/cv.pdf`,
+ * кнопка ведёт в 404 — а битая кнопка резюме на витрине инженера хуже, чем её
+ * отсутствие. Файл кладётся в `public/`, оттуда Astro копирует его в корень
+ * сайта как есть.
+ *
+ * Атрибут `download` обязателен: без него браузер открывает PDF во вкладке, и
+ * обещание кнопки («скачать») расходится с тем, что происходит.
+ */
 import PageShell from "../PageShell.astro";
-import { useTranslations, type Locale } from "../../i18n/ui";
+import { link, useTranslations, type Locale } from "../../i18n/ui";
 
 interface Props {
   locale: Locale;
 }
 const { locale } = Astro.props;
 const t = useTranslations(locale);
+
+/** Один путь на оба языка: резюме у владельца одно. */
+const CV_FILE = "/cv.pdf";
 ---
 
 <PageShell
@@ -16,35 +32,104 @@ const t = useTranslations(locale);
   titleKey="about.title"
   descriptionKey="about.description"
 >
+  <!-- Возврат стоит ДО заголовка: это единственная внутренняя страница сайта,
+       и уводить с неё некуда, кроме главной. Ссылка в шапке ведёт сюда же, где
+       мы уже находимся, так что без этой кнопки выход остаётся только через
+       логотип — а его как навигацию читают не все. -->
+  <p class="top-actions">
+    <a class="back" href={link("/", locale)}>
+      <span class="arrow" aria-hidden="true">←</span>
+      {t("nav.home")}
+    </a>
+  </p>
+
   <h1>{t("about.title")}</h1>
   <article class="glass card">
     <p>{t("about.body")}</p>
     <p class="how">{t("about.how")}</p>
-    <p>
-      <a
-        class="cv"
-        href={`mailto:hello@example.com?subject=${encodeURIComponent(t("about.cvSubject"))}`}
-      >
-        {t("about.cv")} →
+    <p class="cv-row">
+      <a class="cv" href={CV_FILE} download>
+        {t("about.cv")}
+        <span class="down" aria-hidden="true">↓</span>
       </a>
     </p>
   </article>
 </PageShell>
 
 <style>
+  .top-actions {
+    margin: 0 0 1rem;
+  }
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 1.05rem 0.55rem 0.85rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--control-bg);
+    border: 1px solid var(--control-border);
+    box-shadow: var(--glass-inner);
+    /* ⚠ Без `transform` на ховере: та же причина, что у кнопок темы и языка —
+       сдвиг на пиксель под уже подъехавшим курсором читается как дёрганье.
+       Едет только стрелка, и внутри кнопки, не двигая саму кнопку. */
+    transition:
+      background-color 0.24s ease,
+      border-color 0.24s ease,
+      color 0.24s ease;
+  }
+  .back:hover,
+  .back:focus-visible {
+    background: var(--glass-bg-strong);
+    border-color: var(--surface-border-strong);
+    color: var(--accent-hover);
+  }
+  .arrow {
+    display: inline-block;
+    transition: transform 0.24s ease;
+  }
+  .back:hover .arrow,
+  .back:focus-visible .arrow {
+    transform: translateX(-3px);
+  }
+
   .card {
     padding: clamp(1rem, 4vw, 1.75rem);
   }
   .how {
     color: var(--text-muted);
   }
+  /* Кнопка отбита от текста заметно сильнее, чем абзацы друг от друга: это не
+     продолжение рассказа, а действие, и пауза перед ним должна читаться. */
+  .cv-row {
+    margin: 2.25rem 0 0.25rem;
+  }
   .cv {
-    display: inline-block;
-    padding: 0.6rem 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.3rem;
     border-radius: 999px;
     background: var(--accent);
     color: var(--text-on-accent);
     text-decoration: none;
     font-weight: 600;
+    transition: background-color 0.24s ease;
+  }
+  .cv:hover,
+  .cv:focus-visible {
+    background: var(--accent-hover);
+  }
+  /* Стрелка уезжает ВНИЗ — в сторону действия. Двигается только она, сама
+     кнопка стоит: сдвиг кнопки под курсором читается как дёрганье. */
+  .down {
+    display: inline-block;
+    transition: transform 0.24s ease;
+  }
+  .cv:hover .down,
+  .cv:focus-visible .down {
+    transform: translateY(2px);
   }
 </style>

@@ -10,11 +10,23 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  scrollbar-gutter: stable both-edges;
+  overscroll-behavior-y: none;
 }
 
 body {
   margin: 0;
+  /* ⚠ `svh`, а не `vh`, и это не вкус. На мобильных `100vh` — это высота окна с
+     УБРАННЫМИ панелями браузера, то есть заведомо больше того, что видно.
+     Страница из-за этого всегда чуть длиннее экрана и «оттягивается» вниз даже
+     там, где контента на пол-экрана. `svh` берёт наименьший вариант — тот, что
+     виден всегда. `vh` оставлен строкой выше как запасной для старых движков. */
   min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: clip;
+  overscroll-behavior-y: none;
+  display: flex;
+  flex-direction: column;
   font-family:
     "Instrument Sans",
     system-ui,
@@ -23,9 +35,12 @@ body {
     sans-serif;
   font-size: 1rem;
   line-height: 1.6;
+  color-scheme: var(--color-scheme);
 }
 
 main {
+  flex: 1 0 auto;
+  width: 100%;
   max-width: var(--measure);
   margin-inline: auto;
   padding: clamp(1.5rem, 5vw, 3rem) clamp(1rem, 5vw, 2rem);
@@ -56,6 +71,33 @@ a:hover {
   color: var(--accent-hover);
 }
 
+html.theme-switching body,
+html.theme-switching .glass,
+html.theme-switching .theme,
+html.theme-switching .lang,
+html.theme-switching .back,
+html.theme-switching .cta,
+html.theme-switching .frame,
+html.theme-switching .badge {
+  transition:
+    color 0.32s ease,
+    background-color 0.32s ease,
+    border-color 0.32s ease,
+    box-shadow 0.32s ease,
+    opacity 0.32s ease,
+    filter 0.32s ease;
+}
+
+html.theme-switching body::before,
+html.theme-switching body::after,
+html.theme-switching .glass::before,
+html.theme-switching .glass::after {
+  transition:
+    opacity 0.32s ease,
+    filter 0.32s ease,
+    background-color 0.32s ease;
+}
+
 /* Фокус виден ВСЕГДА и не убирается ради красоты: витрина инженера, которая
    не открывается с клавиатуры, — антиреклама (конституция, принцип 6). */
 :focus-visible {
@@ -70,7 +112,8 @@ a:hover {
   top: 0;
   z-index: 20;
   padding: 0.75rem 1rem;
-  background: #fff;
+  background: var(--glass-bg-strong);
+  color: var(--text);
   border-radius: 0 0 var(--radius-sm) 0;
 }
 .skip:focus {
