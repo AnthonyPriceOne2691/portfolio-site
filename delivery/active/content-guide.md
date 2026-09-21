@@ -198,18 +198,35 @@ npm run build
 ### Что нужно для Cloudflare Pages
 
 1. Регистрация: <https://dash.cloudflare.com/sign-up> — бесплатный тариф, карта
-   не нужна. Дальше **Workers & Pages → Create → Pages → Connect to Git**,
-   выбрать этот репозиторий.
-2. Настройки сборки:
+   не нужна.
+2. Подключить репозиторий: на главной панели **Create app** («Ship something
+   new») → импорт из Git → GitHub → выдать доступ к репозиторию. В сайдбаре то
+   же лежит в **Compute → Workers & Pages → Create**.
+
+   <!-- ⚠ Путь назван двумя способами нарочно: Cloudflare перенёс Pages внутрь
+        Workers и переименовал разделы. Если и эти названия разойдутся с
+        панелью — ищите «Pages» или «connect to Git», суть шага не меняется. -->
+
+3. Настройки сборки:
 
    | Поле | Значение |
    |---|---|
-   | Framework preset | Astro |
    | Build command | **`npm run build:site`** |
-   | Output directory | `dist` |
+   | Deploy command | `npx wrangler deploy` (подставляется само) |
    | Переменная `NODE_VERSION` | `22` |
 
-3. Поменять `site` в `astro.config.mjs` на выданный домен.
+   ⚠ Если панель предлагает preset «Astro», он подставит `npm run build` сам —
+   **перепишите вручную** на `build:site`. Обычный `build` цепочкой зовёт
+   `npm test`, а Playwright на сборщике отсутствует.
+
+   ⚠ Панель ведёт в флоу **Workers**, а не Pages: деплоем занимается
+   `npx wrangler deploy`, и он читает `wrangler.toml` ИЗ РЕПОЗИТОРИЯ. Файл
+   лежит в корне; без него сборка проходит, а деплой падает на «no config
+   found» — ошибка приезжает после зелёной сборки. Каталог сборки задан там
+   (`[assets] directory = "./dist"`), поэтому отдельного поля «output
+   directory» в этом флоу нет.
+
+4. Поменять `site` в `astro.config.mjs` на выданный домен.
 
 **⚠ Команда сборки — `build:site`, а не `build`.** Обычный `npm run build`
 цепочкой зовёт `npm test`, а там Playwright: на сборщике Cloudflare браузера
