@@ -14,12 +14,18 @@ interface Props {
   titleKey: UIKey;
   descriptionKey: UIKey;
   titleSuffix?: string;
+  width?: "prose" | "wide";
 }
-const { locale, titleKey, descriptionKey, titleSuffix } = Astro.props;
+const { locale, titleKey, descriptionKey, titleSuffix, width } = Astro.props;
 const t = useTranslations(locale);
 const title = titleSuffix ? `${t(titleKey)} — ${titleSuffix}` : t(titleKey);
 ---
 
-<Base locale={locale} title={title} description={t(descriptionKey)}>
+<Base
+  locale={locale}
+  title={title}
+  description={t(descriptionKey)}
+  width={width}
+>
   <slot />
 </Base>

@@ -2,19 +2,22 @@
 /**
  * Навигация (design v0.8 §4.5).
  *
- * ⚠ Пункты проектов ГЕНЕРИРУЮТСЯ из коллекции, а не пишутся руками. Иначе
- * ломается критерий §4.6 «проект = контент, не код» и вместе с ним пример B2:
- * пятый проект обязан появиться в меню сам, без правки `.astro`.
+ * ⚠ Меню как такового больше НЕТ — ни выпадающего, ни строкой. Это следствие,
+ * а не упрощение ради красоты: страниц проектов не осталось, все кейсы лежат
+ * карточками на самой главной, и список названий в шапке дублировал бы то, что
+ * и так на экране. Критерий §4.6 («пятый проект появляется сам, без правки
+ * `.astro`») держится там же, где и жил, — список карточек генерируется из
+ * коллекции.
  *
- * ⚠ Бургер на мобиле нужен. Прежняя редакция дизайна обещала «помещается без
- * бургера» — это было верно для пяти пунктов; с проектами их 8–9, и в строку
- * на 360 px они честно не влезают.
+ * ⚠ «Обо мне» остаётся ПРЯМОЙ ссылкой, а не уезжает вместе с меню: это
+ * отдельная страница, и без ссылки в шапке на неё нельзя было бы попасть
+ * вообще ниоткуда.
  *
- * Меню работает БЕЗ JS: `<details>` открывается нативно, доступно с клавиатуры
- * и не ломается, если скрипт не загрузился. Ставить сюда JS ради анимации
- * значило бы менять работающее на красивое.
+ * Ссылка на проект — якорь `/#slug`: он раскрывает карточку, а не просто
+ * доматывает до свёрнутой строки (обработчик живёт в `ProjectCard`). Такие
+ * ссылки приходят снаружи — из резюме, письма, чата, — поэтому поведение
+ * должно работать и без меню.
  */
-import { publishedProjects } from "../lib/projects";
 import { link, pathForLocale, useTranslations, type Locale } from "../i18n/ui";
 
 interface Props {
@@ -23,16 +26,7 @@ interface Props {
 const { locale } = Astro.props;
 const t = useTranslations(locale);
 const here = Astro.url.pathname;
-
-const projects = await publishedProjects(locale);
-
-const items = [
-  ...projects.map((p) => ({
-    href: link(`/projects/${p.id}/`, locale),
-    label: p.data.title,
-  })),
-  { href: link("/about/", locale), label: t("nav.about") },
-];
+const about = link("/about/", locale);
 const other: Locale = locale === "ru" ? "en" : "ru";
 ---
 
@@ -41,36 +35,64 @@ const other: Locale = locale === "ru" ? "en" : "ru";
     >AA<span>.</span></a
   >
 
-  <details class="menu">
-    <summary aria-label={t("nav.menu")}>
-      <span class="bars" aria-hidden="true"></span>
-      <span class="menu-text">{t("nav.menu")}</span>
-    </summary>
-    <ul>
-      {
-        items.map((i) => (
-          <li>
-            <a
-              href={i.href}
-              aria-current={here === i.href ? "page" : undefined}
-            >
-              {i.label}
-            </a>
-          </li>
-        ))
-      }
-    </ul>
-  </details>
-
   <a
-    class="lang"
-    href={pathForLocale(here, other)}
-    hreflang={other}
-    lang={other}
+    class="about"
+    href={about}
+    aria-current={here === about ? "page" : undefined}
   >
-    {other.toUpperCase()}
+    {t("nav.about")}
   </a>
+
+  <div class="actions">
+    <button
+      class="theme"
+      type="button"
+      data-theme-toggle
+      data-label-light={t("theme.light")}
+      data-label-dark={t("theme.dark")}
+      aria-label={t("theme.dark")}
+      title={t("theme.dark")}
+    >
+      <span class="theme-sun" aria-hidden="true">☼</span>
+      <span class="theme-moon" aria-hidden="true">◐</span>
+    </button>
+
+    <a
+      class="lang"
+      href={pathForLocale(here, other)}
+      hreflang={other}
+      lang={other}
+    >
+      {other.toUpperCase()}
+    </a>
+  </div>
 </header>
+
+<script>
+  /*
+   * Перенос якоря в другой язык.
+   *
+   * ⚠ Хэш живёт ТОЛЬКО в браузере: до сервера он не доходит, и на статике
+   * ссылка языка собирается без него. Из-за этого переключение языка с
+   * раскрытой карточки выбрасывало в начало другой главной — пользователь
+   * терял ровно то место, ради которого туда шёл.
+   *
+   * Slug'и у языковых пар одинаковые — это не надежда, а инвариант, который
+   * держит `assertLanguagePairs` в `content.config.ts`: файл без пары ВАЛИТ
+   * сборку. Значит `#linkbuilder` существует на обоих языках по построению.
+   *
+   * База берётся один раз из серверного `href`, иначе повторные переключения
+   * склеивали бы хэши друг с другом.
+   */
+  for (const lang of document.querySelectorAll<HTMLAnchorElement>("a.lang")) {
+    const base = lang.getAttribute("href") ?? "";
+    const carryHash = () => {
+      lang.href = `${base}${location.hash}`;
+    };
+    carryHash();
+    window.addEventListener("hashchange", carryHash);
+  }
+</script>
 
 <style>
   .nav {
@@ -95,94 +117,86 @@ const other: Locale = locale === "ru" ? "en" : "ru";
   .brand span {
     color: var(--accent);
   }
-  .menu {
+  /* Ссылка «Обо мне» занимает место бывшего меню и отжимает кнопки вправо. */
+  .about {
     margin-inline-start: auto;
-  }
-  .menu summary {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    list-style: none;
-    padding: 0.4rem 0.6rem;
-    border-radius: var(--radius-sm);
-  }
-  .menu summary::-webkit-details-marker {
-    display: none;
-  }
-  .bars,
-  .bars::before,
-  .bars::after {
-    display: block;
-    width: 18px;
-    height: 2px;
-    background: currentColor;
-    border-radius: 2px;
-  }
-  .bars {
-    position: relative;
-  }
-  .bars::before,
-  .bars::after {
-    content: "";
-    position: absolute;
-    left: 0;
-  }
-  .bars::before {
-    top: -6px;
-  }
-  .bars::after {
-    top: 6px;
-  }
-  .menu ul {
-    position: absolute;
-    inset-inline-end: clamp(0.75rem, 4vw, 2rem);
-    margin-top: 0.5rem;
-    padding: 0.4rem;
-    list-style: none;
-    min-width: 14rem;
-    background: var(--glass-bg-strong);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius);
-    box-shadow: var(--glass-shadow);
-  }
-  .menu a {
-    display: block;
-    padding: 0.55rem 0.7rem;
+    padding: 0.4rem 0.7rem;
     border-radius: var(--radius-sm);
     text-decoration: none;
     color: var(--text);
+    font-weight: 600;
+    transition:
+      background-color 0.24s ease,
+      color 0.24s ease;
   }
-  .menu a:hover,
-  .menu a[aria-current="page"] {
-    background: rgba(0, 96, 223, 0.1);
+  .about:hover,
+  .about:focus-visible,
+  .about[aria-current="page"] {
+    background: var(--control-active-bg);
     color: var(--accent);
   }
+  .theme,
   .lang {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
     font-weight: 600;
     font-size: 0.875rem;
     text-decoration: none;
-    color: var(--accent);
-    padding: 0.4rem 0.6rem;
-    border-radius: var(--radius-sm);
+    border-radius: 999px;
+    /* ⚠ Никакого `transform` на hover. Обе кнопки живут в ЛИПКОЙ шапке и стоят
+       вплотную: сдвиг на пиксель под уже подъехавшим курсором читается как
+       дёрганье, а не как отклик, и на границе кнопки успевает зациклиться
+       (ушёл — вернулся — ушёл). Отклик даёт заливка: она так же заметна, но
+       не двигает ни саму кнопку, ни соседнюю. */
+    transition:
+      background-color 0.24s ease,
+      border-color 0.24s ease,
+      color 0.24s ease;
   }
-
-  /* Десктоп: список в строку, бургер не нужен. */
-  @media (min-width: 48rem) {
-    .menu summary {
-      display: none;
-    }
-    .menu[open] ul,
-    .menu ul {
-      position: static;
-      display: flex;
-      gap: 0.25rem;
-      margin: 0;
-      padding: 0;
-      min-width: 0;
-      background: none;
-      border: 0;
-      box-shadow: none;
-    }
+  .theme {
+    position: relative;
+    border: 1px solid var(--control-border);
+    background: var(--control-bg-quiet);
+    color: var(--text);
+    padding: 0;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .theme:hover,
+  .theme:focus-visible,
+  .lang:hover,
+  .lang:focus-visible {
+    background: var(--control-bg);
+  }
+  .theme:hover,
+  .theme:focus-visible {
+    border-color: var(--surface-border-strong);
+  }
+  .theme-sun,
+  .theme-moon {
+    grid-area: 1 / 1;
+    transition:
+      opacity 0.24s ease,
+      transform 0.24s ease;
+  }
+  .theme {
+    display: inline-grid;
+  }
+  .theme[data-theme-current="light"] .theme-sun,
+  .theme[data-theme-current="dark"] .theme-moon {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  .theme[data-theme-current="light"] .theme-moon,
+  .theme[data-theme-current="dark"] .theme-sun {
+    opacity: 0;
+    transform: scale(0.75) rotate(-18deg);
+  }
+  .lang {
+    color: var(--accent);
+    padding: 0.4rem 0.8rem;
   }
 </style>

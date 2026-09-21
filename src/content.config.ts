@@ -13,6 +13,15 @@ import { glob } from "astro/loaders";
  * (design 7.3). Пара slug'ов обязана существовать в обеих; проверка пары — в
  * поставке MVP, где появится второй язык (кандидат в примеры, см. STATUS).
  */
+/** Ссылка на медиа: файл в `public/` (путь от корня) либо абсолютный URL. */
+const mediaRef = z
+  .string()
+  .refine((v) => v.startsWith("/") || /^https?:\/\//i.test(v), {
+    message:
+      "путь к медиа должен начинаться с «/» (файл в public/) или с http(s)://; " +
+      "относительный вид «teaser.mp4» резолвится от адреса страницы и ломается",
+  });
+
 const projectSchema = z.object({
   title: z.string().min(1),
   oneLiner: z.string().min(1),
@@ -23,9 +32,23 @@ const projectSchema = z.object({
   /** Хотя бы один пруф обязателен: карточка без доказательства — реклама. */
   proof: z
     .object({
-      video: z.string().url().optional(),
-      teaser: z.string().optional(),
-      poster: z.string().optional(),
+      /*
+       * ⚠ Медиа принимает И локальный файл, И внешний URL.
+       *
+       * Было `z.string().url()` — то есть только внешняя ссылка. Это исходило
+       * из предположения, что демо живёт на YouTube. Владелец кладёт видео на
+       * тот же хостинг, что и сайт, и при старой схеме пришлось бы вписывать
+       * в контент боевой домен: превью на localhost тянуло бы файл с прода, а
+       * смена домена означала бы правку всех md-файлов.
+       *
+       * Относительный путь без «/» при этом ЗАПРЕЩЁН намеренно: `teaser.mp4`
+       * резолвится от адреса страницы, а не от корня, и молча ломается. До
+       * этой проверки `teaser` и `poster` не проверялись вовсе — опечатка
+       * давала пустой фрейм на собранном сайте и зелёную сборку.
+       */
+      video: mediaRef.optional(),
+      teaser: mediaRef.optional(),
+      poster: mediaRef.optional(),
       github: z.string().url().optional(),
       case: z.string().optional(),
     })

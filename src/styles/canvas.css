@@ -1,0 +1,310 @@
+/*
+ * Холст, узор и стекло — РЕАЛИЗАЦИЯ визуальной системы.
+ *
+ * Отделено от `tokens.css` при сплите по лимиту длины файла (500 строк). Шов
+ * выбран по смыслу, а не по счётчику строк: в `tokens.css` остались ТОЛЬКО
+ * объявления переменных, здесь — правила, которые из них собирают картинку.
+ *
+ * ⚠ Граница не формальная. `tests/contrast.test.mjs` читает `tokens.css` и
+ * разбирает блоки `:root` и `html[data-theme="dark"]` как единственный источник
+ * правды по цвету. Объявишь переменную здесь — она окажется вне проверки
+ * контраста, и контраст поедет незаметно. Новые токены идут в `tokens.css`.
+ *
+ * Подключается в `Base.astro` ПОСЛЕ токенов.
+ */
+
+/*
+ * Холст. Пятна дают «абстрактный узор» без единой картинки: четыре радиальных
+ * градиента складываются в неповторяющееся пятно света, а не в плитку.
+ * `fixed` — чтобы при скролле не ехали швы на длинных страницах.
+ */
+body {
+  background:
+    radial-gradient(90% 90% at 10% 0%, var(--canvas-1) 0%, transparent 60%),
+    radial-gradient(80% 80% at 95% 5%, var(--canvas-2) 0%, transparent 55%),
+    radial-gradient(100% 100% at 70% 100%, var(--canvas-3) 0%, transparent 60%),
+    radial-gradient(70% 70% at 25% 95%, var(--canvas-4) 0%, transparent 55%),
+    radial-gradient(
+      55% 45% at 52% 42%,
+      var(--canvas-core-glow) 0%,
+      transparent 70%
+    ),
+    linear-gradient(160deg, var(--canvas-base-1) 0%, var(--canvas-base-2) 100%);
+  background-attachment: fixed;
+  color: var(--text);
+}
+
+/*
+ * Узор поверх холста — чертёжная сетка в двух масштабах.
+ *
+ * Было: одна сетка 96px плюс SVG-плитка с засечками и точками. Цвета внутри
+ * SVG захардкожены (data-URI не видит CSS-переменных), поэтому узор не умел
+ * меняться по теме: в светлой белые линии по светлому холсту попросту
+ * выцветали. Здесь всё собрано из градиентов — значит каждая линия берёт цвет
+ * из токена и живёт по правилам темы.
+ *
+ * Два масштаба — не украшение. Одна сетка читается как миллиметровка, две
+ * дают глубину: частая создаёт материал, редкая — структуру, а узлы на их
+ * пересечениях ставят ритм. Это язык инженерного чертежа, а не обоев.
+ *
+ * ⚠ Маска — главное здесь. Узор ослаблен ровно там, где читают, и набирает
+ * силу к краям. Без неё «заметный» узор неизбежно спорит с текстом, и выбор
+ * сводится к «видно, но мешает» или «не мешает, но не видно». Маска снимает
+ * этот выбор: в центре почти чисто, по краям рисунок уверенный.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--tech-pattern-opacity);
+  background-image:
+    radial-gradient(
+      circle at 50% 50%,
+      var(--tech-dot) 0 1.4px,
+      transparent 1.7px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      var(--tech-line-strong) 0 1px,
+      transparent 1px 96px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      var(--tech-line-strong) 0 1px,
+      transparent 1px 96px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      var(--tech-line) 0 1px,
+      transparent 1px 24px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      var(--tech-line) 0 1px,
+      transparent 1px 24px
+    );
+  /* Точки сдвинуты на полклетки, чтобы попасть В УЗЛЫ редкой сетки, а не в
+     середину ячеек: узел — это место, где линии уже встретились. */
+  background-position:
+    48px 48px,
+    0 0,
+    0 0,
+    0 0,
+    0 0;
+  background-size:
+    96px 96px,
+    auto,
+    auto,
+    auto,
+    auto;
+  background-repeat: repeat;
+  mask-image: radial-gradient(
+    118% 88% at 50% 38%,
+    transparent 0 24%,
+    rgb(0 0 0 / 0.45) 54%,
+    #000 88%
+  );
+}
+
+@supports (-webkit-mask-image: none) {
+  /*
+   * ⚠ Префиксное свойство в ОТДЕЛЬНОМ блоке — тот же обход минификатора, что и
+   * у `backdrop-filter` ниже: в одном правиле он считает пару дублем и
+   * оставляет ровно одно. Здесь цена ошибки выше обычного — без маски узор
+   * ложится ровной сеткой прямо под текст.
+   */
+  body::before {
+    -webkit-mask-image: radial-gradient(
+      118% 88% at 50% 38%,
+      transparent 0 24%,
+      rgb(0 0 0 / 0.45) 54%,
+      #000 88%
+    );
+  }
+}
+
+/*
+ * Медленное свечение под узором. Это и есть «чуть живой» фон: не частицы и не
+ * параллакс, а очень плавный дрейф света, который не мешает читать.
+ */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -12%;
+  z-index: -2;
+  pointer-events: none;
+  opacity: var(--tech-glow-opacity);
+  filter: blur(42px);
+  transform: translate3d(0, 0, 0);
+  background:
+    radial-gradient(42% 38% at 15% 15%, var(--tech-glow-1) 0%, transparent 70%),
+    radial-gradient(30% 34% at 82% 14%, var(--tech-glow-2) 0%, transparent 72%),
+    radial-gradient(34% 36% at 72% 82%, var(--tech-glow-3) 0%, transparent 75%),
+    radial-gradient(30% 32% at 18% 78%, var(--tech-glow-4) 0%, transparent 72%);
+}
+
+/*
+ * ⚠ Сетка НЕПОДВИЖНА, и это решение, а не упущение. Раньше она медленно ехала
+ * (`tech-pan`), и именно движение выдавало в ней декорацию: чертёж, который
+ * дрейфует, читается как заставка. Премиальное впечатление даёт обратное —
+ * разметка стоит намертво, а живёт только свет под ней. Плюс это дешевле:
+ * анимация `background-position` заставляет браузер перерисовывать слой во всю
+ * площадь экрана каждый кадр.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  body::after {
+    animation: canvas-float 26s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes canvas-float {
+  0% {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, 2%, 0) scale(1.04);
+  }
+  100% {
+    transform: translate3d(-1%, 3%, 0) scale(1.02);
+  }
+}
+
+.glass {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    linear-gradient(
+      145deg,
+      var(--glass-layer-1) 0%,
+      var(--glass-layer-2) 38%,
+      var(--glass-layer-3) 100%
+    ),
+    radial-gradient(
+      140% 120% at 0% 0%,
+      var(--glass-highlight) 0%,
+      transparent 48%
+    ),
+    radial-gradient(
+      120% 140% at 100% 100%,
+      var(--glass-tint) 0%,
+      transparent 58%
+    ),
+    var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--glass-shadow), var(--glass-inner);
+  backdrop-filter: blur(var(--glass-blur)) saturate(175%) contrast(115%);
+}
+
+.glass::before,
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.glass::before {
+  background:
+    linear-gradient(
+      120deg,
+      var(--glass-sheen-1) 0%,
+      transparent 28%,
+      transparent 68%,
+      var(--glass-sheen-2) 100%
+    ),
+    radial-gradient(
+      100% 70% at 50% 0%,
+      var(--glass-sheen-top) 0%,
+      transparent 70%
+    );
+  opacity: 0.95;
+}
+
+.glass::after {
+  inset: 1px;
+  border: 1px solid var(--glass-overlay-border);
+  background: linear-gradient(
+    180deg,
+    var(--glass-overlay-top) 0%,
+    transparent 24%,
+    transparent 76%,
+    var(--glass-overlay-end) 100%
+  );
+  opacity: 0.9;
+}
+
+.glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * ⚠ Префиксное свойство живёт в ОТДЕЛЬНОМ блоке, и это не стиль, а обход
+ * минификатора. В одном правиле он считает `backdrop-filter` и
+ * `-webkit-backdrop-filter` дублем и оставляет ровно одно: сначала в сборке
+ * пропадало стандартное (в Firefox не было бы блюра), после перестановки —
+ * префиксное (не было бы в Safari до 18). Разные блоки схлопнуть нельзя.
+ * Поймал headless-тест B6, а не глаз: локально в Safari всё выглядело верно.
+ */
+@supports (-webkit-backdrop-filter: blur(1px)) {
+  .glass {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(175%)
+      contrast(115%);
+  }
+}
+
+/*
+ * Деградация стекла. Две причины, обе названы в design §7.1.2:
+ *  1) `prefers-reduced-transparency` — прямая просьба пользователя;
+ *  2) `backdrop-filter` дорог: на слабых Android он просаживает скролл, и это
+ *     ровно то «зависание», которое владелец приписывал числу посетителей.
+ * Замена — непрозрачная заливка. Выглядит почти так же, стоит ноль.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--glass-opaque);
+    backdrop-filter: none;
+  }
+  .glass::before,
+  .glass::after,
+  body::before,
+  body::after {
+    display: none;
+  }
+}
+
+@supports (-webkit-backdrop-filter: blur(1px)) {
+  @media (prefers-reduced-transparency: reduce) {
+    .glass {
+      -webkit-backdrop-filter: none;
+    }
+  }
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .glass {
+    background:
+      linear-gradient(
+        145deg,
+        var(--glass-fallback-1) 0%,
+        var(--glass-fallback-2) 38%,
+        var(--glass-fallback-3) 100%
+      ),
+      radial-gradient(
+        140% 120% at 0% 0%,
+        var(--glass-highlight) 0%,
+        transparent 48%
+      ),
+      radial-gradient(
+        120% 140% at 100% 100%,
+        var(--glass-tint) 0%,
+        transparent 58%
+      ),
+      var(--glass-bg-strong);
+  }
+}

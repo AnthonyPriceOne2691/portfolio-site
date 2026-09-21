@@ -25,16 +25,31 @@ import {
   ui,
 } from "../src/i18n/ui.ts";
 
-// Пути перебираются, а не выбираются: сюда попадают и «неудобные» формы.
-const TAILS = [
-  "/",
-  "/projects/",
-  "/projects/linkbuilder/",
-  "/projects/voice-interview-coach/",
-  "/about/",
-  "/404",
-  "/projects/a-b-c/",
+// Настоящая карта сайта. Страниц проектов здесь нет и не должно быть: кейсы
+// раскрываются карточками на главной, а ссылка на проект — это якорь `/#slug`,
+// хвост которого до `pathForLocale` вообще не доходит (см. отдельный тест ниже).
+const REAL_TAILS = ["/", "/about/", "/404"];
+
+/*
+ * ⚠ Формы, которых на сайте НЕТ — и это не оплошность, а половина смысла файла.
+ *
+ * `pathForLocale` — чистая функция, и проверяется здесь не карта сайта, а
+ * ИНВАРИАНТ преобразования: он обязан держаться на любом пути, включая тот, о
+ * котором автор не думал. Оставить только реальные три — значит проверять
+ * ровно то, что и так работает, и прозевать первый же нестандартный маршрут.
+ *
+ * `/en-dash/` стоит тут отдельной подножкой: путь НАЧИНАЕТСЯ на «/en», но
+ * языковым префиксом не является. Наивная реализация через `startsWith("/en")`
+ * откусила бы кусок слова и увела страницу в другой язык.
+ */
+const SYNTHETIC_TAILS = [
+  "/a-b-c/",
+  "/deep/nested/path/",
+  "/no-trailing-slash",
+  "/en-dash/",
 ];
+
+const TAILS = [...REAL_TAILS, ...SYNTHETIC_TAILS];
 const PATHS = [...TAILS, ...TAILS.map((t) => (t === "/" ? "/en/" : `/en${t}`))];
 
 test("round-trip: двойное переключение возвращает исходный путь", () => {
@@ -81,13 +96,33 @@ test("согласованность: распознаватель видит т
 
 test("RU живёт в корне, EN под /en (design v0.8 §7.3)", () => {
   assert.equal(DEFAULT_LOCALE, "ru");
-  assert.equal(link("/projects/", "ru"), "/projects/");
-  assert.equal(link("/projects/", "en"), "/en/projects/");
+  assert.equal(link("/about/", "ru"), "/about/");
+  assert.equal(link("/about/", "en"), "/en/about/");
   assert.equal(localeFromPath("/"), "ru");
   assert.equal(localeFromPath("/en/"), "en");
   // `/english/` — не языковой префикс. Наивная проверка `startsWith('/en')`
   // считала бы иначе и уводила бы страницу в другой язык.
   assert.equal(localeFromPath("/english/"), "ru");
+});
+
+test("якорь проекта не выпадает из своего языка", () => {
+  /*
+   * Меню строит ссылку на карточку как `link("/", locale) + "#" + slug`
+   * (см. `Nav`). Если корень языка вернётся без хвостового слэша, EN-ссылка
+   * станет `/en#slug` — то есть якорем на РУССКОЙ главной, и переключение
+   * языка молча потеряется. Проверяем именно ту склейку, которой пользуется
+   * меню, а не абстрактный путь.
+   */
+  const slug = "linkbuilder";
+  assert.equal(`${link("/", "ru")}#${slug}`, "/#linkbuilder");
+  assert.equal(`${link("/", "en")}#${slug}`, "/en/#linkbuilder");
+  for (const locale of ["ru", "en"]) {
+    assert.equal(
+      localeFromPath(link("/", locale)),
+      locale,
+      `корень языка ${locale} распознаётся как другой язык`,
+    );
+  }
 });
 
 test("словари не разошлись: у каждого ключа есть перевод в обоих языках", () => {

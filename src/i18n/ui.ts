@@ -23,8 +23,7 @@ export const ui = {
       "Fullstack-инженер AI-автоматизации. В одиночку построил и вывел в прод SaaS для аутрича — 6 500+ тестов, около 30 сервисов. Параллельно делаю полностью локальные AI-системы: голосовой интервьюер, веб-research-агент, AR-примерочную.",
     "about.how":
       "Design-first: версионируемые дизайн-документы и замер до продакшн-кода. Cursor и Claude — инструменты сборки; архитектура, безопасность и финальное ревью остаются за человеком.",
-    "about.cv": "Запросить резюме",
-    "about.cvSubject": "Запрос резюме",
+    "about.cv": "Скачать резюме",
     "home.title": "Антон Аспидов — инженер AI-автоматизации",
     "home.description":
       "Production AI SaaS и полностью локальные голосовые, веб- и AR-агенты. Ставлю LLM под контракт.",
@@ -32,17 +31,17 @@ export const ui = {
     "home.pitch":
       "Ставлю LLM под контракт: production SaaS, рассчитанный на работу одного оператора, и полностью локальные агенты — голос, веб, AR.",
     "home.status": "🟢 Открыт к удалённой работе и контракту · UTC+3",
+    "home.projectsHint":
+      "Открывай любую карточку — внутри полный кейс, доказательства и детали.",
     "nav.projects": "Проекты",
     "nav.about": "Обо мне",
     "nav.contact": "Связаться",
     "nav.cv": "Резюме",
-    "nav.menu": "Меню",
-    "nav.close": "Закрыть меню",
     "nav.skip": "К основному содержанию",
     "nav.home": "На главную",
+    "theme.light": "Переключить на светлую тему",
+    "theme.dark": "Переключить на тёмную тему",
     "projects.title": "Проекты",
-    "projects.all": "Все проекты",
-    "project.next": "Следующий проект",
     "project.contract": "Под контрактом",
     "project.stack": "Стек",
     "project.updated": "Обновлено",
@@ -65,8 +64,7 @@ export const ui = {
       "Fullstack AI automation engineer. Sole builder of a production outreach SaaS — 6,500+ tests, ~30 services. Alongside it I ship fully-local AI systems: a voice interview coach, a web research agent, an AR try-on.",
     "about.how":
       "Design-first: versioned design docs and a benchmark before production code. Cursor and Claude are build tools; architecture, security and the final review stay human.",
-    "about.cv": "Request my CV",
-    "about.cvSubject": "CV request",
+    "about.cv": "Download CV",
     "home.title": "Anton Aspidov — AI Automation Engineer",
     "home.description":
       "Production AI SaaS plus fully-local voice, web and AR agents. LLMs under contract.",
@@ -74,17 +72,17 @@ export const ui = {
     "home.pitch":
       "I put LLMs under contract: a production SaaS built to run with a single operator, and fully-local agents that listen, browse and see.",
     "home.status": "🟢 Open to remote / contract · UTC+3",
+    "home.projectsHint":
+      "Open any card to see the full case, proof links and implementation details.",
     "nav.projects": "Projects",
     "nav.about": "About",
     "nav.contact": "Contact",
     "nav.cv": "CV",
-    "nav.menu": "Menu",
-    "nav.close": "Close menu",
     "nav.skip": "Skip to main content",
     "nav.home": "Home",
+    "theme.light": "Switch to light theme",
+    "theme.dark": "Switch to dark theme",
     "projects.title": "Projects",
-    "projects.all": "All projects",
-    "project.next": "Next project",
     "project.contract": "Under contract",
     "project.stack": "Stack",
     "project.updated": "Updated",

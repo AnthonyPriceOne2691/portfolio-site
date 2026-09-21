@@ -9,6 +9,7 @@
  */
 import Nav from "../components/Nav.astro";
 import Footer from "../components/Footer.astro";
+import { CONTACTS, PROFILES } from "../lib/contacts";
 import {
   DEFAULT_LOCALE,
   pathForLocale,
@@ -16,15 +17,20 @@ import {
   type Locale,
 } from "../i18n/ui";
 import "../styles/tokens.css";
+// ⚠ Порядок значим: `canvas.css` собирает картинку из переменных, объявленных
+// в `tokens.css`, и опирается на них.
+import "../styles/canvas.css";
 import "../styles/global.css";
 
 interface Props {
   locale: Locale;
   title: string;
   description: string;
+  /** `wide` — витрина (карточки, сетки); по умолчанию колонка для чтения. */
+  width?: "prose" | "wide";
 }
 
-const { locale, title, description } = Astro.props;
+const { locale, title, description, width = "prose" } = Astro.props;
 const t = useTranslations(locale);
 const path = Astro.url.pathname;
 const site = Astro.site ?? new URL("https://example.pages.dev");
@@ -44,10 +50,8 @@ const person = {
   name: "Anton Aspidov",
   jobTitle: "AI Automation / LLM Application Engineer",
   url: abs("/"),
-  sameAs: [
-    "https://github.com/AnthonyPriceOne2691",
-    "https://www.linkedin.com/in/anton-aspidov",
-  ],
+  email: `mailto:${CONTACTS.email}`,
+  sameAs: PROFILES,
 };
 ---
 
@@ -56,6 +60,28 @@ const person = {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- ⚠ Скрипт стоит ЗДЕСЬ, до стилей и разметки, и это не оптимизация, а
+         единственное место, где он работает: тема выбирается до первой
+         отрисовки, иначе страница успевает мигнуть светлым и «прыгнуть».
+         `localStorage` завёрнут в try: в приватном окне и при запрете
+         cookies обращение к нему БРОСАЕТ, и без перехвата падал бы весь
+         блок — сайт остался бы вообще без темы. -->
+    <script is:inline>
+      (() => {
+        let stored = null;
+        try {
+          stored = localStorage.getItem("theme");
+        } catch {}
+        const theme =
+          stored === "light" || stored === "dark"
+            ? stored
+            : window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={abs(path)} />
@@ -73,14 +99,97 @@ const person = {
     <meta property="og:locale" content={locale === "ru" ? "ru_RU" : "en_US"} />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <script type="application/ld+json" set:html={JSON.stringify(person)} />
+    <script
+      is:inline
+      type="application/ld+json"
+      set:html={JSON.stringify(person)}
+    />
   </head>
   <body>
     <a class="skip" href="#main">{t("nav.skip")}</a>
     <Nav locale={locale} />
-    <main id="main">
+    <main id="main" class:list={[width]}>
       <slot />
     </main>
     <Footer locale={locale} />
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        const key = "theme";
+        const query = "[data-theme-toggle]";
+        const media = window.matchMedia("(prefers-color-scheme: dark)");
+        let switchingTimer;
+
+        // Чтение и запись хранилища — через обёртки: см. причину у раннего
+        // скрипта в <head>. Тема обязана работать и без localStorage, просто
+        // не переживая перезагрузку.
+        const readStored = () => {
+          try {
+            const v = localStorage.getItem(key);
+            return v === "light" || v === "dark" ? v : null;
+          } catch {
+            return null;
+          }
+        };
+
+        const resolvedTheme = () =>
+          readStored() ?? (media.matches ? "dark" : "light");
+
+        const syncButtons = () => {
+          const dark = root.dataset.theme === "dark";
+          document.querySelectorAll(query).forEach((button) => {
+            const nextLabel = dark
+              ? button.getAttribute("data-label-light")
+              : button.getAttribute("data-label-dark");
+            button.setAttribute("aria-pressed", String(dark));
+            if (nextLabel) {
+              button.setAttribute("aria-label", nextLabel);
+              button.setAttribute("title", nextLabel);
+            }
+            button.setAttribute("data-theme-current", dark ? "dark" : "light");
+          });
+        };
+
+        const applyTheme = (theme, options = {}) => {
+          root.dataset.theme = theme;
+          root.style.colorScheme = theme;
+          if (options.persist) {
+            try {
+              localStorage.setItem(key, theme);
+            } catch {}
+          }
+          if (
+            options.animate &&
+            !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ) {
+            root.classList.add("theme-switching");
+            window.clearTimeout(switchingTimer);
+            switchingTimer = window.setTimeout(() => {
+              root.classList.remove("theme-switching");
+            }, 360);
+          }
+          syncButtons();
+        };
+
+        applyTheme(resolvedTheme());
+
+        document.addEventListener("click", (event) => {
+          const button =
+            event.target instanceof Element
+              ? event.target.closest(query)
+              : null;
+          if (!button) return;
+          const next = root.dataset.theme === "dark" ? "light" : "dark";
+          applyTheme(next, { persist: true, animate: true });
+        });
+
+        // Системная тема сменилась — идём за ней, но только пока выбор не сделан
+        // руками: явное решение пользователя системе не переспорить.
+        media.addEventListener("change", () => {
+          if (readStored()) return;
+          applyTheme(resolvedTheme());
+        });
+      })();
+    </script>
   </body>
 </html>
