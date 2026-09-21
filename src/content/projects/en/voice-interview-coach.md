@@ -1,6 +1,6 @@
 ---
 title: "Voice Interview Coach"
-oneLiner: "A fully offline voice AI: a 15-minute mock technical interview, then a spoken review of your answers."
+oneLiner: "A voice interviewer that never goes online: 15 minutes of technical interview in English, then a spoken review."
 metric: "~3 s per turn"
 status: "local-demo"
 stack:
@@ -14,8 +14,9 @@ updated: 2026-07-20
 draft: false
 ---
 
-Speech in, speech out, nothing leaves the machine: whisper.cpp transcribes, a
-local LLM runs the interview under a behavioral contract, Piper speaks the reply.
+Speech in, speech out, nothing leaves the machine. The real work was not wiring
+the pipeline but the latency: a pause longer than three seconds turns a
+conversation into correspondence.
 
 - A sentence-streaming pipeline cuts perceived latency from 4.8 s to 3.0 s
 - Every sentence passes a contract gate before it is spoken

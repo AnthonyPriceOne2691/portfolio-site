@@ -1,6 +1,6 @@
 ---
 title: "LinkBuilder — Outreach Automation SaaS"
-oneLiner: "One operator runs what took a five-person team: SERP prospecting, AI email negotiation, payments and placement monitoring."
+oneLiner: "What took a team of five now runs on one operator: prospecting, AI-assisted negotiation, payments and placement control."
 metric: "97.9% delivery"
 status: "production"
 stack: ["Python", "FastAPI", "PostgreSQL", "Redis/RQ", "React/TS", "OpenAI API"]
@@ -13,8 +13,8 @@ updated: 2026-07-20
 draft: false
 ---
 
-The platform covers the whole loop: SERP prospecting, AI-assisted email
-negotiation, payments and placement monitoring.
+Shipped and in production: outreach from finding a site to paying for it and
+watching the placement, with no handoff between people.
 
 - 6,500+ backend tests, 102 DB migrations, ~30 Docker services — designed and built solo
 - AI replies pass 17 behavioral contracts before a human approves

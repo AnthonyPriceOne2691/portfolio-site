@@ -1,6 +1,6 @@
 ---
 title: "Local Web Agent"
-oneLiner: "A private web-research agent: drop URLs into a chat, it browses real sites, compares them and returns a ranked, quote-verified report."
+oneLiner: "A private research agent: drop in links, it browses the real sites, compares them and answers only with what it can quote."
 metric: "~180 tests"
 status: "local-demo"
 stack: ["Python", "FastAPI", "Playwright", "Ollama", "Qwen3 14B", "React"]
@@ -13,8 +13,8 @@ updated: 2026-07-20
 draft: false
 ---
 
-An observe → plan → act loop over a real browser, with local vision on
-screenshots. Every model call runs on the laptop.
+Not a scraper with selectors but an observe → plan → act loop over a real
+browser, with vision over screenshots. Every model call runs on the laptop.
 
 - A high-confidence fact must match a quote on the real page, or it is downgraded
 - Actions are tiered by autonomy and reversibility: destructive ones are forbidden
