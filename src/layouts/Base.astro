@@ -44,6 +44,18 @@ const alternates = [
   { hreflang: "x-default", href: abs(pathForLocale(path, DEFAULT_LOCALE)) },
 ];
 
+/*
+ * Превью — СВОЁ на каждый язык: метрики проектов на картинке переведены, а
+ * `og:image` один на страницу. Файлы собираются из тех же токенов и того же
+ * контента (`scripts/make-assets.mjs`), поэтому не расходятся с сайтом.
+ *
+ * ⚠ До 2026-09-21 здесь стоял `/og.png`, которого в проекте НЕ БЫЛО. Сборка
+ * при этом была зелёной: отсутствие файла, на который ссылается мета-тег,
+ * не проверял никто, а увидеть это можно было только на развёрнутом сайте —
+ * запросом, который делает не владелец, а Telegram или hh.
+ */
+const ogImage = locale === "en" ? "/og-en.jpg" : "/og.jpg";
+
 const person = {
   "@context": "https://schema.org",
   "@type": "Person",
@@ -60,6 +72,8 @@ const person = {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- ⚠ Скрипт стоит ЗДЕСЬ, до стилей и разметки, и это не оптимизация, а
          единственное место, где он работает: тема выбирается до первой
          отрисовки, иначе страница успевает мигнуть светлым и «прыгнуть».
@@ -95,7 +109,9 @@ const person = {
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={abs(path)} />
-    <meta property="og:image" content={abs("/og.png")} />
+    <meta property="og:image" content={abs(ogImage)} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:locale" content={locale === "ru" ? "ru_RU" : "en_US"} />
     <meta name="twitter:card" content="summary_large_image" />
 
