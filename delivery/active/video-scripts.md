@@ -23,6 +23,13 @@
 говорят без пауз, смотрится как реклама; демо, где дают посмотреть, — как работа.
 Не заполняйте тишину.
 
+**Две версии реплик — русская и английская.** Английская стоит первой по
+полезности: русскоязычный специалист английское демо посмотрит, англоязычный
+русское — нет, потеря аудитории односторонняя. Если делаете обе, снимайте экран
+ОДИН раз молча и кладите две звуковые дорожки: съёмка дорогая, озвучка дешёвая.
+`proof.video` задаётся в каждом языковом файле отдельно, так что карточки могут
+вести на разные ролики.
+
 **Реплики ниже — опора, а не телесуфлёр.** Читать слово в слово не нужно: своими
 словами звучит живее, а цифры и формулировки контрактов лучше взять как есть —
 в них легко ошибиться на ходу. Говорите медленнее, чем кажется нужным: на записи
@@ -55,6 +62,18 @@ AI под контролем, а не просто подключён.
 >
 > **1:25** Двенадцать тысяч писем. Почти девяносто восемь процентов доставки на кампании в пять с половиной тысяч получателей. Шесть с половиной тысяч тестов, около тридцати сервисов — спроектировано и построено в одиночку.
 
+### Lines (EN)
+
+> **0:00** This is a link-building platform. This work used to take a team of five. Now one operator runs it.
+>
+> **0:10** Sites are found through search results. The system filters them and drops them into a campaign. Nothing is moved by hand.
+>
+> **0:35** Then the negotiation. The model writes the email — but it cannot send it. Every draft passes seventeen behavioral contracts: payment invariants, spending caps, a kill switch. Here a contract rejected the draft. A human will never even see this one.
+>
+> **1:05** A human always confirms the send. After publication the platform watches the placement: the link is either live, or it has been pulled.
+>
+> **1:25** Twelve thousand emails. Almost ninety-eight percent delivery on a campaign of five and a half thousand recipients. Six and a half thousand tests, around thirty services — designed and built solo.
+
 ---
 
 ## 2. Voice Interview Coach — ~3 с на реплику
@@ -81,6 +100,18 @@ AI под контролем, а не просто подключён.
 >
 > **1:10** После сессии — разбор. Оценка по рубрике и словарь терминов, которые стоит подтянуть. Разбор опирается на стенограмму, а не сочиняется заново.
 
+### Lines (EN)
+
+> **0:00** I'm turning the internet off now. Everything you're about to see runs on this laptop.
+>
+> **0:12** This is a mock technical interview in English. The interviewer is called Henry. I answer out loud, he hears me and asks the next question.
+>
+> *(let the dialogue run in silence — the system should be heard, not you)*
+>
+> **0:55** Watch the pause between turns. About three seconds. In the first version it was almost five, and the conversation fell apart — that is not a dialogue any more, it is correspondence. Sentence-level streaming fixed it: the answer starts playing before the model has finished writing it.
+>
+> **1:10** After the session, a review. A rubric over the answers and a vocabulary list worth working on. The review is grounded in the transcript — it is not written from scratch.
+
 ---
 
 ## 3. Local Web Agent — ~180 тестов
@@ -103,6 +134,16 @@ AI под контролем, а не просто подключён.
 > **0:50** Готов отчёт. Вот вывод, а рядом цитата. Нажимаю — она открывается на живой странице. Факт, который агент считает надёжным, обязан совпасть цитатой с реальным сайтом. Не совпал — уверенность понижается.
 >
 > **1:15** Теперь спрошу то, чего на этих сайтах нет. Он отвечает: не найдено. Это и есть главное — честный отказ вместо выдуманного ответа.
+
+### Lines (EN)
+
+> **0:00** I give the agent four competitor links and ask which one has the more complete article on a topic.
+>
+> **0:12** It does not parse pages with selectors. It opens a real browser and looks at the site: takes a screenshot, decides what to do next, acts. Observe, plan, act.
+>
+> **0:50** Here is the report. This is the conclusion, and next to it a quote. I click — and it opens on the live page. Any fact the agent marks as high confidence has to match a quote on the real site. If it does not match, confidence drops.
+>
+> **1:15** Now I will ask about something that is not on those sites at all. It says: not found. That is the point — an honest refusal instead of an invented answer.
 
 ---
 
@@ -127,6 +168,16 @@ AI под контролем, а не просто подключён.
 > **0:40** Теперь спрошу то, чего в своде нет. Отказ. Причём модель даже не вызывалась — вопрос отсекли на входе. Выдумывать просто нечему.
 >
 > **1:05** И замеры. Полнота поиска в двадцати результатах — семьдесят шесть процентов. Но интереснее другое: поиск написан руками, без библиотек, и я проверил сам инструмент — прогнал его на чужом эталонном наборе. Сошлось с эталоном до третьего знака. Мерить чужую систему легко. Проверить собственную линейку почти никто не делает.
+
+### Lines (EN)
+
+> **0:00** This is a search desk over a rulebook: a hundred and ten thousand tokens, two hundred and thirty-two sections. I ask in my own words, not in the document's terms.
+>
+> **0:12** The answer comes back with an address — file and section number. I open that file: exactly what it said. An answer without an address never leaves the system.
+>
+> **0:40** Now something that is not in the rulebook at all. Refused — and the model was never even called, the question was cut off at the gate. There is nothing left to hallucinate with.
+>
+> **1:05** And the measurements. Recall at twenty — seventy-six percent. But here is the more interesting part: the retrieval is written by hand, no libraries, so I calibrated the instrument itself against a public benchmark. It matched the reference to the third decimal. Measuring someone else's system is easy. Almost nobody checks their own ruler.
 
 ---
 
@@ -153,6 +204,16 @@ AI под контролем, а не просто подключён.
 > **1:15** А вот настоящая находка. Этот гейт месяц докладывал, что не видел кода. Код был. Он просто неправильно читал собственный вывод. Зелёный сигнал над проверкой, которая ничего не проверила — главный отказ, ради которого всё это и сделано.
 
 ---
+
+### Lines (EN)
+
+> **0:00** This is a set of checks that deploys into any project. I make a commit — the hooks run, everything is green.
+>
+> **0:15** Now I break it. I change one line in a gate's file mask — the line it uses to find files. *(pause while it runs)* The gate goes red and tells me exactly what is wrong and where to fix it.
+>
+> **0:50** The checks themselves are audited separately. This is the doctor: a verdict per gate. If a gate is declared, wired in — and stays silent on its own canary, that is not green. That is a lie.
+>
+> **1:15** And here is a real find. This gate spent a month reporting that it had not seen any code. The code was there. It was simply misreading its own output. A green light over a check that verified nothing — that is the failure this whole thing exists to catch.
 
 ## Порядок съёмки
 
