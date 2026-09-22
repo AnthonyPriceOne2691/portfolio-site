@@ -22,14 +22,12 @@ import { render, type CollectionEntry } from "astro:content";
 import ProofLinks from "./ProofLinks.astro";
 import StatusBadge from "./StatusBadge.astro";
 import VideoFrame from "./VideoFrame.astro";
-import { useTranslations, type Locale } from "../i18n/ui";
+import { t } from "../lib/text";
 
 interface Props {
-  entry: CollectionEntry<"ru"> | CollectionEntry<"en">;
-  locale: Locale;
+  entry: CollectionEntry<"projects">;
 }
-const { entry, locale } = Astro.props;
-const t = useTranslations(locale);
+const { entry } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
 
@@ -59,7 +57,7 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
     <span class="body">
       <span class="lead">
         <span class="metric">{d.metric}</span>
-        <StatusBadge status={d.status} locale={locale} />
+        <StatusBadge status={d.status} />
       </span>
       <span class="title">{d.title}</span>
       <span class="one">{d.oneLiner}</span>
@@ -97,7 +95,7 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
         {d.stack.join(" · ")}
       </p>
 
-      <ProofLinks proof={proofLinks} locale={locale} />
+      <ProofLinks proof={proofLinks} />
     </div>
   </div>
 </details>

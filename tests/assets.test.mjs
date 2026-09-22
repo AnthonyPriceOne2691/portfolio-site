@@ -155,10 +155,8 @@ function heroCircle(page, html) {
 }
 
 test("круг в герое: видео, фото или заглушка — ровно одно, и без битых ссылок", () => {
-  const heroes = HTML.filter(
-    ([p]) => p === "index.html" || p === "en/index.html",
-  );
-  assert.ok(heroes.length === 2, "не нашлись обе главные — проверять нечего");
+  const heroes = HTML.filter(([p]) => p === "index.html");
+  assert.equal(heroes.length, 1, "не нашлась главная — проверять нечего");
   for (const [page, html] of heroes) heroCircle(page, html);
 });
 

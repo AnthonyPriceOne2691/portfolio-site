@@ -42,46 +42,56 @@ function frontmatter(text) {
   return { order, draft, proof };
 }
 
-function projects(locale) {
-  const dir = new URL(`src/content/projects/${locale}/`, ROOT);
+function projects() {
+  const dir = new URL("src/content/projects/", ROOT);
   return readdirSync(dir)
     .filter((f) => f.endsWith(".md"))
-    .map((f) => ({ slug: f.slice(0, -3), ...frontmatter(readFileSync(new URL(f, dir), "utf8")) }));
+    .map((f) => ({
+      slug: f.slice(0, -3),
+      ...frontmatter(readFileSync(new URL(f, dir), "utf8")),
+    }));
 }
 
 const page = (rel) => readFileSync(new URL(rel, DIST), "utf8");
 /** Идентификаторы карточек в порядке их следования на странице. */
-const cardIds = (html) => [...html.matchAll(/<details[^>]*id="([a-z0-9-]+)"/g)].map((m) => m[1]);
+const cardIds = (html) =>
+  [...html.matchAll(/<details[^>]*id="([a-z0-9-]+)"/g)].map((m) => m[1]);
 /** Фрагмент HTML одной карточки. Вложенных `<details>` в карточке нет. */
 const card = (html, slug) =>
-  html.match(new RegExp(`<details[^>]*id="${slug}"[\\s\\S]*?</details>`))?.[0] ?? "";
+  html.match(
+    new RegExp(`<details[^>]*id="${slug}"[\\s\\S]*?</details>`),
+  )?.[0] ?? "";
 
-const LOCALES = [
-  { locale: "ru", file: "index.html" },
-  { locale: "en", file: "en/index.html" },
-];
+/*
+ * ⚠ Витрина ОДНА. Пока языков было два, тесты ниже ходили по списку пар
+ * «язык — файл»: витрина обязана была совпасть с коллекцией на каждом из них.
+ * Русская версия снята 2026-09-22, список свернулся в одну страницу — но
+ * проход по нему сохранён, потому что проверяется отношение «страница =
+ * коллекция», а не конкретный файл.
+ */
+const SHOWCASES = ["index.html"];
 
 test("есть что сверять: контент и сборка на месте", () => {
   // Обе проверки ниже сравнивают два списка. Пустые списки совпадают всегда —
   // без этой страховки тест был бы зелёным на пустом каталоге.
-  for (const { locale } of LOCALES) {
-    const all = projects(locale);
-    assert.ok(all.length > 0, `нет md-файлов проектов для ${locale}`);
+  {
+    const all = projects();
+    assert.ok(all.length > 0, "нет md-файлов проектов");
     assert.ok(
       all.some((p) => !p.draft),
-      `в ${locale} все проекты черновики — сверять на витрине нечего`,
+      "все проекты черновики — сверять на витрине нечего",
     );
     assert.ok(
       all.some((p) => p.draft),
-      `в ${locale} нет ни одного черновика — половина B2 про их скрытие ` +
-        `не проверяется. Заведи draft-проект или сними эту проверку осознанно`,
+      "нет ни одного черновика — половина B2 про их скрытие не проверяется. " +
+        "Заведи draft-проект или сними эту проверку осознанно",
     );
   }
 });
 
 test("B2: витрина = коллекция, в порядке order, без черновиков", () => {
-  for (const { locale, file } of LOCALES) {
-    const all = projects(locale);
+  for (const file of SHOWCASES) {
+    const all = projects();
     const expected = all
       .filter((p) => !p.draft)
       .sort((a, b) => a.order - b.order)
@@ -107,9 +117,9 @@ test("B2: витрина = коллекция, в порядке order, без �
 });
 
 test("B3: неполный proof не оставляет ни пустого блока, ни битой ссылки", () => {
-  for (const { locale, file } of LOCALES) {
+  for (const file of SHOWCASES) {
     const html = page(file);
-    for (const p of projects(locale).filter((x) => !x.draft)) {
+    for (const p of projects().filter((x) => !x.draft)) {
       const frag = card(html, p.slug);
       assert.ok(frag, `${file}: карточка ${p.slug} не найдена`);
 
@@ -119,7 +129,9 @@ test("B3: неполный proof не оставляет ни пустого б�
       const expected = PROOF_LINKS.filter(
         (k) => p.proof[k] && !(k === "video" && embedded),
       );
-      const actual = [...frag.matchAll(/<a class="glass" href="([^"]*)"/g)].map((m) => m[1]);
+      const actual = [...frag.matchAll(/<a class="glass" href="([^"]*)"/g)].map(
+        (m) => m[1],
+      );
 
       assert.equal(
         actual.length,
@@ -128,7 +140,10 @@ test("B3: неполный proof не оставляет ни пустого б�
           `(${expected.join(", ") || "ни одной"}). Отсутствующий пруф не должен давать пустую строку`,
       );
       for (const href of actual) {
-        assert.ok(href.trim(), `${file} / ${p.slug}: proof-ссылка с пустым href`);
+        assert.ok(
+          href.trim(),
+          `${file} / ${p.slug}: proof-ссылка с пустым href`,
+        );
       }
 
       // Фрейм есть ВСЕГДА — он держит раскладку, пока съёмки нет.

@@ -3,19 +3,18 @@
  * Каркас страницы: мета-слой, стекло, навигация (design v0.8 §8.5).
  *
  * Превью ссылки — НУЛЕВОЙ экран портфолио: рекрутёр видит карточку в Telegram
- * или hh раньше, чем сам сайт. Поэтому og/hreflang/JSON-LD собираются здесь
+ * или hh раньше, чем сам сайт. Поэтому og/canonical/JSON-LD собираются здесь
  * централизованно, а не по страницам: забытый тег на одной странице — это
  * не «мелочь вёрстки», а сломанное первое касание. Пример B8 это проверяет.
+ *
+ * ⚠ `hreflang` здесь больше нет, и это не пропажа: сайт одноязычный с
+ * 2026-09-22. Пара alternate-ссылок, указывающих сама на себя, — худший
+ * вариант, чем их отсутствие: поисковику она обещает перевод, которого нет.
  */
 import Nav from "../components/Nav.astro";
 import Footer from "../components/Footer.astro";
 import { CONTACTS, PROFILES } from "../lib/contacts";
-import {
-  DEFAULT_LOCALE,
-  pathForLocale,
-  useTranslations,
-  type Locale,
-} from "../i18n/ui";
+import { t } from "../lib/text";
 import "../styles/tokens.css";
 // ⚠ Порядок значим: `canvas.css` собирает картинку из переменных, объявленных
 // в `tokens.css`, и опирается на них.
@@ -23,38 +22,27 @@ import "../styles/canvas.css";
 import "../styles/global.css";
 
 interface Props {
-  locale: Locale;
   title: string;
   description: string;
   /** `wide` — витрина (карточки, сетки); по умолчанию колонка для чтения. */
   width?: "prose" | "wide";
 }
 
-const { locale, title, description, width = "prose" } = Astro.props;
-const t = useTranslations(locale);
+const { title, description, width = "prose" } = Astro.props;
 const path = Astro.url.pathname;
 const site = Astro.site ?? new URL("https://example.pages.dev");
 const abs = (p: string) => new URL(p, site).href;
 
-// hreflang-пары строятся из ОДНОЙ функции, что и переключатель в шапке.
-// Разъехаться они не могут по построению — а не потому, что кто-то помнит.
-const alternates = [
-  { hreflang: "ru", href: abs(pathForLocale(path, "ru")) },
-  { hreflang: "en", href: abs(pathForLocale(path, "en")) },
-  { hreflang: "x-default", href: abs(pathForLocale(path, DEFAULT_LOCALE)) },
-];
-
 /*
- * Превью — СВОЁ на каждый язык: метрики проектов на картинке переведены, а
- * `og:image` один на страницу. Файлы собираются из тех же токенов и того же
- * контента (`scripts/make-assets.mjs`), поэтому не расходятся с сайтом.
+ * Превью собирается из тех же токенов и того же контента, что и сайт
+ * (`scripts/make-assets.mjs`), поэтому не расходится с ним.
  *
  * ⚠ До 2026-09-21 здесь стоял `/og.png`, которого в проекте НЕ БЫЛО. Сборка
  * при этом была зелёной: отсутствие файла, на который ссылается мета-тег,
  * не проверял никто, а увидеть это можно было только на развёрнутом сайте —
  * запросом, который делает не владелец, а Telegram или hh.
  */
-const ogImage = locale === "en" ? "/og-en.jpg" : "/og.jpg";
+const ogImage = "/og.jpg";
 
 const person = {
   "@context": "https://schema.org",
@@ -68,7 +56,7 @@ const person = {
 ---
 
 <!doctype html>
-<html lang={locale}>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -99,11 +87,6 @@ const person = {
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={abs(path)} />
-    {
-      alternates.map((a) => (
-        <link rel="alternate" hreflang={a.hreflang} href={a.href} />
-      ))
-    }
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
@@ -112,7 +95,7 @@ const person = {
     <meta property="og:image" content={abs(ogImage)} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:locale" content={locale === "ru" ? "ru_RU" : "en_US"} />
+    <meta property="og:locale" content="en_US" />
     <meta name="twitter:card" content="summary_large_image" />
 
     <script
@@ -123,11 +106,11 @@ const person = {
   </head>
   <body>
     <a class="skip" href="#main">{t("nav.skip")}</a>
-    <Nav locale={locale} />
+    <Nav />
     <main id="main" class:list={[width]}>
       <slot />
     </main>
-    <Footer locale={locale} />
+    <Footer />
     <script is:inline>
       (() => {
         const root = document.documentElement;

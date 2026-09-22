@@ -15,29 +15,18 @@
  * обещание кнопки («скачать») расходится с тем, что происходит.
  */
 import PageShell from "../PageShell.astro";
-import { link, useTranslations, type Locale } from "../../i18n/ui";
+import { t } from "../../lib/text";
 
-interface Props {
-  locale: Locale;
-}
-const { locale } = Astro.props;
-const t = useTranslations(locale);
-
-/** Один путь на оба языка: резюме у владельца одно. */
 const CV_FILE = "/cv.pdf";
 ---
 
-<PageShell
-  locale={locale}
-  titleKey="about.title"
-  descriptionKey="about.description"
->
+<PageShell titleKey="about.title" descriptionKey="about.description">
   <!-- Возврат стоит ДО заголовка: это единственная внутренняя страница сайта,
        и уводить с неё некуда, кроме главной. Ссылка в шапке ведёт сюда же, где
        мы уже находимся, так что без этой кнопки выход остаётся только через
        логотип — а его как навигацию читают не все. -->
   <p class="top-actions">
-    <a class="back" href={link("/", locale)}>
+    <a class="back" href="/">
       <span class="arrow" aria-hidden="true">←</span>
       {t("nav.home")}
     </a>

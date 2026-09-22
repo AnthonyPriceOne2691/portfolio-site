@@ -168,10 +168,7 @@ for (const theme of THEMES) {
     "--tech-pattern-opacity не число — расчёт узора считал бы мусор",
   );
   const line = parseColor(tk("tech-line-strong"));
-  const onLine = composite(
-    { ...line, a: line.a * patternAlpha },
-    worstBg,
-  );
+  const onLine = composite({ ...line, a: line.a * patternAlpha }, worstBg);
 
   const pairs = [
     ["text на стекле", tk("text"), glass],
@@ -206,7 +203,10 @@ for (const theme of THEMES) {
   }
 
   test(`контраст (${theme}): текст на акценте держит порог (кнопки CTA)`, () => {
-    const ratio = contrast(parseColor(tk("text-on-accent")), parseColor(tk("accent")));
+    const ratio = contrast(
+      parseColor(tk("text-on-accent")),
+      parseColor(tk("accent")),
+    );
     assert.ok(
       ratio >= AA,
       `text-on-accent на accent [${theme}]: ${ratio.toFixed(2)}:1. ` +

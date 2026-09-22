@@ -22,22 +22,23 @@ const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const read = (rel) => readFileSync(ROOT + rel, "utf8");
 const TOKENS = read("src/styles/tokens.css");
 const CANVAS = read("src/styles/canvas.css");
-const FONT = '"Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
+const FONT =
+  '"Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
 
 /** Роль — из словаря, чтобы не разошлась с сайтом. */
-function role(locale) {
-  const block = read("src/i18n/ui.ts").split("  " + locale + ": {")[1] ?? "";
-  return block.match(/"home\.role":\s*"([^"]+)"/)?.[1] ?? "";
+function role() {
+  return read("src/lib/text.ts").match(/"home\.role":\s*"([^"]+)"/)?.[1] ?? "";
 }
 
 /** Метрика и название каждого опубликованного проекта, в порядке order. */
-function projects(locale) {
-  const dir = ROOT + "src/content/projects/" + locale + "/";
+function projects() {
+  const dir = ROOT + "src/content/projects/";
   return readdirSync(dir)
     .filter((f) => f.endsWith(".md"))
     .map((f) => {
       const fm = readFileSync(dir + f, "utf8").split("---")[1] ?? "";
-      const get = (k) => fm.match(new RegExp("^" + k + ': "(.*)"$', "m"))?.[1] ?? "";
+      const get = (k) =>
+        fm.match(new RegExp("^" + k + ': "(.*)"$', "m"))?.[1] ?? "";
       return {
         metric: get("metric"),
         title: get("title"),
@@ -49,38 +50,46 @@ function projects(locale) {
     .sort((a, b) => a.order - b.order);
 }
 
-const ogPage = (locale) => [
-  '<!doctype html><html lang="' + locale + '" data-theme="dark"><head><meta charset="utf-8"><style>',
-  TOKENS, CANVAS,
-  // ⚠ box-sizing здесь ОБЯЗАТЕЛЕН и своей строкой: он живёт в global.css,
-  // который сюда не подключён (нужны только токены и холст). Без него body
-  // шириной 1200px плюс padding 5rem занимал 1360px, и правые 160 уходили за
-  // кадр — третья плашка приезжала обрезанной.
-  '*,*::before,*::after{box-sizing:border-box}',
-  'html,body{margin:0;width:1200px;height:630px;overflow:hidden}',
-  'body{display:flex;flex-direction:column;justify-content:center;gap:2.4rem;',
-  '     padding:0 5rem;font-family:' + FONT + ';color:var(--text)}',
-  'h1{font-size:5rem;line-height:1;letter-spacing:-.04em;margin:0 0 .9rem}',
-  '.role{font-size:1.9rem;font-weight:600;color:var(--text-muted);margin:0}',
-  '.metrics{display:flex;gap:1.1rem}',
-  '/* flex:1 1 0 + min-width:0 обязательны: у флекс-элемента базовый',
-  '   min-width:auto, он НЕ сжимается меньше своего текста. Длинное название',
-  '   раздувало первую плашку и выталкивало третью за кадр — обрезалось ровно',
-  '   то, что показать и хотели. */',
-  '.chip{flex:1 1 0;min-width:0;padding:1.25rem 1.4rem;border-radius:var(--radius);',
-  '      display:flex;flex-direction:column;gap:.3rem}',
-  '.m{font-size:2rem;font-weight:800;letter-spacing:-.03em;line-height:1.05}',
-  '.t{font-size:1rem;color:var(--text-muted);line-height:1.25;overflow-wrap:anywhere}',
-  '.host{position:absolute;inset:auto 5rem 2.6rem auto;font-size:1.15rem;',
-  '      font-weight:600;color:var(--accent)}',
-  '</style></head><body><div><h1>Anton Aspidov</h1>',
-  '<p class="role">' + role(locale) + '</p></div><div class="metrics">',
-  projects(locale)
-    .map((p) => '<div class="chip glass"><span class="m">' + p.metric +
-                '</span><span class="t">' + p.title + '</span></div>')
-    .join(""),
-  '</div><span class="host">portfolio-site.anthony-priceone.workers.dev</span></body></html>',
-].join("\n");
+const ogPage = () =>
+  [
+    '<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><style>',
+    TOKENS,
+    CANVAS,
+    // ⚠ box-sizing здесь ОБЯЗАТЕЛЕН и своей строкой: он живёт в global.css,
+    // который сюда не подключён (нужны только токены и холст). Без него body
+    // шириной 1200px плюс padding 5rem занимал 1360px, и правые 160 уходили за
+    // кадр — третья плашка приезжала обрезанной.
+    "*,*::before,*::after{box-sizing:border-box}",
+    "html,body{margin:0;width:1200px;height:630px;overflow:hidden}",
+    "body{display:flex;flex-direction:column;justify-content:center;gap:2.4rem;",
+    "     padding:0 5rem;font-family:" + FONT + ";color:var(--text)}",
+    "h1{font-size:5rem;line-height:1;letter-spacing:-.04em;margin:0 0 .9rem}",
+    ".role{font-size:1.9rem;font-weight:600;color:var(--text-muted);margin:0}",
+    ".metrics{display:flex;gap:1.1rem}",
+    "/* flex:1 1 0 + min-width:0 обязательны: у флекс-элемента базовый",
+    "   min-width:auto, он НЕ сжимается меньше своего текста. Длинное название",
+    "   раздувало первую плашку и выталкивало третью за кадр — обрезалось ровно",
+    "   то, что показать и хотели. */",
+    ".chip{flex:1 1 0;min-width:0;padding:1.25rem 1.4rem;border-radius:var(--radius);",
+    "      display:flex;flex-direction:column;gap:.3rem}",
+    ".m{font-size:2rem;font-weight:800;letter-spacing:-.03em;line-height:1.05}",
+    ".t{font-size:1rem;color:var(--text-muted);line-height:1.25;overflow-wrap:anywhere}",
+    ".host{position:absolute;inset:auto 5rem 2.6rem auto;font-size:1.15rem;",
+    "      font-weight:600;color:var(--accent)}",
+    "</style></head><body><div><h1>Anton Aspidov</h1>",
+    '<p class="role">' + role() + '</p></div><div class="metrics">',
+    projects()
+      .map(
+        (p) =>
+          '<div class="chip glass"><span class="m">' +
+          p.metric +
+          '</span><span class="t">' +
+          p.title +
+          "</span></div>",
+      )
+      .join(""),
+    '</div><span class="host">portfolio-site.anthony-priceone.workers.dev</span></body></html>',
+  ].join("\n");
 
 /*
  * Фавикон — та же монограмма, что в шапке сайта (AA с акцентной точкой), и те
@@ -90,17 +99,17 @@ const ogPage = (locale) => [
 const iconPage = [
   '<!doctype html><html data-theme="dark"><head><meta charset="utf-8"><style>',
   TOKENS,
-  '*,*::before,*::after{box-sizing:border-box}',
-  'html,body{margin:0;width:256px;height:256px;overflow:hidden}',
-  'body{display:grid;place-items:center;font-family:' + FONT + '}',
-  '.mark{width:256px;height:256px;display:grid;place-items:center;',
-  '      background:linear-gradient(145deg,var(--canvas-1),var(--canvas-2) 55%,var(--canvas-3))}',
-  '/* ⚠ Монограмма ОДНИМ узлом. В grid-контейнере каждый ребёнок — отдельный',
-  '   элемент сетки, и текст «AA» с точкой в span разъезжались по двум строкам:',
-  '   буквы сверху, точка внизу. Обёртка делает их единым элементом, точка',
-  '   остаётся строчной внутри него. */',
-  '.brand{font-size:104px;font-weight:800;letter-spacing:-.06em;color:var(--text)}',
-  '.dot{color:var(--accent)}',
+  "*,*::before,*::after{box-sizing:border-box}",
+  "html,body{margin:0;width:256px;height:256px;overflow:hidden}",
+  "body{display:grid;place-items:center;font-family:" + FONT + "}",
+  ".mark{width:256px;height:256px;display:grid;place-items:center;",
+  "      background:linear-gradient(145deg,var(--canvas-1),var(--canvas-2) 55%,var(--canvas-3))}",
+  "/* ⚠ Монограмма ОДНИМ узлом. В grid-контейнере каждый ребёнок — отдельный",
+  "   элемент сетки, и текст «AA» с точкой в span разъезжались по двум строкам:",
+  "   буквы сверху, точка внизу. Обёртка делает их единым элементом, точка",
+  "   остаётся строчной внутри него. */",
+  ".brand{font-size:104px;font-weight:800;letter-spacing:-.06em;color:var(--text)}",
+  ".dot{color:var(--accent)}",
   '</style></head><body><div class="mark">',
   '<span class="brand">AA<span class="dot">.</span></span></div></body></html>',
 ].join("\n");
@@ -114,14 +123,23 @@ mkdirSync(ROOT + "public", { recursive: true });
  * на 512 КБ) и зря греет мобильный интернет. JPEG даёт десятые доли от этого
  * без видимой разницы, а og:image принимает его наравне с PNG.
  */
-for (const [locale, file] of [["ru", "og.jpg"], ["en", "og-en.jpg"]]) {
+{
+  // ⚠ Превью ОДНО. Пока языков было два, их было два — `og.jpg` и `og-en.jpg`,
+  // потому что метрики проектов на картинке переведены, а `og:image` один на
+  // страницу. Русская версия снята 2026-09-22, `og-en.jpg` удалён, английское
+  // превью осталось под прежним именем `og.jpg`: переименование сломало бы
+  // карточки ссылки, уже закэшированные Telegram и LinkedIn.
   const p = await browser.newPage({ viewport: { width: 1200, height: 630 } });
-  await p.setContent(ogPage(locale), { waitUntil: "load" });
+  await p.setContent(ogPage(), { waitUntil: "load" });
   // Свечение холста анимировано бесконечно — ждём устойчивый кадр, иначе две
   // пересборки подряд дают чуть разные файлы.
   await p.waitForTimeout(400);
-  await p.screenshot({ path: ROOT + "public/" + file, type: "jpeg", quality: 90 });
-  console.log("  public/" + file + " — метрик: " + projects(locale).length);
+  await p.screenshot({
+    path: ROOT + "public/og.jpg",
+    type: "jpeg",
+    quality: 90,
+  });
+  console.log("  public/og.jpg — метрик: " + projects().length);
   await p.close();
 }
 

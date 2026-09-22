@@ -7,10 +7,16 @@
 «сайт в порядке», хотя не значил этого.
 
 Что проверяется (acceptance-примеры B1, B8, B10):
-  B1  — состав: обе языковые ветки, у каждой RU-страницы есть EN-двойник;
-  B8  — `<head>` каждой страницы: og:*, hreflang ru/en/x-default (=RU),
-        JSON-LD Person, title и description;
+  B1  — состав: обязательные страницы на месте, языковой ветки `/en/` больше
+        НЕТ, а обещанные редиректы с неё реально уехали в сборку;
+  B8  — `<head>` каждой страницы: og:*, JSON-LD Person, title, description,
+        canonical и `<html lang="en">`;
   B10 — вес страницы без медиа < 300 KB (design v0.8 §7.1.3).
+
+⚠ 2026-09-22 сайт стал одноязычным. Проверки языковых пар и hreflang сняты
+вместе с причиной — но на их место встала обратная: `/en/` не должен собраться
+снова, а `_redirects` обязан доехать. Половина переезда хуже, чем оба его
+конца: страница `/en/` из старой сборки и редирект на неё же дают петлю.
 
 Почему проверка именно здесь, а не в тестах компонентов: ошибка мета-слоя
 появляется при СБОРКЕ и на конкретной странице. Компонент можно протестировать
@@ -35,7 +41,7 @@ GREEN = "\033[32m"
 RESET = "\033[0m"
 
 MAX_PAGE_KB = 300
-DEFAULT_LOCALE = "ru"
+REQUIRED_PAGES = ("index.html", "about/index.html", "404.html")
 
 
 def local_assets(html: str, page: Path, root: Path) -> list[Path]:
@@ -66,16 +72,16 @@ def check_head(html: str, rel: str) -> list[str]:
         if not re.search(pattern, html):
             bad.append(f"{rel}: нет {label}")
 
-    for lang in ("ru", "en", "x-default"):
-        if not re.search(rf'hreflang="{re.escape(lang)}"', html):
-            bad.append(f"{rel}: нет hreflang {lang}")
+    # Язык страницы объявлен один раз и должен быть английским: `lang="ru"`,
+    # переживший переезд, — это скринридер, читающий английский текст русской
+    # фонетикой, и никакой тест вёрстки этого не заметит.
+    if not re.search(r'<html lang="en"', html):
+        bad.append(f'{rel}: нет <html lang="en">')
 
-    # x-default обязан указывать на язык по умолчанию (RU, design v0.8 §7.3).
-    # Проверяется отдельно: тег на месте, но ведущий не туда, — худший случай,
-    # потому что выглядит правильным.
-    m = re.search(r'hreflang="x-default" href="([^"]+)"', html)
-    if m and re.search(r"/en(/|$)", m.group(1)):
-        bad.append(f"{rel}: x-default ведёт на EN, а язык по умолчанию — RU")
+    # Обещание перевода, которого нет: пара alternate-ссылок на одноязычном
+    # сайте вреднее их отсутствия.
+    if re.search(r"hreflang=", html):
+        bad.append(f"{rel}: остался hreflang — сайт одноязычный с 2026-09-22")
     return bad
 
 
@@ -93,29 +99,41 @@ def main() -> int:
         return 1
 
     problems: list[str] = []
-    ru_pages: set[str] = set()
-    en_pages: set[str] = set()
+    seen: set[str] = set()
 
     for page in pages:
         rel = str(page.relative_to(root))
         html = page.read_text(encoding="utf-8", errors="replace")
 
-        # 404 — служебная страница, языковой пары и мета-слоя не требует.
+        seen.add(rel)
+        # 404 — служебная страница, полного мета-слоя не требует.
         if rel != "404.html":
             problems += check_head(html, rel)
-            key = rel[3:] if rel.startswith("en/") else rel
-            (en_pages if rel.startswith("en/") else ru_pages).add(key)
 
         kb = (page.stat().st_size + sum(a.stat().st_size for a in local_assets(html, page, root))) / 1024
         if kb > MAX_PAGE_KB:
             problems.append(f"{rel}: {kb:.0f} KB — тяжелее бюджета {MAX_PAGE_KB} KB (§7.1.3)")
 
-    # B1: ветки обязаны быть зеркальны. Разошлись — часть сайта существует
-    # только на одном языке, и узнаётся это обычно от посетителя.
-    for missing in sorted(ru_pages - en_pages):
-        problems.append(f"нет EN-двойника: en/{missing}")
-    for missing in sorted(en_pages - ru_pages):
-        problems.append(f"нет RU-двойника: {missing}")
+    # B1: состав сборки.
+    for required in REQUIRED_PAGES:
+        if required not in seen:
+            problems.append(f"нет обязательной страницы: {required}")
+    for stale in sorted(p for p in seen if p.startswith("en/")):
+        problems.append(f"осталась страница языковой ветки: {stale}")
+
+    # Редиректы — часть артефакта, а не намерение. Файл лежит в `public/` и
+    # попадает в `dist/` копированием; не доехал — старые ссылки `/en/…`
+    # отдают 404, и узнать об этом можно только от того, кто по ним пришёл.
+    redirects = root / "_redirects"
+    if not redirects.is_file():
+        problems.append("нет _redirects — ссылки /en/… отдадут 404")
+        rules = 0
+    else:
+        text = redirects.read_text(encoding="utf-8", errors="replace")
+        rules = len([ln for ln in text.splitlines() if ln.strip() and not ln.startswith("#")])
+        for need in ("/en/ / 301", "/en/* /:splat 301"):
+            if need not in text:
+                problems.append(f"в _redirects нет правила «{need}»")
 
     if problems:
         print(f"{RED}ERROR{RESET}: оракул артефакта нашёл {len(problems)} проблем(ы):")
@@ -129,7 +147,7 @@ def main() -> int:
     # Успех обязан назвать число (§6): молчание неотличимо от «не запускался».
     print(
         f"{GREEN}dist-оракул: OK{RESET} — просмотрено {len(pages)} файл(ов), "
-        f"пар языков {len(ru_pages)}, бюджет {MAX_PAGE_KB} KB соблюдён"
+        f"редиректов {rules}, бюджет {MAX_PAGE_KB} KB соблюдён"
     )
     return 0
 

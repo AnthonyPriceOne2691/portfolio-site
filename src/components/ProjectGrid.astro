@@ -9,20 +9,15 @@
  */
 import ProjectCard from "./ProjectCard.astro";
 import { publishedProjects } from "../lib/projects";
-import type { Locale } from "../i18n/ui";
 
-interface Props {
-  locale: Locale;
-}
-const { locale } = Astro.props;
-const projects = await publishedProjects(locale);
+const projects = await publishedProjects();
 ---
 
 <ul class="list">
   {
     projects.map((p) => (
       <li>
-        <ProjectCard entry={p} locale={locale} />
+        <ProjectCard entry={p} />
       </li>
     ))
   }

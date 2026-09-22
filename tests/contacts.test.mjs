@@ -24,7 +24,8 @@ function pages(dir = DIST, found = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const next = new URL(`${entry.name}${entry.isDirectory() ? "/" : ""}`, dir);
     if (entry.isDirectory()) pages(next, found);
-    else if (entry.name.endsWith(".html")) found.push([next, readFileSync(next, "utf8")]);
+    else if (entry.name.endsWith(".html"))
+      found.push([next, readFileSync(next, "utf8")]);
   }
   return found;
 }
@@ -89,7 +90,9 @@ test("schema.org: почта в `email`, а в `sameAs` только профи�
   assert.equal(person.email, `mailto:${CONTACTS.email}`);
   assert.deepEqual(person.sameAs, [...PROFILES]);
   assert.ok(
-    !person.sameAs.some((url) => url.includes("@") || url.startsWith("mailto:")),
+    !person.sameAs.some(
+      (url) => url.includes("@") || url.startsWith("mailto:"),
+    ),
     "в sameAs попала почта — это поле про профили, а не про связь",
   );
 });

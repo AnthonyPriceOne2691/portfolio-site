@@ -6,13 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import PageShell from "../PageShell.astro";
 import ProjectGrid from "../ProjectGrid.astro";
-import { useTranslations, type Locale } from "../../i18n/ui";
-
-interface Props {
-  locale: Locale;
-}
-const { locale } = Astro.props;
-const t = useTranslations(locale);
+import { t } from "../../lib/text";
 
 /*
  * Фото подставляется САМО, как только файл появится в `public/`.
@@ -46,22 +40,11 @@ const photo = PHOTO_FILES.find(inPublic);
  * и не должны. Клик заодно снимает вопрос `prefers-reduced-motion`: это
  * осознанное действие зрителя, а не движение, которое ему навязали.
  *
- * Язык выбирается файлом, а не кодом: `intro-en.mp4` ложится только на
- * английскую страницу, `intro.mp4` — на обе. Так владелец может снять одну
- * английскую версию (она полезнее: русскоязычный зритель английскую посмотрит,
- * англоязычный русскую — нет) и назвать её `intro.mp4`, не трогая исходников.
  */
-const intro = photo
-  ? [`intro-${locale}.mp4`, "intro.mp4"].find(inPublic)
-  : undefined;
+const intro = photo && inPublic("intro.mp4") ? "intro.mp4" : undefined;
 ---
 
-<PageShell
-  locale={locale}
-  titleKey="home.title"
-  descriptionKey="home.description"
-  width="wide"
->
+<PageShell titleKey="home.title" descriptionKey="home.description" width="wide">
   <section class="hero">
     <!-- Место под фото зарезервировано (design v0.8 §4.2): подстановка файла
          не должна перекраивать раскладку. Размеры у `<img>` проставлены явно —
@@ -117,7 +100,7 @@ const intro = photo
       <h2>{t("projects.title")}</h2>
       <p>{t("home.projectsHint")}</p>
     </div>
-    <ProjectGrid locale={locale} />
+    <ProjectGrid />
   </section>
 </PageShell>
 

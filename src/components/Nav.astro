@@ -17,23 +17,20 @@
  * доматывает до свёрнутой строки (обработчик живёт в `ProjectCard`). Такие
  * ссылки приходят снаружи — из резюме, письма, чата, — поэтому поведение
  * должно работать и без меню.
+ *
+ * ⚠ Переключателя языка здесь больше нет: сайт одноязычный с 2026-09-22.
+ * Вместе с ним ушёл скрипт переноса хэша между языками — он существовал
+ * только затем, чтобы смена языка с раскрытой карточки не выбрасывала в
+ * начало другой главной.
  */
-import { link, pathForLocale, useTranslations, type Locale } from "../i18n/ui";
+import { t } from "../lib/text";
 
-interface Props {
-  locale: Locale;
-}
-const { locale } = Astro.props;
-const t = useTranslations(locale);
 const here = Astro.url.pathname;
-const about = link("/about/", locale);
-const other: Locale = locale === "ru" ? "en" : "ru";
+const about = "/about/";
 ---
 
 <header class="nav glass">
-  <a class="brand" href={link("/", locale)} aria-label={t("nav.home")}
-    >AA<span>.</span></a
-  >
+  <a class="brand" href="/" aria-label={t("nav.home")}>AA<span>.</span></a>
 
   <a
     class="about"
@@ -56,43 +53,8 @@ const other: Locale = locale === "ru" ? "en" : "ru";
       <span class="theme-sun" aria-hidden="true">☼</span>
       <span class="theme-moon" aria-hidden="true">◐</span>
     </button>
-
-    <a
-      class="lang"
-      href={pathForLocale(here, other)}
-      hreflang={other}
-      lang={other}
-    >
-      {other.toUpperCase()}
-    </a>
   </div>
 </header>
-
-<script>
-  /*
-   * Перенос якоря в другой язык.
-   *
-   * ⚠ Хэш живёт ТОЛЬКО в браузере: до сервера он не доходит, и на статике
-   * ссылка языка собирается без него. Из-за этого переключение языка с
-   * раскрытой карточки выбрасывало в начало другой главной — пользователь
-   * терял ровно то место, ради которого туда шёл.
-   *
-   * Slug'и у языковых пар одинаковые — это не надежда, а инвариант, который
-   * держит `assertLanguagePairs` в `content.config.ts`: файл без пары ВАЛИТ
-   * сборку. Значит `#linkbuilder` существует на обоих языках по построению.
-   *
-   * База берётся один раз из серверного `href`, иначе повторные переключения
-   * склеивали бы хэши друг с другом.
-   */
-  for (const lang of document.querySelectorAll<HTMLAnchorElement>("a.lang")) {
-    const base = lang.getAttribute("href") ?? "";
-    const carryHash = () => {
-      lang.href = `${base}${location.hash}`;
-    };
-    carryHash();
-    window.addEventListener("hashchange", carryHash);
-  }
-</script>
 
 <style>
   .nav {
@@ -135,8 +97,7 @@ const other: Locale = locale === "ru" ? "en" : "ru";
     background: var(--control-active-bg);
     color: var(--accent);
   }
-  .theme,
-  .lang {
+  .theme {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -146,11 +107,10 @@ const other: Locale = locale === "ru" ? "en" : "ru";
     font-size: 0.875rem;
     text-decoration: none;
     border-radius: 999px;
-    /* ⚠ Никакого `transform` на hover. Обе кнопки живут в ЛИПКОЙ шапке и стоят
-       вплотную: сдвиг на пиксель под уже подъехавшим курсором читается как
-       дёрганье, а не как отклик, и на границе кнопки успевает зациклиться
-       (ушёл — вернулся — ушёл). Отклик даёт заливка: она так же заметна, но
-       не двигает ни саму кнопку, ни соседнюю. */
+    /* ⚠ Никакого `transform` на hover. Кнопка живёт в ЛИПКОЙ шапке: сдвиг на
+       пиксель под уже подъехавшим курсором читается как дёрганье, а не как
+       отклик, и на границе кнопки успевает зациклиться (ушёл — вернулся —
+       ушёл). Отклик даёт заливка: она так же заметна, но кнопку не двигает. */
     transition:
       background-color 0.24s ease,
       border-color 0.24s ease,
@@ -166,9 +126,7 @@ const other: Locale = locale === "ru" ? "en" : "ru";
     overflow: hidden;
   }
   .theme:hover,
-  .theme:focus-visible,
-  .lang:hover,
-  .lang:focus-visible {
+  .theme:focus-visible {
     background: var(--control-bg);
   }
   .theme:hover,
@@ -194,9 +152,5 @@ const other: Locale = locale === "ru" ? "en" : "ru";
   .theme[data-theme-current="dark"] .theme-sun {
     opacity: 0;
     transform: scale(0.75) rotate(-18deg);
-  }
-  .lang {
-    color: var(--accent);
-    padding: 0.4rem 0.8rem;
   }
 </style>

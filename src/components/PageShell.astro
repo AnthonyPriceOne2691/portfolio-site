@@ -7,25 +7,18 @@
  * что и любое другое: общим местом.
  */
 import Base from "../layouts/Base.astro";
-import { useTranslations, type Locale, type UIKey } from "../i18n/ui";
+import { t, type TextKey } from "../lib/text";
 
 interface Props {
-  locale: Locale;
-  titleKey: UIKey;
-  descriptionKey: UIKey;
+  titleKey: TextKey;
+  descriptionKey: TextKey;
   titleSuffix?: string;
   width?: "prose" | "wide";
 }
-const { locale, titleKey, descriptionKey, titleSuffix, width } = Astro.props;
-const t = useTranslations(locale);
+const { titleKey, descriptionKey, titleSuffix, width } = Astro.props;
 const title = titleSuffix ? `${t(titleKey)} — ${titleSuffix}` : t(titleKey);
 ---
 
-<Base
-  locale={locale}
-  title={title}
-  description={t(descriptionKey)}
-  width={width}
->
+<Base title={title} description={t(descriptionKey)} width={width}>
   <slot />
 </Base>

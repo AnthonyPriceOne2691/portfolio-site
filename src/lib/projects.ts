@@ -1,9 +1,7 @@
 import { getCollection } from "astro:content";
 
-import type { Locale } from "../i18n/ui";
-
 /**
- * Опубликованные проекты языка, в порядке `order`.
+ * Опубликованные проекты, в порядке `order`.
  *
  * Вынесено после того, как DRY-гейт нашёл дубль: один и тот же запрос жил в
  * `Nav`, `Home` и в списке `/projects` — правило трёх сработало буквально.
@@ -12,8 +10,8 @@ import type { Locale } from "../i18n/ui";
  * забыли `draft`, и черновик всплывёт в меню, но не на странице — или
  * наоборот. Обе сборки при этом зелёные.
  */
-export async function publishedProjects(locale: Locale) {
-  return (await getCollection(locale))
+export async function publishedProjects() {
+  return (await getCollection("projects"))
     .filter((p) => !p.data.draft)
     .sort((a, b) => a.data.order - b.data.order);
 }

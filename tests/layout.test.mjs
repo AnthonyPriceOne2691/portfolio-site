@@ -30,11 +30,11 @@ import test, { after, before } from "node:test";
 import { chromium } from "playwright";
 
 const DIST = new URL("../dist/", import.meta.url);
-const PAGES = [
-  "index.html",
-  "about/index.html",
-  "en/index.html",
-];
+// ⚠ Список страниц СОБРАННОГО сайта, и он же — единственное место, где
+// раньше стояла `en/index.html`. Сайт одноязычный с 2026-09-22: языковой
+// ветки нет, вместе с ней ушёл тест B5 про перенос раскрытой карточки между
+// языками — переносить стало нечего.
+const PAGES = ["index.html", "about/index.html"];
 const WIDTHS = [360, 390, 414];
 
 const MIME = {
@@ -117,7 +117,8 @@ async function positionSettled(page, id, stableReads = 4) {
   let same = 0;
   for (let i = 0; i < 150; i++) {
     const top = await page.evaluate(
-      (target) => Math.round(document.getElementById(target).getBoundingClientRect().top),
+      (target) =>
+        Math.round(document.getElementById(target).getBoundingClientRect().top),
       id,
     );
     same = top === last ? same + 1 : 0;
@@ -271,8 +272,12 @@ test("аккордеон: раскрытая карточка закрывает
     );
 
     await cards.nth(0).click();
-    await until(page, () => document.querySelectorAll("details.card[open]").length === 1,
-      null, `${how}: ни одна карточка не раскрылась`);
+    await until(
+      page,
+      () => document.querySelectorAll("details.card[open]").length === 1,
+      null,
+      `${how}: ни одна карточка не раскрылась`,
+    );
     assert.deepEqual(
       await open(),
       Array.from({ length: total }, (_, i) => i === 0),
@@ -280,10 +285,17 @@ test("аккордеон: раскрытая карточка закрывает
     );
 
     await cards.nth(1).click();
-    await until(page, () => {
-      const open = [...document.querySelectorAll("details.card")].map((c) => c.open);
-      return open.filter(Boolean).length === 1 && open[1];
-    }, null, `${how}: вторая карточка не стала единственной раскрытой`);
+    await until(
+      page,
+      () => {
+        const open = [...document.querySelectorAll("details.card")].map(
+          (c) => c.open,
+        );
+        return open.filter(Boolean).length === 1 && open[1];
+      },
+      null,
+      `${how}: вторая карточка не стала единственной раскрытой`,
+    );
     assert.deepEqual(
       await open(),
       Array.from({ length: total }, (_, i) => i === 1),
@@ -291,8 +303,12 @@ test("аккордеон: раскрытая карточка закрывает
     );
 
     await cards.nth(1).click();
-    await until(page, () => document.querySelectorAll("details.card[open]").length === 0,
-      null, `${how}: карточка не закрылась повторным кликом`);
+    await until(
+      page,
+      () => document.querySelectorAll("details.card[open]").length === 0,
+      null,
+      `${how}: карточка не закрылась повторным кликом`,
+    );
     assert.deepEqual(
       await open(),
       Array(total).fill(false),
@@ -315,7 +331,9 @@ test("ссылка с якорем ведёт на карточку и РАСК�
    * формально «открыта», а по факту наполовину закрыта. Это ловится только
    * сравнением с нижней кромкой шапки, а не фактом `open`.
    */
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1280, height: 900 },
+  });
   // Именно «/», а не «/index.html»: ссылки меню ведут на `/#якорь`, и только с
   // этого адреса переход остаётся сменой хэша, а не перезагрузкой страницы.
   await page.goto(url(""));
@@ -323,13 +341,19 @@ test("ссылка с якорем ведёт на карточку и РАСК�
   const state = () =>
     page.evaluate(() =>
       Object.fromEntries(
-        [...document.querySelectorAll("details.card")].map((c) => [c.id, c.open]),
+        [...document.querySelectorAll("details.card")].map((c) => [
+          c.id,
+          c.open,
+        ]),
       ),
     );
 
   const before = await state();
   const ids = Object.keys(before);
-  assert.ok(ids.length >= 2, "на главной меньше двух карточек — нечего проверять");
+  assert.ok(
+    ids.length >= 2,
+    "на главной меньше двух карточек — нечего проверять",
+  );
   assert.ok(
     Object.values(before).every((v) => v === false),
     "карточки не должны быть раскрыты до перехода по меню",
@@ -346,12 +370,20 @@ test("ссылка с якорем ведёт на карточку и РАСК�
     await page.evaluate((id) => {
       location.hash = `#${id}`;
     }, target);
-    await until(page, (id) => document.getElementById(id).open, target,
-      `ссылка с якорем не раскрыла карточку ${target}`);
+    await until(
+      page,
+      (id) => document.getElementById(id).open,
+      target,
+      `ссылка с якорем не раскрыла карточку ${target}`,
+    );
     await positionSettled(page, target);
 
     const after = await state();
-    assert.equal(after[target], true, `пункт меню не раскрыл карточку ${target}`);
+    assert.equal(
+      after[target],
+      true,
+      `пункт меню не раскрыл карточку ${target}`,
+    );
     for (const id of ids) {
       if (id === target) continue;
       assert.equal(
@@ -376,69 +408,6 @@ test("ссылка с якорем ведёт на карточку и РАСК�
   await page.close();
 });
 
-test("B5: смена языка не теряет раскрытую карточку", async () => {
-  /*
-   * ⚠ Хэш до сервера не доходит — он существует только в браузере. На статике
-   * ссылка языка поэтому собирается без него, и переключение с раскрытой
-   * карточки выбрасывало в начало другой главной: пользователь терял ровно то
-   * место, ради которого переключался. Якорь дописывается на лету (`Nav`).
-   *
-   * Проверяется весь круг, а не один переход: туда, обратно и случай БЕЗ
-   * якоря — там ссылка обязана остаться чистой, иначе на всех страницах
-   * появится висячий «#».
-   */
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-  await page.goto(url(""));
-
-  const lang = page.locator("a.lang");
-  assert.ok(
-    !(await lang.getAttribute("href")).includes("#"),
-    "без якоря ссылка языка не должна тащить решётку",
-  );
-
-  const target = await page.evaluate(
-    () => document.querySelector("details.card").id,
-  );
-  await page.evaluate((id) => {
-    location.hash = `#${id}`;
-  }, target);
-  await until(page, (id) => document.getElementById(id).open, target,
-    `карточка ${target} не раскрылась`);
-
-  assert.equal(
-    await lang.getAttribute("href"),
-    `/en/#${target}`,
-    "ссылка языка не подхватила текущий якорь",
-  );
-
-  // --- туда ---
-  await lang.click();
-  await until(page, () => document.documentElement.lang === "en", null,
-    "не перешли на английскую версию");
-  await until(page, (id) => document.getElementById(id)?.open === true, target,
-    `на EN карточка ${target} не раскрыта — якорь потерялся`);
-  assert.equal(
-    await page.evaluate(() => location.pathname + location.hash),
-    `/en/#${target}`,
-  );
-
-  const gap = await page.evaluate((id) => {
-    const card = document.getElementById(id).getBoundingClientRect();
-    const nav = document.querySelector("header.nav").getBoundingClientRect();
-    return Math.round(card.top - nav.bottom);
-  }, target);
-  assert.ok(gap >= -1, `на EN карточка ${target} приехала под шапку на ${-gap}px`);
-
-  // --- и обратно ---
-  await page.locator("a.lang").click();
-  await until(page, () => document.documentElement.lang === "ru", null,
-    "не вернулись на русскую версию");
-  await until(page, (id) => document.getElementById(id)?.open === true, target,
-    `при возврате карточка ${target} снова закрылась`);
-
-  await page.close();
-});
-
 test("подвал: у каждой ссылки есть ПОДПИСЬ, а не только значок", async () => {
   /*
    * Значки в подвале — подпись к тексту, а не замена ему, и это легко потерять
@@ -450,7 +419,9 @@ test("подвал: у каждой ссылки есть ПОДПИСЬ, а н�
    * Проверяется вычисленное ИМЯ ссылки, а не наличие тега: значок обязан быть
    * `aria-hidden`, иначе в имя попадёт мусор из `<svg>`.
    */
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const page = await browser.newPage({
+    viewport: { width: 1280, height: 900 },
+  });
   await page.goto(url(""));
 
   const links = await page.evaluate(() =>
@@ -511,7 +482,9 @@ test("B6: при reduced-motion ничего не анимируется", async
           duration,
           who: target
             ? `${target.tagName.toLowerCase()}${
-                target.className ? `.${String(target.className).split(" ")[0]}` : ""
+                target.className
+                  ? `.${String(target.className).split(" ")[0]}`
+                  : ""
               }`
             : "?",
         };

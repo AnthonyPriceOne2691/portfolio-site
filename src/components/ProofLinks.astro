@@ -2,14 +2,12 @@
 /** Ссылки-доказательства. Рендерится только то, что реально есть в frontmatter
     (пример B3): отсутствующий пруф не оставляет ни битой иконки, ни пустой
     строки. Схема гарантирует, что хотя бы один пруф найдётся. */
-import { useTranslations, type Locale } from "../i18n/ui";
+import { t } from "../lib/text";
 
 interface Props {
   proof: Record<string, string | undefined>;
-  locale: Locale;
 }
-const { proof, locale } = Astro.props;
-const t = useTranslations(locale);
+const { proof } = Astro.props;
 const links = [
   proof.github ? { href: proof.github, label: t("proof.github") } : null,
   proof.case ? { href: proof.case, label: t("proof.case") } : null,

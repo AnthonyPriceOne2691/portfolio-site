@@ -22,7 +22,14 @@
  */
 import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+  readFileSync,
+  readdirSync,
+} from "node:fs";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
@@ -44,7 +51,11 @@ function gate(script, env = {}) {
 }
 
 const git = (...args) =>
-  execFileSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  execFileSync("git", args, {
+    cwd: ROOT,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
 
 /**
  * Кладёт канарейку, прогоняет, убирает — даже если проверка упала.
@@ -80,23 +91,30 @@ const LINES_600 = "const x = 1;\n".repeat(600);
 test("длина файла: порог берётся по классу файла, а не один на всех", () => {
   // Контроль: без канареек гейт зелёный. Иначе проверки ниже меряют чужую
   // поломку и говорят не о том.
-  assert.equal(gate("check_file_length.sh", LENGTH_ENV).code, 0,
-    "гейт длины красный ещё до канареек — сначала почини дерево");
-
-  const inTests = withCanary("tests/__canary_length.mjs", LINES_600,
-    () => gate("check_file_length.sh", LENGTH_ENV));
   assert.equal(
-    inTests.code, 0,
+    gate("check_file_length.sh", LENGTH_ENV).code,
+    0,
+    "гейт длины красный ещё до канареек — сначала почини дерево",
+  );
+
+  const inTests = withCanary("tests/__canary_length.mjs", LINES_600, () =>
+    gate("check_file_length.sh", LENGTH_ENV),
+  );
+  assert.equal(
+    inTests.code,
+    0,
     "файл на 600 строк В КАТАЛОГЕ tests/ признан нарушением: гейт судит тесты " +
       "прод-лимитом 500 вместо 1000. Маска is_test() снова не знает раскладку " +
       "проекта — тесты этого репозитория лежат в корневом tests/ с расширением " +
       `.mjs.\n${inTests.out}`,
   );
 
-  const inSrc = withCanary("src/__canary_length.ts", LINES_600,
-    () => gate("check_file_length.sh", LENGTH_ENV));
+  const inSrc = withCanary("src/__canary_length.ts", LINES_600, () =>
+    gate("check_file_length.sh", LENGTH_ENV),
+  );
   assert.equal(
-    inSrc.code, 1,
+    inSrc.code,
+    1,
     "файл на 600 строк в src/ прошёл: прод-лимит 500 не применяется, то есть " +
       "is_test() стала слишком широкой и метит продовый код тестовым порогом",
   );
@@ -115,17 +133,23 @@ test("слои: счётчик модулей переживает предуп�
    * `.astro` и не видит, кто их импортирует). Канарейка обязана лежать там,
    * где правило действует, иначе предупреждения не будет и проверка пуста.
    */
-  const r = withCanary("src/__canary_orphan.ts", "export const orphan = 1;\n",
-    () => gate("check_layers_gate.sh", { LINT_TS_SRC: "src", LINT_FE_DIR: "." }));
+  const r = withCanary(
+    "src/__canary_orphan.ts",
+    "export const orphan = 1;\n",
+    () =>
+      gate("check_layers_gate.sh", { LINT_TS_SRC: "src", LINT_FE_DIR: "." }),
+  );
 
   assert.doesNotMatch(
-    r.out, /0 модул(ей|я) просмотрено/,
+    r.out,
+    /0 модул(ей|я) просмотрено/,
     "гейт слоёв объявил «0 модулей просмотрено — гейт не видел кода», хотя код " +
       "на месте. Это ЛОЖНЫЙ ДИАГНОЗ: он отправляет чинить область поиска, с " +
       `которой всё в порядке. Шаблон счётчика снова ждёт скобку.\n${r.out}`,
   );
   assert.match(
-    r.out, /просмотрено \d+ модул/,
+    r.out,
+    /просмотрено \d+ модул/,
     `гейт слоёв не напечатал число просмотренных модулей вовсе\n${r.out}`,
   );
 });
@@ -154,7 +178,8 @@ test("delivery-гейт умеет читать расширения, котор
 
   const blind = [...present].filter((ext) => !known.has(ext));
   assert.deepEqual(
-    blind, [],
+    blind,
+    [],
     `delivery-гейт не читает расширения ${blind.join(", ")}, а тесты этого ` +
       "проекта в них и лежат. Гейт acceptance-примеров прочитает ноль файлов " +
       "и объявит примеры неупомянутыми — ложная тревога при исправном дереве. " +
@@ -165,11 +190,22 @@ test("delivery-гейт умеет читать расширения, котор
 test("после прогона канареек дерево чистое", () => {
   // Канарейка, пережившая падение, ломает настоящие коммиты: файл на 600 строк
   // в src/ валит гейт длины у следующего правящего, и виноват будет он.
-  for (const leftover of ["tests/__canary_length.mjs", "src/__canary_length.ts",
-                          "src/__canary_orphan.ts"]) {
-    assert.ok(!existsSync(`${ROOT}${leftover}`), `канарейка не убрана: ${leftover}`);
+  for (const leftover of [
+    "tests/__canary_length.mjs",
+    "src/__canary_length.ts",
+    "src/__canary_orphan.ts",
+  ]) {
+    assert.ok(
+      !existsSync(`${ROOT}${leftover}`),
+      `канарейка не убрана: ${leftover}`,
+    );
   }
   // Индекс тоже: `git add -N` оставляет запись, и она попала бы в чужой коммит.
-  const tracked = git("ls-files", "--", "src/__canary_*", "tests/__canary_*").trim();
+  const tracked = git(
+    "ls-files",
+    "--",
+    "src/__canary_*",
+    "tests/__canary_*",
+  ).trim();
   assert.equal(tracked, "", `канарейка осталась в индексе git: ${tracked}`);
 });
