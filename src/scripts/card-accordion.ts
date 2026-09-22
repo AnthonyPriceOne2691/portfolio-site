@@ -19,6 +19,76 @@ const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const OPEN = { duration: 420, easing: "cubic-bezier(0.22, 0.61, 0.36, 1)" };
 const SHUT = { duration: 320, easing: "cubic-bezier(0.4, 0, 0.68, 0.06)" };
 
+/** Нижняя кромка липкой шапки: под неё верх карточки уезжать не должен. */
+const stickyBottom = () =>
+  document.querySelector("header.nav")?.getBoundingClientRect().bottom ?? 0;
+
+/**
+ * Держит ВЕРХ раскрываемой карточки на месте, пока соседи схлопываются.
+ *
+ * ⚠ Без этого открытие карточки на телефоне выбрасывает в её середину, и
+ * выглядит это как промах по ссылке. Механика: сосед закрывается НАД целью,
+ * страница под ним уезжает вверх на его высоту — а палец остаётся на месте.
+ * Чем длиннее был раскрытый сосед, тем дальше промах; на телефоне раскрытая
+ * карточка выше экрана, так что мимо уезжает всё, ради чего карточку
+ * открывали: фрейм с видео, метрика, заголовок.
+ *
+ * Компенсируется ПОКАДРОВО, а не одним `scrollIntoView` после анимации:
+ * закрытие идёт 320 мс, и цель уползает всё это время. Доводка в конце
+ * означала бы треть секунды неподвижности, а затем рывок — ровно тот
+ * «рывок с последующим сползанием», из-за которого ниже, в переходе по
+ * якорю, прокрутка сделана мгновенной.
+ *
+ * Якорь — ИСХОДНОЕ положение карточки, а не верх экрана: человек уже смотрит
+ * туда, куда ткнул, и увозить страницу у него из-под пальца незачем. Исключение
+ * одно — карточка, чей верх спрятан под липкой шапкой: там держать нечего,
+ * и она подтягивается под её кромку.
+ *
+ * ⚠ Удержание держит страницу и против ПРОГРАММНОЙ прокрутки: событий мыши и
+ * касания она не порождает, отличить её от «страница сама уехала» изнутри
+ * цикла нечем. Поэтому каждый, кто прокручивает страницу намеренно, обязан
+ * сперва снять удержание через `unpin` — так делают и повторный клик по
+ * соседней карточке, и переход по якорю. Найдено тестом: подводка карточки
+ * к экрану внутри тех же 700 мс откатывалась назад, и это ровно то, что
+ * увидел бы человек, кликнувший в меню сразу после карточки.
+ */
+let unpin: (() => void) | null = null;
+
+function pinTop(card: HTMLElement): void {
+  // Предыдущее удержание снимается ВСЕГДА: два цикла, тянущие страницу к
+  // разным точкам, дают дрожь, а выигрывает тот, чей кадр пришёл вторым.
+  unpin?.();
+
+  const target = Math.max(card.getBoundingClientRect().top, stickyBottom());
+  // Заведомо дольше обеих анимаций (420 мс) с запасом на медленный кадр.
+  const deadline = performance.now() + 700;
+  const events = ["wheel", "touchmove", "keydown"] as const;
+
+  let live = true;
+  const stop = () => {
+    live = false;
+    for (const e of events) window.removeEventListener(e, stop);
+    if (unpin === stop) unpin = null;
+  };
+  unpin = stop;
+  // ⚠ Человек начал скроллить сам — немедленно уступаем. Догонять его палец
+  // значит драться с ним за страницу, а это худшее, что может делать сайт.
+  // Собственный `scrollBy` сюда не попадает: он не порождает ни wheel, ни
+  // touchmove, — иначе компенсация отменяла бы саму себя на первом кадре.
+  for (const e of events) window.addEventListener(e, stop, { passive: true });
+
+  const tick = (now: number) => {
+    if (!live) return;
+    const delta = card.getBoundingClientRect().top - target;
+    // Порог в полпикселя: дробный остаток есть всегда, и без него страница
+    // дрожала бы весь кадр.
+    if (Math.abs(delta) >= 0.5) window.scrollBy(0, delta);
+    if (now < deadline) requestAnimationFrame(tick);
+    else stop();
+  };
+  requestAnimationFrame(tick);
+}
+
 type Controller = {
   card: HTMLDetailsElement;
   open: () => void;
@@ -94,8 +164,16 @@ for (const card of document.querySelectorAll<HTMLDetailsElement>(
 
     if (reduced) {
       const next = !card.open;
+      // Тот же сдвиг, что и в анимированной ветке, только весь целиком в
+      // одном кадре: соседи закрываются мгновенно, страница уезжает разом.
+      const was = card.getBoundingClientRect().top;
       for (const c of others()) c.card.open = false;
       card.open = next;
+      if (next) {
+        const delta =
+          card.getBoundingClientRect().top - Math.max(was, stickyBottom());
+        if (Math.abs(delta) >= 0.5) window.scrollBy(0, delta);
+      }
       return;
     }
 
@@ -110,6 +188,10 @@ for (const card of document.querySelectorAll<HTMLDetailsElement>(
     // Раскрылась одна — остальные уезжают. Закрываем ПЕРЕД открытием, чтобы
     // соседи уже пошли вверх, пока эта идёт вниз: два движения навстречу
     // читаются как одно, а не как очередь.
+    //
+    // ⚠ Замер положения — ДО закрытия соседей: после него верх карточки уже
+    // не тот, и компенсировать было бы нечего.
+    pinTop(card);
     for (const c of others()) c.close();
     open();
   });
@@ -182,6 +264,11 @@ const revealFromHash = () => {
   if (!id) return;
   const target = controllers.find((c) => c.card.id === id);
   if (!target) return;
+
+  // ⚠ Сначала снимаем удержание от предыдущего клика, иначе оно утащит
+  // страницу обратно посреди перехода: клик по карточке и сразу ссылка с
+  // якорем укладываются в те же 700 мс легко.
+  unpin?.();
 
   for (const c of controllers) {
     c.stop();

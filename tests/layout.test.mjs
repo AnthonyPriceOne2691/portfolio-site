@@ -319,6 +319,97 @@ test("аккордеон: раскрытая карточка закрывает
   }
 });
 
+test("аккордеон на телефоне: раскрытая карточка не уезжает в середину", async () => {
+  /*
+   * Найдено владельцем на телефоне 2026-09-22.
+   *
+   * Открыта одна карточка, тыкаешь в другую — та раскрывается, но экран
+   * оказывается в её СЕРЕДИНЕ, мимо фрейма с видео и метрики, ради которых
+   * карточку и открывают. Причина не в прокрутке, а в её отсутствии: сосед
+   * схлопывается НАД целью, и вся страница под ним уезжает вверх на его
+   * высоту, пока палец стоит на месте. На телефоне раскрытая карточка выше
+   * экрана, поэтому промах — почти во весь экран.
+   *
+   * ⚠ Проверка — РЕЛЯЦИОННАЯ: не «карточка на такой-то высоте», а «верх
+   * карточки там же, где был в момент нажатия». Абсолютные числа здесь
+   * зависят от длины текста карточек и сгнили бы при первой же правке
+   * контента, а отношение держится на любом.
+   */
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+  });
+  await page.goto(url(""));
+
+  const cards = page.locator("details.card");
+  const ids = await cards.evaluateAll((list) => list.map((c) => c.id));
+  assert.ok(ids.length >= 2, "для проверки нужны хотя бы две карточки");
+
+  // Открываем первую и даём ей встать. Пауза — не «на всякий случай»: после
+  // клика скрипт 700 мс удерживает верх раскрытой карточки, и подводка второй
+  // внутри этого окна откатилась бы назад (так тест и падал в первый раз).
+  await cards.nth(0).locator("summary").click();
+  await positionSettled(page, ids[1]);
+  await page.waitForTimeout(800);
+
+  const topOf = (id) =>
+    page.evaluate(
+      (target) =>
+        Math.round(document.getElementById(target).getBoundingClientRect().top),
+      id,
+    );
+  const navBottom = await page.evaluate(() =>
+    Math.round(
+      document.querySelector("header.nav").getBoundingClientRect().bottom,
+    ),
+  );
+
+  /*
+   * Вторая карточка лежит ПОД раскрытой первой — именно этот случай и ломался.
+   *
+   * ⚠ Подводим её мгновенным `scrollTo`, а не `scrollIntoView`: у страницы
+   * плавная прокрутка, и `positionSettled` успевал снять четыре одинаковых
+   * замера ДО того, как она тронулась, — тест мерил исходную позицию и падал
+   * на исправном коде. Второе: клик в Playwright сам доскроллит до элемента,
+   * если тот вне экрана, и тогда проверялся бы уже не наш сдвиг, а его.
+   */
+  await page.evaluate((target) => {
+    const el = document.getElementById(target);
+    const y = el.getBoundingClientRect().top + window.scrollY - 300;
+    window.scrollTo({ top: y, behavior: "instant" });
+  }, ids[1]);
+  await positionSettled(page, ids[1]);
+  const before = await topOf(ids[1]);
+  assert.ok(
+    before > 0 && before < 844,
+    `карточку не удалось подвести под экран: верх на ${before}px`,
+  );
+
+  await cards.nth(1).locator("summary").click();
+  await until(
+    page,
+    (target) => document.getElementById(target).open === true,
+    ids[1],
+    "вторая карточка не раскрылась",
+  );
+  await positionSettled(page, ids[1]);
+  const after = await topOf(ids[1]);
+
+  // Допуск в 2px — округление и дробная прокрутка; промах, о котором речь,
+  // измерялся сотнями пикселей.
+  assert.ok(
+    Math.abs(after - before) <= 2,
+    `верх карточки уехал на ${before - after}px: нажали на ${before}, ` +
+      `после раскрытия ${after} — экран показывает не начало карточки`,
+  );
+  assert.ok(
+    after >= navBottom - 2,
+    `верх карточки (${after}) спрятался под липкой шапкой (${navBottom})`,
+  );
+
+  await page.close();
+});
+
 test("ссылка с якорем ведёт на карточку и РАСКРЫВАЕТ её", async () => {
   /*
    * Отдельных страниц у проектов больше нет, и меню из шапки убрано: ссылка на
