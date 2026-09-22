@@ -525,6 +525,64 @@ test("ссылка с якорем ведёт на карточку и РАСК�
   await page.close();
 });
 
+test("фон не перерисовывается при прокрутке (background-attachment: fixed)", async () => {
+  /*
+   * Найдено владельцем на десктопе 2026-09-22: при быстрой прокрутке вверх
+   * между карточками мелькали ЧЁРНЫЕ прямоугольники.
+   *
+   * Механика: фон с `background-attachment: fixed` обязан перерисовываться на
+   * каждый кадр прокрутки, а рядом стоят стеклянные карточки с
+   * `backdrop-filter`, которому нужен снимок того же фона. Браузер прокручивает
+   * страницу на композиторе, растеризация за ним не поспевает — и в кадр
+   * попадает плитка, которую ещё не нарисовали. Видно её в ЗАЗОРАХ между
+   * карточками: только там фон и открыт.
+   *
+   * ⚠ Проверяется СОСТОЯНИЕ СТРАНИЦЫ, а не текст css-файла: стилей несколько,
+   * и запрет, привязанный к одному из них, обходится переездом строки в
+   * соседний. Псевдоэлементы проверяются отдельно — холст и узор живут именно
+   * в них, и `querySelectorAll` их не видит.
+   *
+   * Сам артефакт воспроизвести headless нельзя: скриншот заставляет браузер
+   * дорисовать всё, и в кадр попадает уже исправная картинка. Поэтому здесь
+   * стережётся ПРИЧИНА, а не её вид.
+   */
+  const page = await browser.newPage({
+    viewport: { width: 1280, height: 900 },
+  });
+  await page.goto(url(""));
+
+  const offenders = await page.evaluate(() => {
+    const out = [];
+    const check = (el, pseudo) => {
+      const v = getComputedStyle(el, pseudo).backgroundAttachment;
+      if (v && v.split(",").some((part) => part.trim() === "fixed")) {
+        out.push(
+          `${el.tagName.toLowerCase()}${el.className ? "." + String(el.className).split(" ")[0] : ""}${pseudo ?? ""}`,
+        );
+      }
+    };
+    for (const el of document.querySelectorAll("*")) {
+      check(el, null);
+      check(el, "::before");
+      check(el, "::after");
+    }
+    check(document.documentElement, null);
+    check(document.documentElement, "::before");
+    return out;
+  });
+
+  assert.deepEqual(
+    offenders,
+    [],
+    "фон закреплён через background-attachment: fixed — при прокрутке он " +
+      "перерисовывается каждый кадр, и рядом со стеклом это даёт чёрные " +
+      "прямоугольники в зазорах. Закрепляйте ЭЛЕМЕНТОМ (position: fixed), " +
+      `нашлось: ${offenders.join(", ")}`,
+  );
+
+  await page.close();
+});
+
 test("подвал: у каждой ссылки есть ПОДПИСЬ, а не только значок", async () => {
   /*
    * Значки в подвале — подпись к тексту, а не замена ему, и это легко потерять
