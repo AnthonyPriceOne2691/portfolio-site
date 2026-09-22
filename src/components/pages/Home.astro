@@ -27,10 +27,33 @@ const t = useTranslations(locale);
  * Расширения перебираются в фиксированном порядке, чтобы результат сборки не
  * зависел от того, что владелец положил первым.
  */
+const inPublic = (f: string) =>
+  existsSync(fileURLToPath(new URL(`../../../public/${f}`, import.meta.url)));
+
 const PHOTO_FILES = ["photo.jpg", "photo.jpeg", "photo.png", "photo.webp"];
-const photo = PHOTO_FILES.find((f) =>
-  existsSync(fileURLToPath(new URL(`../../../public/${f}`, import.meta.url))),
-);
+const photo = PHOTO_FILES.find(inPublic);
+
+/*
+ * Кружок умеет быть видео «о себе» — и тоже САМ, по появлению файла.
+ *
+ * ⚠ Постер обязателен: видео подставляется ТОЛЬКО поверх фотографии. Без
+ * постера круг до первого клика — чёрная дыра, а это ровно тот запрет, ради
+ * которого выше стоит заглушка. Поэтому `intro` ищется лишь тогда, когда фото
+ * уже нашлось, и фотография остаётся первым кадром.
+ *
+ * ⚠ Играет по КЛИКУ, а не по наведению, как тизеры в карточках. Говорящая
+ * голова без звука выглядит сломанной, а звук по наведению браузеры не дадут
+ * и не должны. Клик заодно снимает вопрос `prefers-reduced-motion`: это
+ * осознанное действие зрителя, а не движение, которое ему навязали.
+ *
+ * Язык выбирается файлом, а не кодом: `intro-en.mp4` ложится только на
+ * английскую страницу, `intro.mp4` — на обе. Так владелец может снять одну
+ * английскую версию (она полезнее: русскоязычный зритель английскую посмотрит,
+ * англоязычный русскую — нет) и назвать её `intro.mp4`, не трогая исходников.
+ */
+const intro = photo
+  ? [`intro-${locale}.mp4`, "intro.mp4"].find(inPublic)
+  : undefined;
 ---
 
 <PageShell
@@ -45,7 +68,31 @@ const photo = PHOTO_FILES.find((f) =>
          без них браузер не знает высоту до загрузки и первый экран дёргается
          ровно там, где на него впервые смотрят. -->
     {
-      photo ? (
+      intro && photo ? (
+        <button
+          class="intro"
+          type="button"
+          aria-pressed="false"
+          aria-label={t("home.introPlay")}
+          data-intro
+        >
+          <video
+            class="photo"
+            src={`/${intro}`}
+            poster={`/${photo}`}
+            preload="none"
+            playsinline
+            width="200"
+            height="200"
+          />
+          {/* Значок — единственный контрол. Нативную панель сюда ставить
+              нельзя: `border-radius: 50%` срежет ей низ, и выглядеть это
+              будет поломкой, а не круглым плеером. Пауза — повторный клик. */}
+          <span class="badge" aria-hidden="true">
+            ▶
+          </span>
+        </button>
+      ) : photo ? (
         <img
           class="photo"
           src={`/${photo}`}
@@ -74,6 +121,32 @@ const photo = PHOTO_FILES.find((f) =>
   </section>
 </PageShell>
 
+<script>
+  const btn = document.querySelector<HTMLButtonElement>("[data-intro]");
+  const video = btn?.querySelector("video");
+
+  if (btn && video) {
+    btn.addEventListener("click", () => {
+      // `play()` отвергается сам по себе (вкладка в фоне, политика
+      // автовоспроизведения) — это не ошибка, и падать из-за неё нечему.
+      if (video.paused) void video.play().catch(() => {});
+      else video.pause();
+    });
+
+    const state = () => btn.setAttribute("aria-pressed", String(!video.paused));
+    video.addEventListener("play", state);
+    video.addEventListener("pause", state);
+
+    // ⚠ После `ended` в круге застывает ПОСЛЕДНИЙ кадр — случайная гримаса
+    // вместо портрета, и так до перезагрузки страницы. `load()` возвращает
+    // постер: досмотревший видит то же фото, что и не начинавший.
+    video.addEventListener("ended", () => {
+      video.load();
+      state();
+    });
+  }
+</script>
+
 <style>
   .hero {
     display: grid;
@@ -89,10 +162,53 @@ const photo = PHOTO_FILES.find((f) =>
        него неквадратный файл сплющило бы в кружке. */
     object-fit: cover;
   }
-  /* Оправа только у настоящего фото: заглушке её даёт класс `glass`. */
-  img.photo {
+  /* Оправа только у настоящего медиа: заглушке её даёт класс `glass`. */
+  img.photo,
+  video.photo {
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
+  }
+  /* Кнопка не рисуется — рисуется кружок внутри неё. */
+  .intro {
+    position: relative;
+    display: block;
+    width: min(200px, 60vw);
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+    /* `line-height` у кнопки добавил бы полосу под видео и сместил бы круг
+       относительно текста справа. */
+    line-height: 0;
+  }
+  .intro:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .badge {
+    position: absolute;
+    right: 6%;
+    bottom: 6%;
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    background: var(--canvas-1);
+    box-shadow: var(--glass-shadow);
+    color: var(--accent);
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: opacity 0.2s ease;
+  }
+  /* Играет — значок уходит: он приглашение, а не индикатор. */
+  .intro[aria-pressed="true"] .badge {
+    opacity: 0;
+  }
+  .intro:hover .badge {
+    transform: scale(1.06);
   }
   .role {
     font-weight: 600;

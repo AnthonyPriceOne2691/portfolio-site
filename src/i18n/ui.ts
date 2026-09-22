@@ -29,6 +29,7 @@ export const ui = {
       "Production AI SaaS и полностью локальные голосовые, веб- и AR-агенты. Ставлю LLM под контракт.",
     "home.role": "AI Automation / LLM Application Engineer",
     "home.photoAlt": "Антон Аспидов",
+    "home.introPlay": "Видео о себе — включить (со звуком)",
     "home.pitch":
       "Ставлю LLM под контракт: production SaaS, рассчитанный на работу одного оператора, и полностью локальные агенты — голос, веб, AR.",
     "home.status": "🟢 Открыт к удалённой работе и контракту · UTC+3",
@@ -71,6 +72,7 @@ export const ui = {
       "Production AI SaaS plus fully-local voice, web and AR agents. LLMs under contract.",
     "home.role": "AI Automation / LLM Application Engineer",
     "home.photoAlt": "Anton Aspidov",
+    "home.introPlay": "Play the intro video (with sound)",
     "home.pitch":
       "I put LLMs under contract: a production SaaS built to run with a single operator, and fully-local agents that listen, browse and see.",
     "home.status": "🟢 Open to remote / contract · UTC+3",
