@@ -104,7 +104,7 @@
 
 ## 1. LinkBuilder — 97.9% delivery
 
-**Хронометраж:** 1:45. Чистой речи ~65 с.
+**Хронометраж:** 1:55. Чистой речи ~72 с.
 
 **Ключевой кадр:** момент, где контракт **отклоняет** письмо. Он доказывает, что
 AI под контролем, а не просто подключён. Без него ролик — реклама.
@@ -155,8 +155,16 @@ AI под контролем, а не просто подключён. Без н
 **0:48 · Открываете панель контрактов над черновиком. Ведёте курсор сверху вниз
 по списку, НЕ кликая. Читать их вслух не нужно, важно, что их много.**
 
-> Every draft passes seventeen behavioral contracts before a human sees it.
-> Payment invariants, spending caps, a kill switch.
+> Every draft passes behavioral contracts before a human sees it. Payment
+> invariants, spending caps, a kill switch. They are specs in version control,
+> one per agent, not instructions inside a prompt — hard invariants that must
+> never break, and soft ones that are judged.
+
+**0:58 · Если под рукой есть переписка не на английском — покажите её. Если нет,
+пропустите: выдумывать эту секунду не нужно.**
+
+> The same contracts apply across six languages — the negotiation does not
+> switch to English just because a rule was written in it.
 
 **1:00 · КЛЮЧЕВОЙ КАДР. Переключаетесь на заранее открытый отклонённый черновик.
 Причина отказа должна быть видна крупно. Держите кадр три секунды МОЛЧА, потом
@@ -174,7 +182,9 @@ AI под контролем, а не просто подключён. Без н
 есть пример снятой ссылки — покажите и его, он ценнее удачного.**
 
 > After publication the platform keeps watching: the link is either live, or it
-> has been pulled, and that changes the status here.
+> has been pulled, and that changes the status here. Relevance scoring runs on a
+> local embedding service the workers share, rather than four copies of the same
+> model in memory.
 
 **1:32 · Возвращаетесь на общий экран кампании. Последняя фраза идёт поверх него,
 титр не нужен.**
@@ -202,6 +212,22 @@ AI под контролем, а не просто подключён. Без н
 а с ним — факт.
 
 ### Подготовка
+
+Пять шагов из `docs/DEMO.md`, каждый отвечает «да/нет». Ни один не пропускать:
+все пять отказов случались вживую.
+
+1. `./scripts/dev.sh` — весь стек одной командой.
+2. Ассеты на месте: модели, голос Piper, `whisper-cli`.
+3. `delivery/evals/browser/run.sh mid-turn` — живой оракул полного цикла на
+   настоящем Chromium. Ожидаемый вердикт `closed-mid-turn`.
+4. **Прогреть модель** одним запросом к ollama. Первый ход на холодной грузит
+   девять гигабайт и выглядит как «зависло».
+5. **Наушники, не колонки.** На колонках VAD слышит Генри, и агент перебивает
+   сам себя. Эхо-защита — самое сложное место проекта, и на записи она
+   проверяется именно так.
+
+**Если шаги 1–3 красные — вживую не снимать.** Снимки последнего прогона лежат
+в `delivery/evals/browser/out/*.png`.
 
 - **Прогрейте модели до записи.** Whisper и Ollama на холодную грузятся
   секундами, и это ровно те секунды, из-за которых ролик про задержку выглядит
@@ -242,10 +268,25 @@ localhost в строке браузера покажите специально
 
 > In the first version it was almost five, and the conversation fell apart —
 > that is not a dialogue any more, it is correspondence. Sentence-level
-> streaming fixed it: the answer starts playing before the model has finished
-> writing it. Four point eight seconds down to three.
+> streaming fixed it: speech starts on the first finished sentence, before the
+> model has written the rest. Four point eight seconds down to three, and the
+> first sound lands in about one point three.
 
-**1:15 · Завершаете сессию и открываете разбор: рубрика с оценками, словарь
+**1:08 · Не переключая экран, добавляете про выбор модели. Диалог продолжает
+идти.**
+
+> A reasoning model was measured here too: thirty-one to fifty-two seconds per
+> turn. It stayed — but only for the offline review after the session, where
+> nobody is waiting.
+
+**1:08 · МЕТА-ХОД. Говорите Генри: «speak slower». Он подтверждает и ДОСЛОВНО
+повторяет прошлую реплику новым темпом.**
+
+> I can also interrupt him. "Speak slower" — and he repeats the previous line
+> word for word, at a new pace. That is not a request to the model: it is a
+> deterministic meta-turn, so the question is not spent.
+
+**1:20 · Завершаете сессию и открываете разбор: рубрика с оценками, словарь
 терминов. Прокручиваете медленно, чтобы было видно, что это не одна строка.**
 
 > After the session there is a review. A rubric over the answers, and a
@@ -255,8 +296,16 @@ localhost в строке браузера покажите специально
 показываете, что разбор опирается на сказанное.**
 
 > The review is grounded in the transcript, not written from scratch. And every
-> sentence the interviewer says passes a contract first: English only, no
-> coaching, three sentences at most, one question per turn.
+> sentence the interviewer says passes a contract before it is spoken: English
+> only, no coaching, three sentences at most, one question per turn. The
+> structure is code, not prompting — six questions alternating technical and
+> behavioral, and a deterministic follow-up policy. The model only phrases them.
+
+**1:45 · Финальный кадр — вкладка History или Settings с полоской микрофона.**
+
+> A hundred and seventy-six backend tests at ninety-five percent coverage,
+> forty-one on the front end, strict typing, and gates that run before the
+> commit rather than when I remember.
 
 ### Если пойдёт не так
 
@@ -271,83 +320,101 @@ localhost в строке браузера покажите специально
 
 ## 3. Local Web Agent — ~180 tests
 
-**Хронометраж:** 1:50. Чистой речи ~60 с.
+**Хронометраж:** 1:55. Чистой речи ~60 с.
 
 **Ключевой кадр:** отказ в конце. Он отличает исследователя от генератора текста.
 
+⚠ **Живьём реальные сайты не показывать.** Ваш же замер 17.08: один реальный
+сайт — 7 мин 38 с, из них на модель ушло 97 с, остальное съела сеть под VPN
+(Chromium встаёт на 16–30 с примерно на трети загрузок). Ролик строится из двух
+слоёв ровно как `DEMO.md`: готовые прогоны из витрины плюс ОДИН живой запуск на
+локальной фикстуре — 3 мин 09 с, и его легко сжать монтажом.
+
 ### Подготовка
 
-- **Выберите четыре сайта заранее** и проверьте, что агент на них отрабатывает.
-  Живой обход чужих страниц на записи — единственная часть ролика, которую вы
-  не контролируете.
-- **Подготовьте вопрос, ответа на который на этих сайтах НЕТ.** Это ключевой
-  кадр, и он должен быть предсказуемым.
-- **Окно с браузером агента держите видимым.** Ценность ролика в том, что видно,
-  как он реально ходит по страницам, а не в итоговом отчёте.
+- **Прогреть Ollama** (`ollama run qwen3:14b ""`), поднять сервер фикстур
+  (`scripts/spike/fixtures_server.py`) и бэкенд, проверить `/health` — должно
+  отвечать `ollama: reachable`.
+- **Открыть витрину сессий заранее.** Показываем немецкую: задача задана
+  по-немецки, агент обошёл три сайта и ответил по-немецки. Это сильнее любого
+  рассказа про мультиязычность.
+- **Тему живого запуска брать из содержимого фикстур** (8901–8903 — про ставки
+  на футбол). Проверено на своей шкуре: задача про кэширование отработала
+  штатно, но сравнивать было нечего, и на показе это выглядело поломкой.
+- **Заготовить вопрос, ответа на который в фикстурах НЕТ** — это ключевой кадр.
 
 ### Раскадровка
 
-**0:00 · Чат агента. Вставляете четыре ссылки и пишете задачу словами. Пишете
-медленно или вставляете готовое — но так, чтобы текст задачи было видно.**
+**0:00 · Витрина: список готовых сессий. Открываете немецкую. Видно задачу
+по-немецки и три обойдённых сайта.**
 
-> I give the agent four competitor links and ask which one has the more complete
-> article on a topic.
+> This agent runs entirely on the laptop. Here is a session where the task was
+> written in German — it browsed three sites and answered in German.
 
-**0:12 · Запускаете. Открывается настоящий браузер, агент начинает обход.
-15 секунд МОЛЧИТЕ: пусть видно скриншоты, шаги, переходы.**
+**0:10 · Прокручиваете к оценкам: 95 / 85 / 75 с разбором. Разбор целиком на
+языке вопроса — задержитесь на нём.**
 
-**0:28 · Говорите поверх работающего агента, ничего не нажимая.**
+> Scores with reasoning, in the language of the question. The comparison runs
+> against a rubric, not by feel.
+
+**0:20 · Наводите курсор на приписку про границу знания («I did not read
+everything…»). Это самый недооценённый кадр ролика.**
+
+> And it marks its own limit: it did not read everything, so "nothing found"
+> here can mean "not read far enough". That sentence is added by code, not by
+> the model — asking the model for it worked about half the time.
+
+**0:32 · Переходите к живому запуску. Вставляете задачу, указываете локальный
+сайт, ставите флажок «Show me the browser». Запускаете.**
+
+> Now a live run. One site, and I ask it to show me the browser.
+
+**0:40 · Открывается видимое окно браузера, агент начинает обход. 15 секунд
+МОЛЧИТЕ — идёт лента событий «Reading… site 1 of 3».**
+
+**0:57 · Говорите поверх работающего агента.**
 
 > It does not parse pages with selectors. It opens a real browser and looks at
-> the site: takes a screenshot, decides what to do next, acts. Observe, plan,
-> act — and every model call runs on this laptop.
+> the page: screenshot, decide, act. Observe, plan, act — and every model call
+> runs here, on this machine.
 
-**0:42 · Наводите курсор на список шагов агента, где видно проверку действия
-перед выполнением.**
+**1:10 · Показываете ленту событий, где видно проверку действия перед
+выполнением.**
 
-> Every action is validated before it reaches the browser. Under ten
-> milliseconds per check. Destructive actions are not allowed at all — actions
-> are tiered by how reversible they are.
+> Every action is validated before it reaches the browser — under ten
+> milliseconds per check. Destructive actions are not allowed at all: actions
+> are tiered by how reversible they are. And if a site puts up a challenge, the
+> agent stops and asks me to pass it. There is no anti-bot spoofing here, and
+> that is a decision, not a gap.
 
-**0:55 · Агент упирается в капчу или логин — если это случилось. Если нет,
-пропустите этот блок, выдумывать его не нужно.**
+**1:25 · Прогон закончился. Открываете отчёт, показываете вывод и цитату рядом.
+Кликаете по цитате — открывается страница с этим текстом.**
 
-> When a site puts up a challenge, the agent stops and asks me to pass it. There
-> is no anti-bot spoofing here, and that is a decision, not a gap.
+> Here is the answer, and here is the quote it rests on. I click, and it opens
+> on the page it came from. A fact marked high confidence has to match a quote
+> on the real site, or the confidence drops. Facts that came from the screenshot
+> instead of the text are tagged separately — vision never gets top confidence.
 
-**1:08 · Готов отчёт. Показываете вывод и цитату рядом с ним.**
+**1:40 · КЛЮЧЕВОЙ КАДР. Задаёте заготовленный вопрос, ответа на который нет.
+Ждёте ответ МОЛЧА, потом говорите поверх «не найдено».**
 
-> Here is the report. This is the conclusion, and next to it the quote it rests
-> on.
-
-**1:15 · КЛИКАЕТЕ по цитате — открывается живая страница с этим текстом. Держите
-кадр три секунды, чтобы зритель увидел совпадение.**
-
-> I click, and it opens on the live page. Any fact the agent marks as high
-> confidence has to match a quote on the real site. If it does not match, the
-> confidence drops.
-
-**1:30 · КЛЮЧЕВОЙ КАДР. Возвращаетесь в чат и задаёте заготовленный вопрос,
-ответа на который на этих сайтах нет. Ждёте ответ МОЛЧА.**
-
-**1:40 · На экране «не найдено». Говорите поверх него.**
-
-> Now something that is not on those sites at all. It says: not found. That is
-> the point — an honest refusal instead of an invention. Around a hundred and
-> eighty tests hold that behavior in place.
+> Now something that is not there at all. It says: not found. That is the point
+> — an honest refusal instead of an invention. Around a hundred and eighty tests
+> hold that behavior in place, and almost every recent one is a failure I hit on
+> a live site first.
 
 ### Если пойдёт не так
 
-- **Сайт отдал капчу там, где вы её не ждали.** Это не провал ролика, а его
-  лучший кадр: покажите, как агент останавливается и передаёт управление вам.
-- **Агент ответил на вопрос, которого нет в источниках.** Останавливайте запись
-  и разбирайтесь: ролик утверждает обратное, и снимать его в этот день нельзя.
-
----
+- **Прогон завис на загрузке.** Это VPN, а не агент. Переключайтесь на витрину
+  и продолжайте рассказ — ровно как на живом показе.
+- **`409 run_in_progress`.** Идёт другой прогон: один активный за раз, так
+  задумано. Скажите это вслух, если попало в кадр.
+- **Агент ответил на вопрос, которого нет в источниках.** Останавливайте запись:
+  ролик утверждает обратное.
 
 ## 4. RAG over a rulebook — 0 uncited answers
 
-**Хронометраж:** 1:55. Чистой речи ~70 с — здесь цифр больше всего.
+**Хронометраж:** 2:00. Чистой речи ~75 с — здесь цифр больше всего.
 
 **Ключевой кадр:** поверка прибора. Мерить чужую систему умеют все, проверить
 собственную линейку — почти никто.
@@ -405,12 +472,20 @@ localhost в строке браузера покажите специально
 > against an anchor of zero point six six five. Measuring someone else's system
 > is easy. Almost nobody checks their own ruler.
 
-**1:38 · Открываете README на строке про ограничения. Она должна быть видна
+**1:35 · Открываете `MEASUREMENTS.md` на таблице «взгляды на holdout». Видно три
+строки, одна из них помечена как несанкционированная.**
+
+> And I keep a ledger of every look at the holdout. Three so far — and one of
+> them is written down as unsanctioned, because an architectural decision was
+> made with the holdout inside the denominator. Spending a holdout is fixed by
+> accounting, not by good intentions.
+
+**1:48 · Открываете README на строке про ограничения. Она должна быть видна
 целиком.**
 
-> And the limits are stated, not hidden. Exact file-and-section accuracy is
-> fifty percent on an independent holdout. That line sits in the README above
-> the strengths, not below them.
+> The limits are stated, not hidden. Exact file-and-section accuracy is fifty
+> percent on an independent holdout. That line sits in the README above the
+> strengths, not below them.
 
 ### Если пойдёт не так
 
@@ -423,7 +498,7 @@ localhost в строке браузера покажите специально
 
 ## 5. Quality contour — 53 gates
 
-**Хронометраж:** 1:50. Чистой речи ~60 с.
+**Хронометраж:** 2:00. Чистой речи ~70 с.
 
 **Ключевой кадр:** переход зелёного в красное от одной сломанной строки. Только
 он доказывает, что проверка живая.
@@ -486,7 +561,15 @@ localhost в строке браузера покажите специально
 > And here is a real find. This gate spent a month reporting that it had not
 > seen any code. The code was there. It was misreading its own output.
 
-**1:42 · Возвращаетесь к общему прогону, зелёному.**
+**1:40 · Открываете полевой журнал `field/FIELD-LOG.md`. Прокручиваете, чтобы
+было видно, что записей много и у каждой есть строка «кто должен был поймать».**
+
+> The canon is measured in the field. Five deployments, twenty-six recorded
+> findings, and every one of them names which existing check claimed to cover
+> that class and stayed silent. Fixing the symptom without that line leaves the
+> next instance to walk through the same hole.
+
+**1:52 · Возвращаетесь к общему прогону, зелёному.**
 
 > A green light over a check that verified nothing — that is the failure this
 > whole thing exists to catch. While this site was being built, it surfaced
