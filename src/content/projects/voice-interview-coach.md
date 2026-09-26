@@ -7,10 +7,10 @@ stack:
   ["Python", "FastAPI", "WebSocket", "whisper.cpp", "Ollama", "Piper", "React"]
 proof:
   github: "https://github.com/AnthonyPriceOne2691/voice-coach"
-contract: "Every sentence passes a contract before it is spoken: English-only, no coaching, at most three sentences, one question per turn."
+contract: "Every sentence passes a contract before it is spoken: English only, no scores, at most three sentences, and every turn ends in a question or a short acknowledgement."
 featured: false
 order: 2
-updated: 2026-09-22
+updated: 2026-09-26
 draft: false
 ---
 
@@ -18,7 +18,7 @@ Speech in, speech out, nothing leaves the machine. The real work was not wiring
 the pipeline but the latency: a pause longer than three seconds turns a
 conversation into correspondence.
 
-- Sentence-level streaming cuts a turn from 4.8 s to 3.0 s; first sound lands in ~1.3 s
+- Sentence-level streaming: Henry's first word lands ~1.3 s after your turn ends — 1.30 s even in the worst measured run, against a 3 s budget
 - A reasoning model was measured and rejected for dialogue: 31–52 s per turn, kept for the offline review
 - The interview structure is code, not prompting: alternating questions, a deterministic follow-up policy
 - 176 backend tests at 94.9% coverage, 41 on the front end, gates before every commit

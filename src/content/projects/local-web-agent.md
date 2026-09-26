@@ -1,15 +1,15 @@
 ---
 title: "Local Web Agent"
 oneLiner: "A private research agent: drop in links, it browses the real sites, compares them and answers only with what it can quote."
-metric: "438 tests"
+metric: "443 tests"
 status: "local-demo"
 stack: ["Python", "FastAPI", "Playwright", "Ollama", "Qwen3 14B", "React"]
 proof:
   github: "https://github.com/AnthonyPriceOne2691"
-contract: "Every action is validated before it reaches the browser — under 10 ms per check, bounded recovery, auto-tightening on drift."
+contract: "Every action is checked against 14 hard rules before it reaches the browser — bounded recovery, auto-tightening on drift."
 featured: false
 order: 3
-updated: 2026-09-22
+updated: 2026-09-26
 draft: false
 ---
 
