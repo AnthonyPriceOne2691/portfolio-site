@@ -23,10 +23,15 @@
  * только затем, чтобы смена языка с раскрытой карточки не выбрасывала в
  * начало другой главной.
  */
+import HandNote from "./HandNote.astro";
 import { t } from "../lib/text";
 
 const here = Astro.url.pathname;
 const about = "/about/";
+// Резюме лежит на About, но из шапки этого не видно: пункт называется «About»,
+// а не «CV». Стрелка под ним — везде, кроме самой About: там она указывала бы
+// на ссылку, по которой человек уже пришёл.
+const cvHint = here !== about;
 ---
 
 <header class="nav glass">
@@ -36,6 +41,7 @@ const about = "/about/";
     class="about"
     href={about}
     aria-current={here === about ? "page" : undefined}
+    aria-describedby={cvHint ? "cv-hint-note" : undefined}
   >
     {t("nav.about")}
   </a>
@@ -56,6 +62,20 @@ const about = "/about/";
   </div>
 </header>
 
+{
+  cvHint && (
+    <div class="cv-hint">
+      <HandNote
+        id="cv-hint-note"
+        text={t("nav.cvHint")}
+        viewBox="0 0 64 32"
+        stem="M48 29C30 29 10 22 8 5"
+        tip="M3.8 10.6 8 5l4.8 5.2"
+      />
+    </div>
+  )
+}
+
 <style>
   .nav {
     position: sticky;
@@ -63,9 +83,9 @@ const about = "/about/";
     z-index: 10;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: var(--nav-gap);
     min-height: var(--nav-h);
-    padding: 0.5rem clamp(0.75rem, 4vw, 2rem);
+    padding: 0.5rem var(--nav-pad-x);
     border-radius: 0;
     border-width: 0 0 1px;
   }
@@ -101,8 +121,8 @@ const about = "/about/";
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2.5rem;
-    min-height: 2.5rem;
+    min-width: var(--nav-control);
+    min-height: var(--nav-control);
     font-weight: 600;
     font-size: 0.875rem;
     text-decoration: none;
@@ -152,5 +172,42 @@ const about = "/about/";
   .theme[data-theme-current="dark"] .theme-sun {
     opacity: 0;
     transform: scale(0.75) rotate(-18deg);
+  }
+
+  /*
+   * Стрелка «my CV is here» под пунктом About.
+   *
+   * ⚠ Живёт ВНЕ шапки — блоком нулевой высоты сразу под ней, — и это решение,
+   * а не случайность. Шапка липкая: положенная внутрь, стрелка висела бы над
+   * карточками при любой прокрутке. Отсюда она уезжает вместе со страницей и
+   * уходит под стекло шапки, как любой контент. Плата — целиться приходится по
+   * числам шапки (`--nav-*` в tokens.css), а не по самому пункту; попадание
+   * острия в About стережёт `tests/layout.test.mjs`.
+   */
+  .cv-hint {
+    position: relative;
+    /* Над героем, но под шапкой — у неё 10. */
+    z-index: 2;
+    height: 0;
+  }
+  .cv-hint :global(.hand-arrow) {
+    position: absolute;
+    top: -2px;
+    /* Острие — в 0.5rem от левого края рисунка шириной 4rem, то есть в 3.5rem
+       от правого. Ставим его под середину About: правый край пункта отстоит
+       от края шапки на кнопку темы и зазор, середина — ещё на 2.1rem левее. */
+    right: calc(
+      var(--nav-pad-x) + var(--nav-control) + var(--nav-gap) + 2.1rem - 3.5rem
+    );
+    width: 4rem;
+    height: 2rem;
+  }
+  .cv-hint :global(.hand-text) {
+    position: absolute;
+    top: 1.85rem;
+    /* Прижата к правому краю АБСОЛЮТНО, а не `text-align`: строка, не
+       влезшая в блок, переливается вправо при любом выравнивании — и на узком
+       экране это был бы горизонтальный скролл (пример B7). */
+    right: var(--nav-pad-x);
   }
 </style>

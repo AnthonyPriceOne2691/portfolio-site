@@ -1,0 +1,97 @@
+---
+/**
+ * Рукописная пометка: подпись и стрелка, которая один раз рисует себя от
+ * подписи к цели.
+ *
+ * Появилась 26.09 по просьбе владельца — «красиво стрелочкой» показать, что
+ * резюме лежит на странице About: пометка под пунктом About в шапке и её пара
+ * у кнопки «Download CV». Компонент держит ЯЗЫК пометки — штрих, подпись,
+ * прорисовку, reduced-motion. Где она стоит и куда целится, решает место
+ * использования: класс на корне и `:global(.hand-arrow)` / `:global(.hand-text)`.
+ *
+ * ⚠ Пометка скрыта от скринридера целиком: прочитанная по порядку, «my CV is
+ * here» не указывает ни на что. Подпись доходит до него иначе — через
+ * `aria-describedby` у цели, поэтому `id` обязателен.
+ */
+interface Props {
+  /** `id` подписи: на него ссылается `aria-describedby` цели. */
+  id: string;
+  text: string;
+  /** Рамка рисунка и два пути: линия идёт ОТ подписи к цели, наконечник — у цели. */
+  viewBox: string;
+  stem: string;
+  tip: string;
+  class?: string;
+}
+const { id, text, viewBox, stem, tip, class: className, ...rest } = Astro.props;
+---
+
+<span class:list={["hand-note", className]} aria-hidden="true" {...rest}>
+  <span class="hand-text" id={id}>{text}</span>
+  <svg class="hand-arrow" viewBox={viewBox} focusable="false">
+    <path class="stem" pathLength="1" d={stem}></path>
+    <path class="tip" pathLength="1" d={tip}></path>
+  </svg>
+</span>
+
+<style>
+  .hand-note {
+    pointer-events: none;
+  }
+  .hand-text {
+    white-space: nowrap;
+    font-size: 0.85rem;
+    font-style: italic;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--text-muted);
+  }
+  .hand-arrow {
+    overflow: visible;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Порядок появления: подпись, линия от неё к цели, последним — наконечник.
+     `pathLength="1"` делает длину пути единицей, и сдвиг штриха на единицу
+     прячет линию целиком — отсюда прорисовка.
+     ⚠ Промежуток ВДВОЕ длиннее штриха, а не равен ему. При `1 1` следующий
+     штрих начинался ровно на конце пути, и круглый конец линии рисовал этот
+     штрих нулевой длины точкой: у цели висела точка задолго до стрелки. */
+  .hand-arrow path {
+    stroke-dasharray: 1 2;
+  }
+  .hand-text {
+    animation: hand-note-text 0.5s ease-out 0.3s both;
+  }
+  .stem {
+    animation: hand-note-draw 0.72s cubic-bezier(0.65, 0, 0.35, 1) 0.55s both;
+  }
+  .tip {
+    animation: hand-note-draw 0.25s ease-out 1.25s both;
+  }
+  @keyframes hand-note-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+  }
+  @keyframes hand-note-text {
+    from {
+      opacity: 0;
+      transform: translateY(0.25rem);
+    }
+  }
+  /* ⚠ Своё правило, а не только общее из global.css: общее сокращает
+     ДЛИТЕЛЬНОСТЬ, но не задержку, и пометка полсекунды оставалась бы пустой, а
+     потом возникала рывком. Здесь она просто нарисована с самого начала. */
+  @media (prefers-reduced-motion: reduce) {
+    .hand-text,
+    .stem,
+    .tip {
+      animation: none;
+    }
+  }
+</style>

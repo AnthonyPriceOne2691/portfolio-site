@@ -176,8 +176,8 @@ test("B7: ни одна страница не даёт горизонтальн�
 test("B7: раскрытая карточка не выносит страницу за экран", async () => {
   /*
    * ⚠ Отдельный прогон, а не «заодно» в проверке выше. Раскрытие МЕНЯЕТ
-   * раскладку: панель добавляет высоту, фрейм растёт, а на широком экране
-   * карточка ещё и нарочно выходит за поля колонки отрицательным полем.
+   * раскладку: панель добавляет высоту, а на широком экране карточка ещё и
+   * нарочно выходит за поля колонки отрицательным полем.
    * Проверка свёрнутого состояния об этом не знает ничего — до этого теста
    * раскрытая карточка не судилась вообще, а именно в ней появился первый на
    * сайте элемент, который УМЫШЛЕННО шире своего контейнера.
@@ -434,6 +434,233 @@ test("аккордеон на телефоне: раскрытая карточ�
   );
 
   await page.close();
+});
+
+test("текст карточки не пляшет, пока она раскрывается и сворачивается", async () => {
+  /*
+   * Найдено владельцем 2026-09-26: при раскрытии и сворачивании текст
+   * карточки «пляшет». Причина — ширина текстовой колонки менялась ПО ХОДУ
+   * анимации: фрейм рос с 28% до 38% шапки, а от 76rem карточка ещё и
+   * выходила за поля, утаскивая содержимое на 1.5rem влево. Текст
+   * перекладывался заново на каждом кадре: на 1280 px колонка сменила ширину
+   * 13 раз за одно раскрытие, на 900 px фраза прыгала с двух строк на три.
+   *
+   * ⚠ Судятся ВСЕ кадры, а не начало и конец. Конечные состояния могут
+   * совпасть и при пляске посередине — именно так устроено сворачивание:
+   * карточка возвращается ровно туда, откуда уехала.
+   *
+   * Правило общее, а не про фрейм: у раскрытия нет права менять ширину и
+   * положение текста. Всё, что ему нужно, — высота панели и то, что не
+   * касается раскладки (тень, рамка, поверхность за полями).
+   */
+  const PARTS = [
+    ".body",
+    ".metric",
+    ".title",
+    ".one",
+    ".stack",
+    ".panel-inner",
+  ];
+
+  for (const width of [390, 900, 1280, 1440]) {
+    const page = await browser.newPage({ viewport: { width, height: 900 } });
+    await page.goto(url(""));
+
+    const run = await page.evaluate(async (parts) => {
+      const card = document.querySelector("details.card");
+      const summary = card.querySelector("summary");
+      card.scrollIntoView({ block: "start", behavior: "instant" });
+      // Координаты — от начала документа: прокрутка страницы не должна
+      // выдаваться за сдвиг текста.
+      const snap = () =>
+        parts.map((sel) => {
+          const r = card.querySelector(sel).getBoundingClientRect();
+          // Панель закрытой карточки не отрисована — сравнивать нечего.
+          if (r.width === 0 && r.height === 0) return null;
+          return [r.left + scrollX, r.top + scrollY, r.width, r.height];
+        });
+      const record = (ms) =>
+        new Promise((resolve) => {
+          const out = [];
+          const t0 = performance.now();
+          const tick = () => {
+            out.push(snap());
+            if (performance.now() - t0 < ms) requestAnimationFrame(tick);
+            else resolve(out);
+          };
+          requestAnimationFrame(tick);
+        });
+
+      const frames = [snap()];
+      summary.click();
+      frames.push(...(await record(900)));
+      const opened = card.open;
+      summary.click();
+      frames.push(...(await record(1200)));
+      return { frames, opened, closed: !card.open };
+    }, PARTS);
+    await page.close();
+
+    // Без этого тест зелёный и на карточке, которая не шевельнулась вовсе.
+    assert.ok(
+      run.opened && run.closed,
+      `@${width}px: карточка не раскрылась и не закрылась кликом — ` +
+        `проверять было нечего`,
+    );
+    assert.ok(
+      run.frames.length > 20,
+      `@${width}px: снято всего ${run.frames.length} кадров — анимацию не видели`,
+    );
+
+    const AXES = ["left", "top", "width", "height"];
+    const drift = [];
+    PARTS.forEach((sel, i) => {
+      const seen = run.frames.map((f) => f[i]).filter(Boolean);
+      AXES.forEach((axis, k) => {
+        const values = seen.map((v) => v[k]);
+        const lo = Math.min(...values);
+        const hi = Math.max(...values);
+        // Полпикселя — дробная раскладка; перенос строки стоит 20+ px.
+        if (hi - lo > 0.5) {
+          drift.push(`${sel} ${axis}: ${Math.round(lo)}…${Math.round(hi)}px`);
+        }
+      });
+    });
+    assert.deepEqual(
+      drift,
+      [],
+      `@${width}px текст карточки ездит по ходу анимации:\n  ` +
+        drift.join("\n  ") +
+        "\n  Раскрытие не должно менять ширину и положение текста: " +
+        "ни фрейм, ни поля карточки не имеют права отнимать у него место",
+    );
+  }
+});
+
+test("стрелки к резюме попадают в цель на любой ширине", async () => {
+  /*
+   * Пометка «my CV is here» живёт ВНЕ липкой шапки и целится в пункт About по
+   * числам шапки (`--nav-*`), а не по самому пункту. Значит, попадание — не
+   * свойство разметки, а совпадение двух расчётов, и разойтись они могут
+   * молча: поменяли кнопку темы — стрелка указывает в пустоту, сборка зелёная.
+   *
+   * Острие берётся с самого рисунка — концом линии, — а не пересчётом из
+   * констант CSS: тест, повторяющий расчёт стиля, согласился бы с ним и в
+   * ошибке.
+   */
+  const tipOf = (selector) => {
+    const stem = document.querySelector(`${selector} .stem`);
+    const end = stem.getPointAtLength(stem.getTotalLength());
+    const p = new DOMPoint(end.x, end.y).matrixTransform(stem.getScreenCTM());
+    return { x: p.x, y: p.y };
+  };
+
+  for (const width of [...WIDTHS, 900, 1280, 1440]) {
+    const page = await browser.newPage({ viewport: { width, height: 900 } });
+
+    await page.goto(url(""));
+    const nav = await page.evaluate(
+      ([fn]) => {
+        const tip = new Function(`return (${fn})`)()(".cv-hint");
+        const link = document
+          .querySelector("header.nav a.about")
+          .getBoundingClientRect();
+        const bar = document
+          .querySelector("header.nav")
+          .getBoundingClientRect();
+        return { tip, link: link.toJSON(), barBottom: bar.bottom };
+      },
+      [tipOf.toString()],
+    );
+    const quarter = (nav.link.right - nav.link.left) / 4;
+    assert.ok(
+      nav.tip.x >= nav.link.left + quarter &&
+        nav.tip.x <= nav.link.right - quarter,
+      `@${width}px стрелка под шапкой бьёт мимо About: острие на x=${Math.round(nav.tip.x)}, ` +
+        `пункт ${Math.round(nav.link.left)}…${Math.round(nav.link.right)}. ` +
+        "Разошлись числа шапки и `--nav-*` в tokens.css",
+    );
+    assert.ok(
+      nav.tip.y >= nav.barBottom - 1 && nav.tip.y <= nav.barBottom + 12,
+      `@${width}px острие не у кромки шапки: y=${Math.round(nav.tip.y)}, ` +
+        `низ шапки ${Math.round(nav.barBottom)}`,
+    );
+
+    await page.goto(url("about/"));
+    const about = await page.evaluate(
+      ([fn]) => {
+        const tip = new Function(`return (${fn})`)()(".cv-row");
+        const btn = document.querySelector("a.cv").getBoundingClientRect();
+        const note = document
+          .querySelector(".cv-row .hand-text")
+          .getBoundingClientRect();
+        const card = document.querySelector("article.card");
+        const box = card.getBoundingClientRect();
+        const pad = parseFloat(getComputedStyle(card).paddingRight);
+        return {
+          tip,
+          btn: btn.toJSON(),
+          noteRight: note.right,
+          innerRight: box.right - pad,
+        };
+      },
+      [tipOf.toString()],
+    );
+    const gap = about.tip.x - about.btn.right;
+    const third = (about.btn.bottom - about.btn.top) / 3;
+    assert.ok(
+      gap >= 0 &&
+        gap <= 24 &&
+        about.tip.y >= about.btn.top + third &&
+        about.tip.y <= about.btn.bottom - third,
+      `@${width}px стрелка на /about/ не указывает на кнопку: острие ` +
+        `(${Math.round(about.tip.x)}, ${Math.round(about.tip.y)}), кнопка ` +
+        `${Math.round(about.btn.left)}…${Math.round(about.btn.right)} × ` +
+        `${Math.round(about.btn.top)}…${Math.round(about.btn.bottom)}`,
+    );
+    // Стекло карточки режет всё, что за краем (`overflow: hidden`), — вылезшую
+    // подпись B7 не заметит: страница шире не становится.
+    assert.ok(
+      about.noteRight <= about.innerRight + 1,
+      `@${width}px подпись у кнопки вылезла за карточку и обрезана: ` +
+        `${Math.round(about.noteRight)} > ${Math.round(about.innerRight)}`,
+    );
+
+    await page.close();
+  }
+
+  /*
+   * ⚠ При reduced-motion стрелка нарисована СРАЗУ. Общее правило в global.css
+   * сокращает длительность анимаций, но не задержку: без своего правила
+   * пометка полсекунды оставалась бы пустой, а потом возникала рывком. B6 этого
+   * не видит — он судит длительности.
+   */
+  const page = await browser.newPage({
+    viewport: { width: 1280, height: 900 },
+    reducedMotion: "reduce",
+  });
+  await page.goto(url(""));
+  const drawn = await page.evaluate(() =>
+    [
+      ...document.querySelectorAll(
+        ".hand-note .stem, .hand-note .tip, .hand-note .hand-text",
+      ),
+    ].map((el) => {
+      const s = getComputedStyle(el);
+      return `${el.getAttribute("class")}:${parseFloat(s.strokeDashoffset) || 0}/${s.opacity}`;
+    }),
+  );
+  await page.close();
+  assert.ok(
+    drawn.length === 3,
+    `на главной не нашлось пометки целиком: ${drawn}`,
+  );
+  assert.deepEqual(
+    drawn.filter((d) => !d.endsWith(":0/1")),
+    [],
+    "при reduced-motion пометка не нарисована сразу после загрузки — ждёт " +
+      "задержку анимации, которую общее правило не гасит",
+  );
 });
 
 test("ссылка с якорем ведёт на карточку и РАСКРЫВАЕТ её", async () => {

@@ -18,10 +18,11 @@ export const text = {
   "about.description":
     "AI automation engineer: production SaaS and local AI agents.",
   "about.body":
-    "AI / full-stack product engineer. I ship LLM products end to end and run them in production: a sole-built outreach CRM with 11,000+ backend tests, two client services taken from first commit to production in 8 and 14 days, and fully-local agents that listen, browse and cite.",
+    "AI / full-stack product engineer. I ship LLM products end to end and run them in production: a sole-built outreach CRM with 11,000+ backend tests, two client services taken from first commit to production-ready in 5 and 8 days, and fully-local agents that listen, browse and cite.",
   "about.how":
     "I build with AI coding agents at team speed, inside a quality contour I designed — specs, 22 gates under a hard cap, and a doctor that audits the gates themselves. Architecture, contracts and the final review stay mine.",
   "about.cv": "Download CV",
+  "about.cvHint": "one-page PDF",
   "home.title": "Anton Aspidov — AI Automation Engineer",
   "home.description":
     "Production AI SaaS plus fully-local voice, web and AR agents. LLMs under contract.",
@@ -37,6 +38,7 @@ export const text = {
   "nav.about": "About",
   "nav.contact": "Contact",
   "nav.cv": "CV",
+  "nav.cvHint": "my CV is here",
   "nav.skip": "Skip to main content",
   "nav.home": "Home",
   "theme.light": "Switch to light theme",

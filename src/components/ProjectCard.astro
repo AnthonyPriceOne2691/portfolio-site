@@ -107,8 +107,7 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
 <style>
   /* Переход по якорю ставит состояние мгновенно — см. разбор в скрипте.
      Класс живёт ровно один кадр. */
-  .card.instant,
-  .card.instant .media {
+  .card.instant {
     transition: none;
   }
   .card {
@@ -116,8 +115,11 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
     scroll-margin-top: calc(var(--nav-h) + 1rem);
     padding: 1.25rem;
     color: var(--text);
+    /* Поле и отступ едут ОДНИМ переходом, иначе на выходе за поля (ниже)
+       содержимое успевало бы сдвинуться, пока одно догоняет другое. */
     transition:
       margin 0.42s cubic-bezier(0.22, 0.61, 0.36, 1),
+      padding 0.42s cubic-bezier(0.22, 0.61, 0.36, 1),
       box-shadow 0.28s ease,
       border-color 0.28s ease;
   }
@@ -183,7 +185,6 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
     display: block;
     width: 100%;
     order: -1;
-    transition: width 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
   }
   .media :global(.frame) {
     transition:
@@ -268,7 +269,8 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
       gap: 1.9rem;
     }
     .card {
-      padding: 1.55rem 1.7rem;
+      --pad-inline: 1.7rem;
+      padding: 1.55rem var(--pad-inline);
     }
     .head .body {
       flex: 1 1 auto;
@@ -295,11 +297,12 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
       display: flex;
       align-items: center;
     }
-    /* Раскрыли — фрейм становится главным: смотреть теперь важнее, чем читать
-       строку витрины. */
-    .card[open] .media {
-      width: clamp(18rem, 38%, 27rem);
-    }
+    /* ⚠ При раскрытии фрейм НЕ растёт. Раньше рос (28% → 38% шапки) — и
+       отнимал ширину у текста: тот перекладывался на каждом кадре анимации,
+       фраза прыгала со строки на строку, метрика съезжала вниз. Владелец
+       назвал это «текст пляшет». Крупное видео — дело плеера демо: он играет
+       в раскрытой панели во всю её ширину. Сторож — тест «текст карточки не
+       пляшет» в `tests/layout.test.mjs`. */
   }
 
   /*
@@ -312,10 +315,18 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
    * остаётся ещё пять на полосу прокрутки и поля окна. Ниже порога карточка
    * при раскрытии просто не двигается по горизонтали — и это правильнее, чем
    * отъехать за край экрана.
+   *
+   * ⚠ За поля выходит ПОВЕРХНОСТЬ карточки, а не её содержимое: отступ растёт
+   * ровно на столько же, на сколько уходит поле, и текст стоит на месте.
+   * Одним отрицательным полем содержимое уезжало на 1.5rem влево и
+   * перекладывалось по новой ширине — половина той «пляски», что нашёл
+   * владелец 26.09.
    */
   @media (min-width: 76rem) {
     .card[open] {
-      margin-inline: -1.5rem;
+      --out: 1.5rem;
+      margin-inline: calc(-1 * var(--out));
+      padding-inline: calc(var(--pad-inline) + var(--out));
     }
   }
 </style>
