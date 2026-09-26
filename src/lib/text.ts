@@ -18,9 +18,9 @@ export const text = {
   "about.description":
     "AI automation engineer: production SaaS and local AI agents.",
   "about.body":
-    "Fullstack AI automation engineer. Sole builder of a production outreach SaaS — 6,500+ tests, ~30 services. Alongside it I ship fully-local AI systems: a voice interview coach, a web research agent, an AR try-on.",
+    "AI / full-stack product engineer. I ship LLM products end to end and run them in production: a sole-built outreach CRM with 11,000+ backend tests, two client services taken from first commit to production in 8 and 14 days, and fully-local agents that listen, browse and cite.",
   "about.how":
-    "Design-first: versioned design docs and a benchmark before production code. Cursor and Claude are build tools; architecture, security and the final review stay human.",
+    "I build with AI coding agents at team speed, inside a quality contour I designed — specs, 22 gates under a hard cap, and a doctor that audits the gates themselves. Architecture, contracts and the final review stay mine.",
   "about.cv": "Download CV",
   "home.title": "Anton Aspidov — AI Automation Engineer",
   "home.description":

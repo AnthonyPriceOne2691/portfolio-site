@@ -170,7 +170,8 @@ ffmpeg -i src.mov -vf scale=1280:-2 -c:v libx264 -preset slow -crf 24   -maxrate
 public/teaser-<slug>.mp4    →  proof.teaser: "/teaser-<slug>.mp4"
 public/poster-<slug>.jpg    →  proof.poster: "/poster-<slug>.jpg"
 public/demo-<slug>.mp4      →  proof.video:  "/demo-<slug>.mp4"
-public/cv.pdf               →  кнопка «Скачать резюме» на /about/
+public/cv.pdf               →  кнопка «Скачать резюме» на /about/ (собирается из
+                               markdown владельца; держать в одну страницу, < 512 КБ)
 ```
 
 ⚠ Путь обязан начинаться с `/`. Относительный вид `teaser.mp4` резолвится от
@@ -311,9 +312,6 @@ node scripts/make-assets.mjs
 
 ## Незакрытый долг
 
-- `public/cv.pdf` не существует — кнопка «Скачать резюме» на `/about/` ведёт в
-  404. Долг объявлен в `tests/assets.test.mjs` (`DECLARED_MISSING`) и называется
-  вслух при каждом прогоне; положите файл и уберите оттуда строку
 - ни одного видео и постера: фреймы во всех карточках показывают заглушку
 - `public/intro*.mp4` нет — круг в герое остаётся фотографией. Это не долг,
   а необязательная добавка, и до появления файла её ветку стережёт канарейка
