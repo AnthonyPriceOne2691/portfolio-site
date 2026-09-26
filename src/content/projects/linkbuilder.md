@@ -5,7 +5,7 @@ metric: "97.9% delivery"
 status: "production"
 stack: ["Python", "FastAPI", "PostgreSQL", "Redis/RQ", "React/TS", "OpenAI API"]
 proof:
-  case: "https://github.com/AnthonyPriceOne2691"
+  brief: "/briefs/linkbuilder.pdf"
 contract: "Every drafted email passes behavioral contracts held as versioned specs — payment invariants, governance caps, kill-switch — before a human ever sees it."
 featured: true
 order: 1

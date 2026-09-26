@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LinkBuilder — technical brief · Anton Aspidov</title>
+    <link rel="stylesheet" href="brief.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="kicker">
+          <span><b>Technical brief</b> · Anton Aspidov</span>
+          <span class="status">Ran in production · built solo</span>
+        </p>
+        <h1>LinkBuilder</h1>
+        <p class="subtitle">Outreach automation CRM</p>
+        <p class="lede">
+          A <span class="nb">link-building</span> team’s whole pipeline, run by one operator: finding
+          donor sites, outreach, <span class="nb">AI-drafted</span> replies, payments and placement
+          monitoring. Every AI draft passes versioned contracts before it can be
+          sent.
+      </p>
+        <ul class="figures">
+          <li><b>11,000+</b><span>backend tests, full run green</span></li>
+          <li><b>69</b><span>contract rules on every AI draft</span></li>
+          <li><b>16,000+</b><span>placed links tracked</span></li>
+          <li><b>20+</b><span>queue workers in one stack</span></li>
+        </ul>
+      </header>
+
+      <div class="two">
+        <section>
+          <h2>The problem</h2>
+          <p>
+            Link building is a long chain of paid, stateful steps, and failures look
+            like successes: a drained data vendor once let a job report
+            “600/600, 0 errors” after about 120 keywords. An LLM writing to
+            strangers about money must obey rules that can be enforced, audited
+            and switched off live.
+          </p>
+        </section>
+        <section>
+          <h2>What it does</h2>
+          <ul>
+            <li>Mines competitors’ backlinks and gates every site, the paid check last</li>
+            <li>Sends from a fleet of domains with caps and a bounce breaker</li>
+            <li>Classifies each reply, drafts an answer, checks it against contracts</li>
+            <li>Registers the payment, then keeps verifying the placement</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h2>Architecture</h2>
+        <div class="diagram">
+          <svg viewBox="0 0 760 292" role="img" aria-label="LinkBuilder architecture: acquire, converse, deal and retain loops">
+            <defs>
+              <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 10 5 0 10z" fill="#6f6a85" />
+              </marker>
+              <style>
+                .b { fill: #f1eefc; stroke: #5b3fd0; stroke-width: 1.2; }
+                .k { fill: #5b3fd0; stroke: none; }
+                .x { fill: #fff; stroke: #8a86a0; stroke-width: 1; stroke-dasharray: 4 3; }
+                .t { font: 700 12px "Helvetica Neue", Arial, sans-serif; fill: #221d33; }
+                .tk { font: 700 12px "Helvetica Neue", Arial, sans-serif; fill: #fff; }
+                .s { font: 10px "Helvetica Neue", Arial, sans-serif; fill: #5c5870; }
+                .sk { font: 10px "Helvetica Neue", Arial, sans-serif; fill: #e6e0ff; }
+                .l { font: italic 9.5px "Helvetica Neue", Arial, sans-serif; fill: #6f6a85; }
+                .lane { font: 700 8.5px "Helvetica Neue", Arial, sans-serif; fill: #8a86a0; letter-spacing: 1.4px; }
+                .a { stroke: #6f6a85; stroke-width: 1.3; fill: none; marker-end: url(#arr); }
+              </style>
+            </defs>
+
+            <text class="lane" x="8" y="11">ACQUIRE</text>
+            <rect class="b" x="8" y="17" width="170" height="50" rx="9" />
+            <text class="t" x="20" y="38">Prospecting</text>
+            <text class="s" x="20" y="55">SERP and competitor links</text>
+            <rect class="b" x="204" y="17" width="170" height="50" rx="9" />
+            <text class="t" x="216" y="38">Quality gates</text>
+            <text class="s" x="216" y="55">cheap checks first, paid last</text>
+            <rect class="b" x="400" y="17" width="170" height="50" rx="9" />
+            <text class="t" x="412" y="38">Outreach engine</text>
+            <text class="s" x="412" y="55">sending fleet, caps, breaker</text>
+            <rect class="b" x="596" y="17" width="156" height="50" rx="9" />
+            <text class="t" x="608" y="38">Inbound replies</text>
+            <text class="s" x="608" y="55">threaded, untrusted input</text>
+            <path class="a" d="M178 42h24" />
+            <path class="a" d="M374 42h24" />
+            <path class="a" d="M570 42h24" />
+
+            <text class="lane" x="118" y="106">CONVERSE</text>
+            <rect class="b" x="596" y="112" width="156" height="54" rx="9" />
+            <text class="t" x="608" y="134">Classify &amp; draft</text>
+            <text class="s" x="608" y="151">LLM extracts facts once</text>
+            <rect class="k" x="352" y="108" width="218" height="62" rx="10" />
+            <text class="tk" x="366" y="129">Contract evaluator</text>
+            <text class="sk" x="366" y="145">hard rules block · soft rewrite</text>
+            <text class="sk" x="366" y="160">drift score · live switch</text>
+            <rect class="b" x="118" y="112" width="208" height="54" rx="9" />
+            <text class="t" x="130" y="134">Operator console</text>
+            <text class="s" x="130" y="151">approve · edit · discard</text>
+            <path class="a" d="M674 67v43" />
+            <text class="l" x="680" y="93">reply</text>
+            <path class="a" d="M596 139h-24" />
+            <path class="a" d="M352 139h-24" />
+            <path class="a" d="M290 112V88h160V69" />
+            <text class="l" x="300" y="84">approved → send</text>
+
+            <text class="lane" x="8" y="199">DEAL &amp; RETAIN</text>
+            <rect class="b" x="8" y="205" width="190" height="50" rx="9" />
+            <text class="t" x="20" y="226">Payments</text>
+            <text class="s" x="20" y="243">register first, then invoice</text>
+            <rect class="b" x="224" y="205" width="214" height="50" rx="9" />
+            <text class="t" x="236" y="226">Placement monitoring</text>
+            <text class="s" x="236" y="243">an incident needs two passes</text>
+            <rect class="b" x="464" y="205" width="130" height="50" rx="9" />
+            <text class="t" x="476" y="226">Recovery</text>
+            <text class="s" x="476" y="243">claims, re-indexing</text>
+            <path class="a" d="M150 166v37" />
+            <text class="l" x="156" y="190">deal</text>
+            <path class="a" d="M198 230h24" />
+            <path class="a" d="M438 230h24" />
+            <rect class="x" x="614" y="196" width="138" height="68" rx="9" />
+            <text class="t" x="626" y="216">Shared services</text>
+            <text class="s" x="626" y="233">Postgres · Redis/RQ</text>
+            <text class="s" x="626" y="247">21 queue workers</text>
+            <text class="s" x="626" y="259">one embedding service</text>
+            <text class="l" x="8" y="284">Dark box: the gate every AI draft passes. Dashed: shared infrastructure. External LLM, mail and SEO-data vendors sit behind budget gates.</text>
+          </svg>
+        </div>
+      </section>
+
+      <section>
+        <h2>How it flows</h2>
+        <ol class="flow">
+          <li><b>Acquire</b> — discover sites, gate them, enrich contacts, launch a campaign.</li>
+          <li><b>Converse</b> — reply → classify → draft → contract check → a human approves → send.</li>
+          <li><b>Deal &amp; retain</b> — payment runs <span class="nb">register-first</span>; an incident opens only after a confirming pass.</li>
+          <li><b>Control</b> — drift score and vendor balances raise alerts; a live switch sets full, <span class="nb">warn-only</span> or off.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Worth knowing</h2>
+        <ul class="hooks">
+          <li><b>63 of 69 rules are plain code.</b>After seven rounds of prompt tuning, the LLM became a fact extractor and deterministic code became the judge.</li>
+          <li><b>Safe is not the same as useful.</b>The safety judge passed 109 of 109 shadow drafts; the operator sent only a quarter unchanged. <span class="nb">Auto-send</span> waits for replay data.</li>
+          <li><b>“Dead” is checked twice.</b>159 of 865 “dead” placements were alive — donors’ firewalls were blocking the checker, not the links.</li>
+        </ul>
+      </section>
+
+      <div class="foot" data-nosrc>
+        <span>LinkBuilder · technical brief · 1 / 2</span>
+        <a href="https://portfolio-site.anthony-priceone.workers.dev"><span class="nb">portfolio-site</span>.<span class="nb">anthony-priceone</span>.workers.dev</a>
+      </div>
+    </div>
+
+    <div class="page">
+      <p class="running">
+        <span><b>Technical brief</b> · LinkBuilder</span>
+        <span>How it is built</span>
+      </p>
+
+      <section>
+        <h2>Decisions that shape it</h2>
+        <div class="decisions">
+          <div class="decision">
+            <h3>Correctness in the database, not the scheduler</h3>
+            <p class="why">one hung send tick once stopped mail for four hours. A send is now claimed atomically and its message ID stored before the provider is called; a stuck send is <span class="nb">re-queued</span> only if the provider provably never took it.</p>
+            <p class="cost"><span class="nb">hand-built</span> retries and reapers.</p>
+          </div>
+          <div class="decision">
+            <h3>Contracts as versioned specs, not prompt rules</h3>
+            <p class="why">the rules had drifted between a generator prompt and a validator prompt. A violation now forces a rewrite; if the last attempt still breaks a hard rule, the draft is blocked and escalated.</p>
+            <p class="cost">69 invariants and 11 caps to maintain.</p>
+          </div>
+          <div class="decision">
+            <h3>Code judges, the LLM extracts</h3>
+            <p class="why"><span class="nb">LLM-as-judge</span> kept its false positives through seven tuning rounds. The model now extracts thread facts once; code rules on them, and tests replay exactly.</p>
+            <p class="cost">one structured LLM call per thread.</p>
+          </div>
+          <div class="decision">
+            <h3>Autonomy earned by measurement</h3>
+            <p class="why">passing the safety judge is not the same as being worth sending. <span class="nb">Auto-send</span> stays off until replay shows <span class="nb">70–80%</span> of first replies sent unchanged.</p>
+            <p class="cost">operator time on every reply until then.</p>
+          </div>
+          <div class="decision">
+            <h3>Register first, then the side effect</h3>
+            <p class="why">a failed invoice upload once rolled back a registration, and a second request went in for the same money. Registration now commits first, and a test pins the order.</p>
+            <p class="cost">a visible “registered, no invoice” state to retry.</p>
+          </div>
+          <div class="decision">
+            <h3>Fail loud on paid APIs</h3>
+            <p class="why">a silent partial result costs more than a refused run. A drained vendor now stops the job with a reason, and runs refuse to start without balance.</p>
+            <p class="cost">runs refused when a balance is low.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>How it is engineered</h2>
+        <ol class="trail">
+          <li><b>Design doc</b>62 of them, one per feature</li>
+          <li><b>ADR</b>with revisit criteria</li>
+          <li><b>Build</b>with AI coding agents</li>
+          <li><b>Gates</b>16 on commit, 11 ratchets</li>
+          <li><b>Verification</b>16 reports and audits</li>
+          <li><b>Handover</b>the running system, not the design</li>
+        </ol>
+        <div class="stats">
+          <div class="stat"><b>11,000+</b><span>backend tests, full run green</span></div>
+          <div class="stat"><b>705</b><span>frontend tests</span></div>
+          <div class="stat"><b>1,098 / 1,953</b><span>commits <span class="nb">co-written</span> with AI agents, under the gates</span></div>
+          <div class="stat"><b>84</b><span>adversarial <span class="nb">prompt-injection</span> cases</span></div>
+        </div>
+        <p class="note">
+          <b>Inbound mail is untrusted input.</b> Five layers stand between a
+          webmaster’s email and the model: a sanitizer with 61 signatures,
+          <span class="nb">untrusted-content</span> wrapping, a <span class="nb">fail-closed</span> contract gate, output guards
+          against a redirected payment, and an adversarial suite. Attack
+          payloads are logged only as hashes.
+        </p>
+      </section>
+
+      <div class="closing">
+        <section class="transfer">
+          <h2>Where it transfers</h2>
+          <p>
+            The pattern is not about SEO. Any business that lets an LLM write to
+            customers — sales, support, collections, procurement — needs the same
+            layers: the model proposes, versioned contracts check
+            deterministically, a human approves until replay data says otherwise,
+            and an admin can stop everything without a deploy. Scale comes from
+            the boring parts: a stateless API, queue workers that scale
+            independently, correctness held by atomic database claims, and budget
+            caps on every paid call.
+          </p>
+        </section>
+
+        <section>
+          <h2>Stack</h2>
+          <p class="stack">
+            <b>Backend</b> Python, FastAPI, async SQLAlchemy, Alembic, Pydantic,
+            PostgreSQL, Redis + RQ, APScheduler, Playwright ·
+            <b>Frontend</b> React, TypeScript, Mantine, TanStack Query, Vite ·
+            <b>AI</b> OpenAI API, a shared MiniLM embedding service ·
+            <b>Infra</b> Docker Compose
+          </p>
+        </section>
+      </div>
+
+      <div class="foot" data-nosrc>
+        <span>LinkBuilder · technical brief · 2 / 2</span>
+        <span>Built solo for an employer; partner and data details stay private.</span>
+      </div>
+    </div>
+
+    <script type="application/json" id="sources">
+      {
+        "600": "job reported 600/600, 0 errors — docs/PROVIDER_FUNDS_GUARD_DESIGN.md:14,36-43",
+        "0": "quoted job report \"600/600, 0 errors\" — docs/PROVIDER_FUNDS_GUARD_DESIGN.md:36-43",
+        "120": "vendor credit ran out after ~120 keywords — docs/PROVIDER_FUNDS_GUARD_DESIGN.md:36-43",
+        "11,000": "backend 11,038 passed, 18 skipped — full run 2026-09-26, 8 workers",
+        "69": "38 hard + 31 soft invariants — YAML parse of backend/features/outreach_contracts/contracts/**/*.yml",
+        "16,000": "16,188 placed links tracked — docs/HANDOVER.md:47 (prod, 2026-09-10)",
+        "20": "dev compose: 28 services, 21 of them RQ workers — the public phrasing is 20+",
+        "21": "RQ workers in dev compose (28 services)",
+        "63": "63 of 69 invariants checked by code, 6 by an LLM judge — YAML parse of contracts",
+        "109": "109 of 109 shadow drafts allowed by the safety judge — docs/MASS_OUTREACH_AI_REPLY_CALIBRATION_DESIGN.md:53; 25% of the 84 decided sent as-is — :31-39",
+        "159": "alive with our link on re-check — docs/MONITORING_DEAD_PAGE_VERIFICATION_2026_08_19.md:22-25",
+        "865": "pages flagged dead and re-checked — docs/MONITORING_DEAD_PAGE_VERIFICATION_2026_08_19.md:9,22-25",
+        "11": "8 hard + 3 soft governance caps (contracts parse); 11 ratchet baselines — CLAUDE.md:18",
+        "70": "auto-send bar: ≥70–80% sent unchanged on turn 1 — calibration doc :259,285",
+        "80": "auto-send bar: ≥70–80% sent unchanged on turn 1 — calibration doc :259,285",
+        "62": "design docs — ls docs | grep -c DESIGN",
+        "16": "16 pre-commit hooks (+1 pre-push) — .pre-commit-config.yaml; 16 reports / verifications / audits in docs/",
+        "705": "frontend tests — full run 2026-09-26",
+        "1,098": "commits with an AI co-author trailer — git log",
+        "1,953": "commits, 1,952 by one author, 2026-02-17..2026-09-26 — git log",
+        "84": "adversarial corpus: 74 attacks across 6 threat classes + 10 legitimate — docs/OUTREACH_AI_PROMPT_INJECTION_DEFENCE.md:163-236",
+        "61": "sanitizer signatures, 33 high severity — docs/OUTREACH_AI_PROMPT_INJECTION_DEFENCE.md:163-236"
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>RAG over a rulebook — technical brief · Anton Aspidov</title>
+    <link rel="stylesheet" href="brief.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="kicker">
+          <span><b>Technical brief</b> · Anton Aspidov</span>
+          <span class="status">Local demo · standard library only</span>
+        </p>
+        <h1>RAG over a rulebook</h1>
+        <p class="subtitle">Cite the exact clause — or refuse</p>
+        <p class="lede">
+          Offline question answering over four engineering rulebooks: every
+          answer carries an exact (file, §) address — or says the question
+          isn’t covered. A case study in evaluation discipline; corpus and
+          answers in Russian.
+      </p>
+        <ul class="figures">
+          <li><b>0&thinsp;/&thinsp;680</b><span>answers without an address</span></li>
+          <li><b>72%</b><span>recall@20 on a clean holdout</span></li>
+          <li><b>58</b><span>predictions written before the runs</span></li>
+          <li><b>0.666</b><span>nDCG@10 against a 0.665 anchor</span></li>
+        </ul>
+      </header>
+
+      <div class="two">
+        <section>
+          <h2>The problem</h2>
+          <p>
+            An answer is only as good as the clause behind it, and the clause must
+            be checkable. Almost half of the § numbers exist in more than one
+            document, so only a (file, §) pair is a valid citation. A small model
+            given any context never refuses on its own, and questions written by
+            the author overstated retrieval by 28 points.
+          </p>
+        </section>
+        <section>
+          <h2>What it does</h2>
+          <ul>
+            <li>Indexes addressed § sections twice — lexical and dense</li>
+            <li>Refuses before generation when a question barely overlaps the rules</li>
+            <li>Fuses both rankings; a local model answers in one line with an address</li>
+            <li>Measures itself on independent questions, logging every holdout look</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h2>Architecture</h2>
+        <div class="diagram">
+          <svg viewBox="0 0 760 292" role="img" aria-label="RAG architecture: index, answer and evaluate lanes">
+            <defs>
+              <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 10 5 0 10z" fill="#6f6a85" />
+              </marker>
+              <style>
+                .b { fill: #f1eefc; stroke: #5b3fd0; stroke-width: 1.2; }
+                .k { fill: #5b3fd0; stroke: none; }
+                .e { fill: #fff; stroke: #8a86a0; stroke-width: 1; stroke-dasharray: 4 3; }
+                .t { font: 700 12px "Helvetica Neue", Arial, sans-serif; fill: #221d33; }
+                .tk { font: 700 12px "Helvetica Neue", Arial, sans-serif; fill: #fff; }
+                .s { font: 10px "Helvetica Neue", Arial, sans-serif; fill: #5c5870; }
+                .sk { font: 10px "Helvetica Neue", Arial, sans-serif; fill: #e6e0ff; }
+                .l { font: italic 9.5px "Helvetica Neue", Arial, sans-serif; fill: #6f6a85; }
+                .lane { font: 700 8.5px "Helvetica Neue", Arial, sans-serif; fill: #8a86a0; letter-spacing: 1.4px; }
+                .a { stroke: #6f6a85; stroke-width: 1.3; fill: none; marker-end: url(#arr); }
+              </style>
+            </defs>
+
+            <text class="lane" x="8" y="11">INDEX · ONCE</text>
+            <rect class="b" x="8" y="17" width="170" height="50" rx="9" />
+            <text class="t" x="20" y="38">Rulebooks</text>
+            <text class="s" x="20" y="55">four canon documents</text>
+            <rect class="b" x="204" y="17" width="186" height="50" rx="9" />
+            <text class="t" x="216" y="38">§ chunker</text>
+            <text class="s" x="216" y="55">every piece keyed (file, §)</text>
+            <rect class="b" x="416" y="17" width="336" height="50" rx="9" />
+            <text class="t" x="428" y="38">Lexical + dense index</text>
+            <text class="s" x="428" y="55">hand-written BM25 · embeddings of child chunks → parent</text>
+            <path class="a" d="M178 42h24" />
+            <path class="a" d="M390 42h24" />
+
+            <text class="lane" x="8" y="106">ANSWER · PER QUESTION</text>
+            <rect class="k" x="8" y="112" width="188" height="58" rx="10" />
+            <text class="tk" x="20" y="133">Refusal gate</text>
+            <text class="sk" x="20" y="149">too little overlap → “not covered”</text>
+            <text class="sk" x="20" y="163">before any model sees a rule</text>
+            <rect class="b" x="228" y="116" width="150" height="50" rx="9" />
+            <text class="t" x="240" y="137">Hybrid retrieval</text>
+            <text class="s" x="240" y="154">rank fusion</text>
+            <rect class="b" x="402" y="116" width="170" height="50" rx="9" />
+            <text class="t" x="414" y="137">Selector</text>
+            <text class="s" x="414" y="154">local LLM keeps up to five</text>
+            <rect class="b" x="596" y="116" width="156" height="50" rx="9" />
+            <text class="t" x="608" y="137">Generator</text>
+            <text class="s" x="608" y="154">one line + (file, §)</text>
+            <path class="a" d="M196 141h30" />
+            <text class="l" x="199" y="131">pass</text>
+            <path class="a" d="M378 141h22" />
+            <path class="a" d="M572 141h22" />
+            <path class="a" d="M470 67v20H303v27" />
+            <text class="l" x="480" y="83">candidates by address</text>
+
+            <text class="lane" x="8" y="198">EVALUATE · OFFLINE</text>
+            <rect class="e" x="8" y="204" width="214" height="54" rx="9" />
+            <text class="t" x="20" y="225">Independent questions</text>
+            <text class="s" x="20" y="242">holdout grouped by address</text>
+            <rect class="e" x="246" y="204" width="236" height="54" rx="9" />
+            <text class="t" x="258" y="225">Citation validator</text>
+            <text class="s" x="258" y="242">correct · wrong · refused · fabricated</text>
+            <rect class="e" x="506" y="204" width="246" height="54" rx="9" />
+            <text class="t" x="518" y="225">Ledger of looks</text>
+            <text class="s" x="518" y="242">predictions committed before runs</text>
+            <path class="a" d="M222 231h22" />
+            <path class="a" d="M482 231h22" />
+            <path class="a" d="M674 166v17H364v19" />
+            <text class="l" x="500" y="176">every answer, audited</text>
+            <text class="l" x="8" y="284">Dark box: the only runtime gate — it refuses before the model sees any rule text. Dashed: the evaluation harness, run offline.</text>
+          </svg>
+        </div>
+      </section>
+
+      <section>
+        <h2>How it flows</h2>
+        <ol class="flow">
+          <li>Sections keep their (file, §) address; small child chunks point back to the parent.</li>
+          <li>A question meets the refusal gate first — too little overlap, and it stops there.</li>
+          <li>Rankings are fused; a local model keeps up to five fragments and answers in one line.</li>
+          <li>Offline, a validator sorts every answer: correct, wrong, refused, unaddressed or fabricated.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Worth knowing</h2>
+        <ul class="hooks">
+          <li><b>A <span class="nb">hand-written</span> BM25 matched a published anchor.</b>nDCG@10 0.666 against 0.665 on BEIR/SciFact, 300 queries — with the pass bar committed before the run.</li>
+          <li><b>The gate reveals the loss; it doesn’t cause it.</b>Without it, 0 of 7 false refusals became useful answers, and 3 of 3 correct refusals became confident wrong ones.</li>
+          <li><b><span class="nb">Author-written</span> questions flattered retrieval by 28 points.</b>The first run on 394 independent questions switched the retriever from lexical to hybrid.</li>
+        </ul>
+      </section>
+
+      <div class="foot" data-nosrc>
+        <span>RAG over a rulebook · technical brief · 1 / 2</span>
+        <a href="https://portfolio-site.anthony-priceone.workers.dev"><span class="nb">portfolio-site</span>.<span class="nb">anthony-priceone</span>.workers.dev</a>
+      </div>
+    </div>
+
+    <div class="page">
+      <p class="running">
+        <span><b>Technical brief</b> · RAG over a rulebook</span>
+        <span>How it is built</span>
+      </p>
+
+      <section>
+        <h2>Decisions that shape it</h2>
+        <div class="decisions">
+          <div class="decision">
+            <h3>Hybrid retrieval over pure lexical or pure vector</h3>
+            <p class="why">on 314 independent questions hybrid reached 76% recall@20 against 61% lexical and 71% dense; a <span class="nb">pre-registered</span> paired test on the clean holdout confirmed it — 72% against 57%, p&nbsp;=&nbsp;0.0018.</p>
+            <p class="cost">fusion discards score magnitude, so refusal needs its own gate.</p>
+          </div>
+          <div class="decision">
+            <h3>The § section as the unit, (file, §) as the key</h3>
+            <p class="why">almost half of the § numbers collide across documents. <span class="nb">Parent-document</span> retrieval keeps the address and lifted dense top-5 from 6% to 61%.</p>
+            <p class="cost">uneven sections, and special cases for chapters without text.</p>
+          </div>
+          <div class="decision">
+            <h3>Citations by structure, not by prompt wording</h3>
+            <p class="why">with fragment headers 8 of 8 answers carried a <span class="nb">file-qualified</span> address; without them, 1 of 8 — whatever the prompt said.</p>
+            <p class="cost">a valid citation is not a correct one, so correctness is measured separately.</p>
+          </div>
+          <div class="decision">
+            <h3>A lexical refusal gate, not the model’s judgment</h3>
+            <p class="why">with empty context the model refused 210 of 210; given any context, it refused 0 of 102.</p>
+            <p class="cost">the gate measures word overlap, so short real questions are refused more often.</p>
+          </div>
+          <div class="decision">
+            <h3>A ledger of looks; predictions before runs</h3>
+            <p class="why">the first architecture choice was made with the holdout inside the denominator. A <span class="nb">pre-registered</span> rerun put the cost at about 4 points — and the ranking held.</p>
+            <p class="cost">slower loops, and negatives get published.</p>
+          </div>
+          <div class="decision">
+            <h3>Calibrate the ruler on someone else’s benchmark</h3>
+            <p class="why">internal numbers can’t validate the instrument itself. BM25 matched the BEIR anchor within 0.001 — and the log calls the third decimal “partly luck”.</p>
+            <p class="cost">it validates only the lexical channel, in English.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>How it is engineered</h2>
+        <ol class="trail">
+          <li><b>Questions</b>394, by four independent authors</li>
+          <li><b>Holdout</b>grouped by address, none shared</li>
+          <li><b><span class="nb">Pre-register</span></b>the prediction is committed first</li>
+          <li><b>Measure</b>intervals and paired tests</li>
+          <li><b>Ledger</b>every look at the holdout</li>
+          <li><b>Reverse runs</b>instruments must go red on faults</li>
+        </ol>
+        <div class="stats">
+          <div class="stat"><b>23</b><span>measurements, 17 of them <span class="nb">pre-registered</span></span></div>
+          <div class="stat"><b>58</b><span>predictions written down first; 18 refuted, and kept</span></div>
+          <div class="stat"><b>680</b><span>answers audited; 0.3% cited a pair that doesn’t exist</span></div>
+          <div class="stat"><b>0</b><span><span class="nb">third-party</span> imports: the standard library only</span></div>
+        </div>
+        <p class="note">
+          <b>Limits are stated above the strengths.</b> The README opens with
+          the honest table: exact (file, §) accuracy is 50% on an independent
+          holdout — each number with its own configuration and population, so
+          no headline figure can hide behind a friendlier one.
+        </p>
+      </section>
+
+      <div class="closing">
+        <section class="transfer">
+          <h2>Where it transfers</h2>
+          <p>
+            Wherever an answer is only as good as the clause behind it: internal
+            policies and HR handbooks, compliance and regulatory manuals,
+            security standards, SOPs, support knowledge bases. What carries over
+            is the architecture, not the model — index at clause level, make
+            (document, clause) the citation key, enforce citations by structure
+            and give refusal its own path — and the evaluation harness carries
+            over unchanged, so a new corpus means <span class="nb">re-measuring</span>, not <span class="nb">re-arguing</span>.
+          </p>
+        </section>
+
+        <section>
+          <h2>Stack</h2>
+          <p class="stack">
+            <b>Core</b> Python standard library only — BM25 with a Russian
+            stemmer, rank fusion, <span class="nb">parent-document</span> retrieval, written by hand ·
+            <b>Models</b> Ollama: Qwen3 as selector and generator, bge-m3
+            embeddings · <b>Statistics</b> Wilson intervals, cluster bootstrap,
+            exact McNemar, minimum detectable effect
+          </p>
+        </section>
+      </div>
+
+      <div class="foot" data-nosrc>
+        <span>RAG over a rulebook · technical brief · 2 / 2</span>
+        <span>Private repository; corpus and answers in Russian.</span>
+      </div>
+    </div>
+
+    <script type="application/json" id="sources">
+      {
+        "0": "0 answers without an address — rag/README.md:1782-1795; 0 of 7 / 0 of 102 — rag/MEASUREMENTS.md:2441-2502, README.md:1644-1649; 0 third-party imports — AST scan of rag/",
+        "680": "logged answers: 0 without address, 2 nonexistent pairs = 0.3% — rag/README.md:1782-1795",
+        "72": "72% [62..83], 58/80, clean holdout, pre-registered — rag/MEASUREMENTS.md:159-174, 249",
+        "28": "author's 36 questions 89% vs 314 independent 61% top-20 lexical — rag/README.md:1289-1293",
+        "20": "recall@20 — top-20 retrieval window, the metric used throughout rag/README.md:1300-1306",
+        "10": "nDCG@10 — the BEIR standard cutoff, rag/MEASUREMENTS.md:3010-3029",
+        "0.666": "BM25 nDCG@10 on BEIR/SciFact — rag/MEASUREMENTS.md:3010-3029",
+        "0.665": "published Elasticsearch anchor — rag/MEASUREMENTS.md:3010-3029",
+        "300": "BEIR/SciFact queries — rag/MEASUREMENTS.md:3010-3029",
+        "7": "false refusals, none became useful without the gate — rag/MEASUREMENTS.md:2441-2502",
+        "3": "correct refusals that became confident wrong answers — rag/MEASUREMENTS.md:2471-2502",
+        "394": "golden set by four LLM agents, rag/ closed to them — rag/README.md:1247-1260",
+        "314": "independent questions, recall@20 — rag/README.md:1300-1306",
+        "76": "hybrid recall@20 76% [71..80] — rag/README.md:1300-1304",
+        "61": "lexical 61% [56..67] — README.md:1300-1306; dense top-5 child chunks 61% — README.md:804-812",
+        "71": "dense 71% [66..76] — rag/README.md:1300-1306",
+        "57": "lexical 57% (46/80) on the clean holdout — rag/MEASUREMENTS.md:159-174",
+        "0.0018": "exact binomial on discordant pairs, 13 flips vs 1 — rag/MEASUREMENTS.md:67-90",
+        "5": "dense top-5 — rag/README.md:804-812",
+        "6": "whole-section dense top-5 6% — rag/README.md:804-812",
+        "8": "8/8 with headers, 1/8 without — rag/README.md:403-419",
+        "1": "1/8 without fragment headers — rag/README.md:403-419",
+        "210": "refusals with empty context — rag/README.md:1820-1821",
+        "102": "refusals given context on uncovered questions: 0/102 — rag/README.md:1644-1649",
+        "4": "leak cost 76% → 72% — rag/MEASUREMENTS.md:171-174",
+        "0.001": "0.666 − 0.665 — rag/MEASUREMENTS.md:3010-3029",
+        "23": "measurements З-1..З-23 — grep -oE 'З-[0-9]+' rag/MEASUREMENTS.md | sort -u",
+        "17": "measurements with a PRE-REGISTRATION heading — rag/MEASUREMENTS.md",
+        "58": "labelled predictions П-8-1..П-23-4 — grep -oE 'П-[0-9]+-[0-9]+' | sort -u | wc -l",
+        "18": "predictions refuted or missed — verdict lines in rag/MEASUREMENTS.md",
+        "0.3": "2 nonexistent pairs of 680 — rag/README.md:1782-1795",
+        "50": "exact (file, §) pair 12/24 [31..69] on an independent holdout — rag/README.md:27, 2058-2071"
+      }
+    </script>
+  </body>
+</html>

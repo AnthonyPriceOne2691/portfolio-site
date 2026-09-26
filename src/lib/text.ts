@@ -22,7 +22,7 @@ export const text = {
   "about.how":
     "I build with AI coding agents at team speed, inside a quality contour I designed — specs, 22 gates under a hard cap, and a doctor that audits the gates themselves. Architecture, contracts and the final review stay mine.",
   "about.cv": "Download CV",
-  "about.cvHint": "one-page PDF",
+  "about.cvHint": "Here",
   "home.title": "Anton Aspidov — AI Automation Engineer",
   "home.description":
     "Production AI SaaS plus fully-local voice, web and AR agents. LLMs under contract.",
@@ -50,7 +50,7 @@ export const text = {
   "project.proof": "Proof",
   "project.video": "Watch demo",
   "proof.github": "Code on GitHub",
-  "proof.case": "Read the case",
+  "proof.brief": "Technical brief · PDF",
   "status.production": "Production",
   "status.local-demo": "Local demo",
   "status.poc": "PoC",

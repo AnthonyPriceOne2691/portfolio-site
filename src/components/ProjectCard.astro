@@ -71,6 +71,13 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
   <div class="panel">
     <div class="panel-inner">
       {
+        /* Пруфы — ПЕРВОЙ строкой, а не в конце кейса: раскрывший карточку
+          должен сразу увидеть, что бриф можно унести с собой, а не
+          дочитывать до низа, чтобы узнать об этом. */
+      }
+      <ProofLinks proof={proofLinks} />
+
+      {
         demo && (
           <video
             class="demo"
@@ -94,8 +101,6 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
         <span class="label">{t("project.stack")}:</span>
         {d.stack.join(" · ")}
       </p>
-
-      <ProofLinks proof={proofLinks} />
     </div>
   </div>
 </details>

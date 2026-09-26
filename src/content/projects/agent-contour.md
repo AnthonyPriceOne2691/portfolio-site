@@ -5,7 +5,7 @@ metric: "22 gates, hard-capped"
 status: "production"
 stack: ["Python", "Bash", "pre-commit", "GitHub Actions", "dependency-cruiser"]
 proof:
-  github: "https://github.com/AnthonyPriceOne2691"
+  brief: "/briefs/agent-contour.pdf"
 contract: "Only what a mechanism can reject counts as done: a gate that cannot turn red is treated as broken."
 featured: false
 order: 6

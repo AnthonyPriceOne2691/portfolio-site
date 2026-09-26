@@ -68,9 +68,9 @@ const cvHint = here !== about;
       <HandNote
         id="cv-hint-note"
         text={t("nav.cvHint")}
-        viewBox="0 0 64 32"
-        stem="M48 29C30 29 10 22 8 5"
-        tip="M3.8 10.6 8 5l4.8 5.2"
+        viewBox="0 0 96 36"
+        stem="M91 29C93 12 40 16 24 5"
+        tip="M26.2 11.1 24 5h6.5"
       />
     </div>
   )
@@ -193,14 +193,13 @@ const cvHint = here !== about;
   .cv-hint :global(.hand-arrow) {
     position: absolute;
     top: -2px;
-    /* Острие — в 0.5rem от левого края рисунка шириной 4rem, то есть в 3.5rem
-       от правого. Ставим его под середину About: правый край пункта отстоит
-       от края шапки на кнопку темы и зазор, середина — ещё на 2.1rem левее. */
-    right: calc(
-      var(--nav-pad-x) + var(--nav-control) + var(--nav-gap) + 2.1rem - 3.5rem
-    );
-    width: 4rem;
-    height: 2rem;
+    /* Линия выходит из конца подписи — над «here» — поднимается и уходит
+       влево, как стрелка у кнопки на /about/, только вверх. Правый край
+       рисунка — у правого края подписи; острие ложится под правую часть
+       About и смотрит вверх-влево, на само слово. */
+    right: var(--nav-pad-x);
+    width: 6rem;
+    height: 2.25rem;
   }
   .cv-hint :global(.hand-text) {
     position: absolute;

@@ -16,6 +16,8 @@ import { strict as assert } from "node:assert";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
+import { numbers } from "./lib/numbers.mjs";
+
 const ROOT = new URL("../", import.meta.url);
 
 /** Число → почему его нет ни на одной карточке. */
@@ -28,10 +30,6 @@ const NOT_ON_CARDS = new Map([
   ["3", "«UTC+3» в статусе героя — часовой пояс, а не метрика"],
 ]);
 
-/** Числа в тексте: «11,000+», «97.9%», «~3», «22». Часть слова (Qwen3) — не число. */
-function numbers(text) {
-  return [...text.matchAll(/(?<![\w.])~?(\d[\d,]*(?:\.\d+)?)\+?%?(?![\w])/g)].map((m) => m[1]);
-}
 
 function cardsCorpus() {
   const dir = new URL("src/content/projects/", ROOT);

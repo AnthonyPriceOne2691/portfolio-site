@@ -1,25 +1,41 @@
 ---
 /** Ссылки-доказательства. Рендерится только то, что реально есть в frontmatter
     (пример B3): отсутствующий пруф не оставляет ни битой иконки, ни пустой
-    строки. Схема гарантирует, что хотя бы один пруф найдётся. */
+    строки. Схема гарантирует, что у опубликованной карточки пруф найдётся.
+
+    Два вида и два жеста, как на /about/: СКАЧИВАНИЕ — акцентная кнопка со
+    стрелкой вниз (бриф — это файл, который уносят с собой и пересылают),
+    ПЕРЕХОД — стеклянная ссылка со стрелкой вправо. `data-proof` называет,
+    какой это пруф: по нему B3 сверяет разметку с frontmatter. */
 import { t } from "../lib/text";
 
 interface Props {
-  proof: Record<string, string | undefined>;
+  proof: { brief?: string; github?: string; video?: string };
 }
 const { proof } = Astro.props;
 const links = [
-  proof.github ? { href: proof.github, label: t("proof.github") } : null,
-  proof.case ? { href: proof.case, label: t("proof.case") } : null,
-  proof.video ? { href: proof.video, label: t("project.video") } : null,
-].filter(Boolean) as { href: string; label: string }[];
+  proof.github
+    ? { key: "github", href: proof.github, label: t("proof.github") }
+    : null,
+  proof.video
+    ? { key: "video", href: proof.video, label: t("project.video") }
+    : null,
+].filter(Boolean) as { key: string; href: string; label: string }[];
 ---
 
 {
-  links.length > 0 && (
+  (proof.brief || links.length > 0) && (
     <nav class="proof" aria-label={t("project.proof")}>
+      {proof.brief && (
+        <a class="brief" href={proof.brief} download data-proof="brief">
+          {t("proof.brief")}
+          <span class="down" aria-hidden="true">
+            ↓
+          </span>
+        </a>
+      )}
       {links.map((l) => (
-        <a class="glass" href={l.href}>
+        <a class="glass" href={l.href} data-proof={l.key}>
           {l.label} →
         </a>
       ))}
@@ -32,11 +48,34 @@ const links = [
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
-    margin: 1.5rem 0;
+    margin: 0 0 1.25rem;
   }
   .proof a {
     padding: 0.6rem 1rem;
     text-decoration: none;
     font-weight: 600;
+  }
+  .brief {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    transition: background-color 0.24s ease;
+  }
+  .brief:hover,
+  .brief:focus-visible {
+    background: var(--accent-hover);
+    color: var(--text-on-accent);
+  }
+  /* Как у «Download CV»: едет только стрелка, кнопка под курсором стоит. */
+  .down {
+    display: inline-block;
+    transition: transform 0.24s ease;
+  }
+  .brief:hover .down,
+  .brief:focus-visible .down {
+    transform: translateY(2px);
   }
 </style>

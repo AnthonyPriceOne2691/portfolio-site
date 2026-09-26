@@ -1,0 +1,491 @@
+/*
+ * Общий макет технических брифов (PDF к карточкам витрины).
+ *
+ * Формат у всех брифов ОДИН, и это требование владельца, а не вкус: две
+ * страницы A4 — на первой задача, архитектура квадратами и стрелками, ход
+ * работы и три зацепки; на второй решения «X вместо Y, потому что Z», как
+ * проект сделан, куда это переносится и стек. Читатель, открывший второй
+ * бриф, уже знает, где что искать.
+ *
+ * Вид — «дорогой» по прямой просьбе владельца: системный SF Pro, крупные
+ * цифры под тонкими линейками вместо «таблеток», мягкая тонированная шапка
+ * как холст сайта, воздух вместо рамок. Цвета — печатные двойники токенов
+ * сайта (`src/styles/tokens.css`); тёмной темы у PDF нет.
+ */
+@page {
+  size: A4;
+  margin: 0;
+}
+:root {
+  --ink: #1d1930;
+  --body: #2e2a40;
+  --muted: #5d5970;
+  --faint: #8c889f;
+  --accent: #5b3fd0;
+  --accent-ink: #3d2a9e;
+  --accent-soft: #f2effd;
+  --accent-line: #cdc4f4;
+  --rule: #e6e3ef;
+  --sans: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--body);
+  font-family: var(--sans);
+  font-size: 9.3pt;
+  line-height: 1.42;
+  font-kerning: normal;
+  font-variant-numeric: lining-nums;
+  -webkit-font-smoothing: antialiased;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Страница — жёсткий лист A4 и колонка: подвал и финальный блок прижаты к
+   низу, а всё, что не влезло, видно при сборке (скрипт требует ровно две
+   страницы), а не переезжает на третью. */
+.page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 210mm;
+  height: 297mm;
+  padding: 0 16mm 17mm;
+  overflow: hidden;
+  break-after: page;
+}
+.page:last-child {
+  break-after: auto;
+}
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1.6mm;
+  background: linear-gradient(90deg, #5b3fd0, #8b6cf1 55%, #5fb6ea);
+}
+
+/* --- шапка первой страницы ---
+   ⚠ Фон — непрозрачный ЛИНЕЙНЫЙ градиент. Полупрозрачные радиальные «пятна»,
+   как на холсте сайта, Skia печатает растром: бриф весил 1 МБ вместо 250 КБ
+   при пороге pre-commit 512 КБ. Сборка это ловит сама (`MAX_BYTES`). */
+.hero {
+  margin: 0 -16mm 5mm;
+  padding: 8.5mm 16mm 0;
+  background: linear-gradient(115deg, #efeafd 0%, #f7f5fe 48%, #e9f3fd 100%);
+  border-bottom: 0.3mm solid var(--rule);
+}
+.kicker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 0 4.4mm;
+  font-size: 7.4pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.kicker b {
+  color: var(--accent);
+  font-weight: 700;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.6mm;
+  padding: 1mm 2.6mm;
+  border: 0.3mm solid var(--accent-line);
+  border-radius: 99px;
+  background: #fff;
+  color: var(--accent-ink);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.status::before {
+  content: "";
+  width: 1.6mm;
+  height: 1.6mm;
+  border-radius: 50%;
+  background: var(--accent);
+}
+h1 {
+  margin: 0;
+  font-size: 25pt;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.subtitle {
+  margin: 0.8mm 0 2.6mm;
+  font-size: 12.5pt;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--accent);
+}
+.lede {
+  margin: 0 0 4.6mm;
+  max-width: 160mm;
+  font-size: 10.2pt;
+  line-height: 1.42;
+  color: var(--muted);
+}
+.figures {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 0;
+  padding: 0;
+  border-top: 0.3mm solid var(--rule);
+  list-style: none;
+}
+.figures li {
+  margin: 0;
+  padding: 2.6mm 4mm 3.2mm 0;
+}
+.figures li + li {
+  padding-left: 4mm;
+  border-left: 0.3mm solid var(--rule);
+}
+.figures li > b {
+  display: block;
+  font-size: 17.5pt;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--accent-ink);
+}
+.figures li > span {
+  display: block;
+  margin-top: 1mm;
+  font-size: 7.9pt;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+/* --- шапка второй страницы --- */
+.running {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 5mm;
+  padding-top: 8.5mm;
+  font-size: 7.4pt;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.running b {
+  color: var(--accent);
+}
+
+/* --- разделы --- */
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+  margin: 0 0 2.2mm;
+  font-size: 7.6pt;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+h2::after {
+  content: "";
+  flex: 1;
+  height: 0.25mm;
+  background: var(--rule);
+}
+section {
+  margin: 0 0 4mm;
+}
+p {
+  margin: 0 0 1.6mm;
+}
+ul {
+  margin: 0;
+  padding-left: 4mm;
+}
+li {
+  margin: 0 0 1.1mm;
+}
+li::marker {
+  color: var(--accent);
+}
+b,
+strong {
+  color: var(--ink);
+}
+.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8mm;
+}
+
+/* --- архитектура --- */
+.diagram {
+  margin: 0;
+  padding: 2.8mm 3mm 1.6mm;
+  border: 0.25mm solid var(--rule);
+  border-radius: 3mm;
+  background: #fcfbff;
+}
+.diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.diagram svg text {
+  font-family: var(--sans);
+}
+
+/* --- ход работы --- */
+.flow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.1mm 8mm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.flow li {
+  position: relative;
+  margin: 0;
+  padding-left: 7mm;
+  counter-increment: step;
+}
+.flow li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.15mm;
+  width: 4.6mm;
+  height: 4.6mm;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 7pt;
+  font-weight: 700;
+  line-height: 4.6mm;
+  text-align: center;
+}
+
+/* --- зацепки первой страницы --- */
+.hooks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4mm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hooks li {
+  margin: 0;
+  padding: 2.4mm 0 0;
+  border-top: 0.6mm solid var(--accent);
+  font-size: 8.5pt;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.hooks li b {
+  display: block;
+  margin-bottom: 0.8mm;
+  font-size: 9.5pt;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+
+/* --- решения: формат журнала решений --- */
+.decisions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3.2mm;
+  counter-reset: decision;
+}
+.decision {
+  position: relative;
+  padding: 2.8mm 3.5mm 2.9mm;
+  border: 0.25mm solid var(--rule);
+  border-radius: 2.4mm;
+  background: #fff;
+  counter-increment: decision;
+  font-size: 8.8pt;
+  line-height: 1.42;
+  break-inside: avoid;
+}
+.decision::after {
+  content: counter(decision, decimal-leading-zero);
+  position: absolute;
+  top: 3mm;
+  right: 3.6mm;
+  font-size: 8pt;
+  font-weight: 700;
+  color: var(--accent-line);
+}
+.decision h3 {
+  margin: 0 7mm 1.1mm 0;
+  font-size: 9.7pt;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+.decision p {
+  margin: 0 0 1mm;
+}
+.decision .why::before {
+  content: "Because ";
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+.decision .cost {
+  margin: 0;
+  padding-top: 1mm;
+  border-top: 0.25mm dashed var(--rule);
+  color: var(--muted);
+  font-size: 8.1pt;
+}
+.decision .cost::before {
+  content: "Cost: ";
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* --- как сделан проект --- */
+.trail {
+  display: flex;
+  align-items: stretch;
+  gap: 3.6mm;
+  margin: 0 0 3mm;
+  padding: 0;
+  list-style: none;
+}
+.trail li {
+  position: relative;
+  flex: 1;
+  margin: 0;
+  padding: 2.2mm 2.4mm;
+  border: 0.25mm solid var(--accent-line);
+  border-radius: 2mm;
+  background: #fff;
+  font-size: 7.9pt;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.trail li b {
+  display: block;
+  margin-bottom: 0.4mm;
+  font-size: 8.8pt;
+  color: var(--ink);
+}
+.trail li + li::before {
+  content: "→";
+  position: absolute;
+  left: -1.8mm;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--accent);
+  font-size: 8pt;
+  font-weight: 700;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 0 0 3mm;
+  padding: 0;
+  border-top: 0.3mm solid var(--rule);
+  border-bottom: 0.3mm solid var(--rule);
+}
+.stat {
+  padding: 2.3mm 3.4mm 2.5mm 0;
+}
+.stat + .stat {
+  padding-left: 3.4mm;
+  border-left: 0.3mm solid var(--rule);
+}
+.stat > b {
+  display: block;
+  font-size: 14pt;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--accent-ink);
+}
+.stat > span {
+  display: block;
+  margin-top: 0.8mm;
+  font-size: 7.9pt;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.note {
+  margin: 0;
+  font-size: 8.9pt;
+  line-height: 1.42;
+  color: var(--muted);
+}
+.note b {
+  color: var(--ink);
+}
+
+/* --- вторая страница: свободная высота делится поровну между блоками, а не
+   копится одной пустой полосой над финалом --- */
+.page:has(> .running) {
+  justify-content: space-between;
+}
+.page:has(> .running) > * {
+  margin-bottom: 0;
+}
+.closing {
+  margin: 0;
+}
+.transfer {
+  margin: 0 0 3.6mm;
+  padding: 3.2mm 4.2mm;
+  border-radius: 3mm;
+  background: linear-gradient(115deg, #f0ecfd 0%, #edf5fd 100%);
+}
+.transfer p {
+  margin: 0;
+  font-size: 9.1pt;
+  line-height: 1.45;
+  color: var(--body);
+}
+.stack {
+  margin: 0;
+  font-size: 8.4pt;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.stack b {
+  color: var(--ink);
+}
+
+/* --- подвал --- */
+.foot {
+  position: absolute;
+  left: 16mm;
+  right: 16mm;
+  bottom: 8.5mm;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 2.2mm;
+  border-top: 0.25mm solid var(--rule);
+  font-size: 7.3pt;
+  letter-spacing: 0.02em;
+  color: var(--faint);
+}
+.foot a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* Составные слова и диапазоны чисел не рвутся: «AI-/drafted» и «70–/80%»
+   в конце строки читаются как опечатка. */
+.nb {
+  white-space: nowrap;
+}

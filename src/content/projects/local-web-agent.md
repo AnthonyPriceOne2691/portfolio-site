@@ -5,7 +5,7 @@ metric: "443 tests"
 status: "local-demo"
 stack: ["Python", "FastAPI", "Playwright", "Ollama", "Qwen3 14B", "React"]
 proof:
-  github: "https://github.com/AnthonyPriceOne2691"
+  github: "https://github.com/AnthonyPriceOne2691/local-web-agent"
 contract: "Every action is checked against 14 hard rules before it reaches the browser — bounded recovery, auto-tightening on drift."
 featured: false
 order: 3

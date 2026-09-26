@@ -6,7 +6,7 @@ status: "local-demo"
 stack:
   ["Python", "FastAPI", "WebSocket", "whisper.cpp", "Ollama", "Piper", "React"]
 proof:
-  github: "https://github.com/AnthonyPriceOne2691/voice-coach"
+  brief: "/briefs/voice-interview-coach.pdf"
 contract: "Every sentence passes a contract before it is spoken: English only, no scores, at most three sentences, and every turn ends in a question or a short acknowledgement."
 featured: false
 order: 2

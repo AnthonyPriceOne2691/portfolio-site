@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A quality contour for AI agents — technical brief · Anton Aspidov</title>
+    <link rel="stylesheet" href="brief.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="kicker">
+          <span><b>Technical brief</b> · Anton Aspidov</span>
+          <span class="status">In use · 7 repositories</span>
+        </p>
+        <h1>Quality contour</h1>
+        <p class="subtitle">Gates and a doctor for AI coding agents</p>
+        <p class="lede">
+          A rulebook and a set of gates that deploy into any repository and stop
+          an AI agent from reporting green on something nobody checked — with a
+          doctor that audits the gates themselves.
+      </p>
+        <ul class="figures">
+          <li><b>22</b><span>gates under a hard cap</span></li>
+          <li><b>22,600+</b><span>lines of canon</span></li>
+          <li><b>25</b><span>field findings, classified</span></li>
+          <li><b>1,113</b><span>behaviour tests on the canon</span></li>
+        </ul>
+      </header>
+
+      <div class="two">
+        <section>
+          <h2>The problem</h2>
+          <p>
+            An agent ships work that looks finished. The usual failure is not
+            bad code — it is a green light over a check that verified nothing:
+            a gate that exits 0 when its tool is missing, a mask copied from a
+            template that doesn’t know the repository’s layout, a baseline
+            that never shrinks. In one field test a suite with all 49
+            assertions deleted still passed 25 hooks at 93.91% coverage.
+          </p>
+        </section>
+        <section>
+          <h2>What it does</h2>
+          <ul>
+            <li>Cuts work into <span class="nb">size-capped</span> slices — spec, plan, verify — with breakers that stop the agent</li>
+            <li>Runs 22 gates, 16 on every commit and 6 in CI, under a hard cap</li>
+            <li>Freezes existing debt in ratchets that may only shrink</li>
+            <li>Audits every gate with a doctor that plants a defect and expects red</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h2>Architecture</h2>
+        <div class="diagram">
+          <svg viewBox="0 0 760 292" role="img" aria-label="Quality contour architecture: deliver, judge and learn lanes">
+            <defs>
+              <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 10 5 0 10z" fill="#6f6a85" />
+              </marker>
+              <style>
+                .b { fill: #f1eefc; stroke: #5b3fd0; stroke-width: 1.2; }
+                .k { fill: #5b3fd0; stroke: none; }
+                .t { font: 700 12px "Helvetica Neue", Arial, sans-serif; fill: #221d33; }
+                .tk { font: 700 12px "Helvetica Neue", Arial, sans-serif; fill: #fff; }
+                .s { font: 10px "Helvetica Neue", Arial, sans-serif; fill: #5c5870; }
+                .sk { font: 10px "Helvetica Neue", Arial, sans-serif; fill: #e6e0ff; }
+                .l { font: italic 9.5px "Helvetica Neue", Arial, sans-serif; fill: #6f6a85; }
+                .lane { font: 700 8.5px "Helvetica Neue", Arial, sans-serif; fill: #8a86a0; letter-spacing: 1.4px; }
+                .a { stroke: #6f6a85; stroke-width: 1.3; fill: none; marker-end: url(#arr); }
+                .d { stroke: #5b3fd0; stroke-width: 1.3; fill: none; stroke-dasharray: 4 3; marker-end: url(#arr); }
+              </style>
+            </defs>
+
+            <text class="lane" x="8" y="11">DELIVER</text>
+            <rect class="b" x="8" y="17" width="146" height="50" rx="9" />
+            <text class="t" x="20" y="38">Owner</text>
+            <text class="s" x="20" y="55">signs spec, owns merge</text>
+            <rect class="b" x="178" y="17" width="200" height="50" rx="9" />
+            <text class="t" x="190" y="38">Delivery slice</text>
+            <text class="s" x="190" y="55">spec → plan → verify, breakers</text>
+            <rect class="b" x="402" y="17" width="170" height="50" rx="9" />
+            <text class="t" x="414" y="38">Commit gates</text>
+            <text class="s" x="414" y="55">16 on every commit</text>
+            <rect class="b" x="596" y="17" width="156" height="50" rx="9" />
+            <text class="t" x="608" y="38">CI + merge guard</text>
+            <text class="s" x="608" y="55">6 more, delivery check</text>
+            <path class="a" d="M154 42h22" />
+            <path class="a" d="M378 42h22" />
+            <path class="a" d="M572 42h22" />
+
+            <text class="lane" x="178" y="106">JUDGE THE JUDGES</text>
+            <rect class="k" x="178" y="112" width="250" height="58" rx="10" />
+            <text class="tk" x="192" y="133">Doctor</text>
+            <text class="sk" x="192" y="149">plants a defect for every gate</text>
+            <text class="sk" x="192" y="163">a silent gate is DEAD — the run fails</text>
+            <rect class="b" x="596" y="116" width="156" height="50" rx="9" />
+            <text class="t" x="608" y="137">Ratchets</text>
+            <text class="s" x="608" y="154">debt may only shrink</text>
+            <path class="d" d="M428 130h58V69" />
+            <path class="d" d="M428 152h118V92h94V69" />
+            <path class="a" d="M674 67v47" />
+            <text class="l" x="436" y="124">canary</text>
+
+            <text class="lane" x="8" y="198">LEARN</text>
+            <rect class="b" x="8" y="204" width="226" height="54" rx="9" />
+            <text class="t" x="20" y="225">Field log</text>
+            <text class="s" x="20" y="242">each finding names its missed check</text>
+            <rect class="b" x="258" y="204" width="226" height="54" rx="9" />
+            <text class="t" x="270" y="225">Canon</text>
+            <text class="s" x="270" y="242">versioned, fixes the class</text>
+            <rect class="b" x="508" y="204" width="244" height="54" rx="9" />
+            <text class="t" x="520" y="225">Fleet</text>
+            <text class="s" x="520" y="242">7 repositories, updates as PRs</text>
+            <path class="a" d="M234 231h22" />
+            <path class="a" d="M484 231h22" />
+            <path class="a" d="M230 170v16H121v16" />
+            <text class="l" x="238" y="186">findings</text>
+            <text class="l" x="8" y="284">Dark box: the doctor. Dashed arrows: a planted violation per gate — the gate must go red, or the run fails.</text>
+          </svg>
+        </div>
+      </section>
+
+      <section>
+        <h2>How it flows</h2>
+        <ol class="flow">
+          <li>The owner signs a spec; the agent builds inside a slice with size breakers.</li>
+          <li>Every commit runs the commit gates; growth over a ratchet snapshot is red.</li>
+          <li>CI runs the rest and the delivery check; main merges only when green.</li>
+          <li>The doctor plants a violation for each gate — a gate that stays silent is DEAD.</li>
+          <li>Any finding names the existing check that should have caught it.</li>
+          <li>The canon fixes the class and ships to every repository, verdicts before and after.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Worth knowing</h2>
+        <ul class="hooks">
+          <li><b>One digit makes a gate lie.</b>Raise a limit from 500 to 50000 and the hook still prints Passed; the doctor fails the run with DEAD.</li>
+          <li><b>Two gates judged wrong for a month.</b>Both were rated healthy. <span class="nb">Known-answer</span> tests now replay the bug and go red the day an update brings it back.</li>
+          <li><b>It publishes what it doesn’t enforce.</b>Of 23 rules, 16 are held by a gate, 1 by a tool and 6 by review only — and the split is public.</li>
+        </ul>
+      </section>
+
+      <div class="foot" data-nosrc>
+        <span>Quality contour · technical brief · 1 / 2</span>
+        <a href="https://portfolio-site.anthony-priceone.workers.dev"><span class="nb">portfolio-site</span>.<span class="nb">anthony-priceone</span>.workers.dev</a>
+      </div>
+    </div>
+
+    <div class="page">
+      <p class="running">
+        <span><b>Technical brief</b> · Quality contour</span>
+        <span>How it is built</span>
+      </p>
+
+      <section>
+        <h2>Decisions that shape it</h2>
+        <div class="decisions">
+          <div class="decision">
+            <h3>A hard cap on gates, not a gate per incident</h3>
+            <p class="why">process systems die of weight. A new gate needs a swap or a written justification, and the last two were each paid for by a measured defect class.</p>
+            <p class="cost">known defect classes can wait for a slot.</p>
+          </div>
+          <div class="decision">
+            <h3>Ratchets instead of bans</h3>
+            <p class="why">legacy repositories must join on day one. Old debt is frozen in a snapshot that may only shrink; an upward <span class="nb">re-snapshot</span> fails.</p>
+            <p class="cost">it needs a remote baseline: <span class="nb">pre-push</span> or CI only.</p>
+          </div>
+          <div class="decision">
+            <h3>A canary doctor, not a config reader</h3>
+            <p class="why">“wired in” is text; “actually judges” needs execution. Five dead gates surfaced in its first session.</p>
+            <p class="cost">it catches silence, not wrong verdicts — those need <span class="nb">known-answer</span> tests.</p>
+          </div>
+          <div class="decision">
+            <h3>A decision log a checker can reject</h3>
+            <p class="why">a choice without its alternative can’t be audited. Every entry must read “chose X instead of Y — because Z”, enforced in CI.</p>
+            <p class="cost">it checks the form, not the truth.</p>
+          </div>
+          <div class="decision">
+            <h3>Fix the class, not the instance</h3>
+            <p class="why">a fix in one gate left three neighbours with the same silence. Every finding now names the check that should have caught it, and a test enforces this.</p>
+            <p class="cost">classes are named by hand.</p>
+          </div>
+          <div class="decision">
+            <h3>Publish what is enforced and what is advisory</h3>
+            <p class="why">an unwired gate once let acceptance show all green. A <span class="nb">meta-gate</span> now fails any unwired script, and the <span class="nb">enforced-versus-advisory</span> split is public.</p>
+            <p class="cost">the <span class="nb">meta-gate</span> sees wiring, not code.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>How it is engineered</h2>
+        <ol class="trail">
+          <li><b>Canon</b>versioned documents with a changelog</li>
+          <li><b>Snapshot</b>vendored with provenance</li>
+          <li><b>Deploy</b>local deviations declared</li>
+          <li><b>Doctor</b>before and after every update</li>
+          <li><b>Field log</b>every finding classified</li>
+          <li><b>Class fix</b>with a stated cost</li>
+        </ol>
+        <div class="stats">
+          <div class="stat"><b>1,113</b><span>behaviour tests on the canon itself</span></div>
+          <div class="stat"><b>156</b><span>delivery slices across the fleet; 152 with a verify report</span></div>
+          <div class="stat"><b>25</b><span>field findings from 6 deployments</span></div>
+          <div class="stat"><b>22</b><span>gates; a new one must swap one out</span></div>
+        </div>
+        <p class="note">
+          <b>Verdicts are named, not implied.</b> AUTO — the canary went red;
+          WEAK — the gate runs but doesn’t judge, and says why; ABSENT, SKIP
+          and TOOL are declared. DEAD — declared, wired and silent on its own
+          canary — is the only lie and the only verdict that fails the run. The
+          contour calls itself unfinished: its <span class="nb">gate-defect</span> share is 28% against
+          a 20% target.
+        </p>
+      </section>
+
+      <div class="closing">
+        <section class="transfer">
+          <h2>Where it transfers</h2>
+          <p>
+            Adoption is vendoring, not a framework install: a pinned snapshot of
+            the canon, with provenance, is copied into the repository, and every
+            local deviation is declared with a reason. Updates arrive as a pull
+            request with doctor verdicts before and after, and a new revision
+            reaches one canary project first. It scales across teams because its
+            cost is capped by a gate budget, legacy code joins on day one through
+            ratchets, and the doctor lets people who didn’t write a gate audit it.
+          </p>
+        </section>
+
+        <section>
+          <h2>Stack</h2>
+          <p class="stack">
+            <b>Core</b> Python, Bash, <span class="nb">pre-commit</span>, GitHub Actions ·
+            <b>Python gates</b> ruff, mypy --strict, <span class="nb">import-linter</span>, <span class="nb">pytest-cov</span>,
+            mutmut · <b>TypeScript gates</b> ESLint, Prettier, <span class="nb">dependency-cruiser</span>,
+            Stryker · <b>Both</b> jscpd, <span class="nb">detect-secrets</span>
+          </p>
+        </section>
+      </div>
+
+      <div class="foot" data-nosrc>
+        <span>Quality contour · technical brief · 2 / 2</span>
+        <span>See it deployed in the <span class="nb">open-source</span> Local Web Agent repository.</span>
+      </div>
+    </div>
+
+    <script type="application/json" id="sources">
+      {
+        "7": "repositories with the doctor + pre-commit + gate scripts: portfolio-site, voice-interview-coach, local-web-agent, lash-try-on, Fake office, G connect, Ahrefs cases",
+        "22": "22 gates = 16 at commit + 6 outside — Prepare/CODE_QUALITY_GATES.md:679-694",
+        "22,600": "canon: 22,643 lines — wc -l of AGENT_DELIVERY_HARNESS.md, CODE_QUALITY_GATES.md, AGENT_STACK, OKF",
+        "25": "field findings F1–F25 — Prepare/field/FIELD-LOG.md; CONTOUR-EN.md:99-117; 25 hooks passed with assertions deleted — FIELD-LOG.md:884-888",
+        "0": "gate exit code 0 with the tool missing — portfolio-site/scripts/lint/contour_doctor.py:4-13",
+        "49": "assertions deleted, suite still green — Prepare/field/FIELD-LOG.md:884-888",
+        "93.91": "coverage with assertions deleted — Prepare/field/FIELD-LOG.md:884-888",
+        "16": "16 gates at commit — CODE_QUALITY_GATES.md:679-684; 16 of 23 rules held by a gate — CONTOUR-EN.md:51-57",
+        "6": "6 gates outside commit — CODE_QUALITY_GATES.md:679-694; 6 rules review-only — CONTOUR-EN.md:51-57; 6 deployments — CONTOUR-EN.md:99-117",
+        "500": "MAX_LINES_PROD in scripts/lint/check_file_length.sh:22 — demo run on a clone, doctor DEAD 1, exit 1",
+        "50000": "the planted limit in the same demo run",
+        "23": "23 rules: 16 gate · 1 tool · 6 review — CODE_QUALITY_GATES.md:644-659; CONTOUR-EN.md:51-57",
+        "1": "1 rule held by a tool — CONTOUR-EN.md:51-57",
+        "1,113": "canon behaviour tests — Prepare/CONTOUR-EN.md:253",
+        "156": "dated archived delivery slices across the fleet — find <repo>/delivery/archive",
+        "152": "of them with verify-report.md — same find",
+        "28": "gate-defect share 28% against a ≤20% target over 10 deployments — Prepare/CONTOUR-EN.md:245-251",
+        "20": "the ≤20% target — Prepare/CONTOUR-EN.md:245-251"
+      }
+    </script>
+  </body>
+</html>

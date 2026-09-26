@@ -540,13 +540,15 @@ test("текст карточки не пляшет, пока она раскр�
 test("стрелки к резюме попадают в цель на любой ширине", async () => {
   /*
    * Пометка «my CV is here» живёт ВНЕ липкой шапки и целится в пункт About по
-   * числам шапки (`--nav-*`), а не по самому пункту. Значит, попадание — не
+   * геометрии шапки (`--nav-*`), а не по самому пункту. Значит, попадание — не
    * свойство разметки, а совпадение двух расчётов, и разойтись они могут
    * молча: поменяли кнопку темы — стрелка указывает в пустоту, сборка зелёная.
    *
-   * Острие берётся с самого рисунка — концом линии, — а не пересчётом из
-   * констант CSS: тест, повторяющий расчёт стиля, согласился бы с ним и в
-   * ошибке.
+   * Проверяется ПРИЦЕЛ, а не точка: луч от острия по касательной к линии
+   * обязан войти в цель. Стрелка приходит к About снизу-справа и под углом —
+   * правило «острие под серединой пункта» судило бы форму, а не попадание.
+   * Острие и касательная берутся с самого рисунка, а не пересчётом констант
+   * CSS: тест, повторяющий расчёт стиля, согласился бы с ним и в ошибке.
    *
    * ⚠ Размер рисунка проверяется отдельно. Общее `svg { max-width: 100% }`
    * однажды сжало стрелку на /about/ в точку — подпись висела одна, а острие
@@ -554,10 +556,39 @@ test("стрелки к резюме попадают в цель на любо�
    */
   const tipOf = (selector) => {
     const stem = document.querySelector(`${selector} .stem`);
-    const end = stem.getPointAtLength(stem.getTotalLength());
-    const p = new DOMPoint(end.x, end.y).matrixTransform(stem.getScreenCTM());
+    const len = stem.getTotalLength();
+    const ctm = stem.getScreenCTM();
+    const at = (l) => {
+      const q = stem.getPointAtLength(l);
+      return new DOMPoint(q.x, q.y).matrixTransform(ctm);
+    };
+    const end = at(len);
+    const before = at(Math.max(0, len - 4));
     const box = stem.ownerSVGElement.getBoundingClientRect();
-    return { x: p.x, y: p.y, w: box.width, h: box.height };
+    return {
+      x: end.x,
+      y: end.y,
+      dx: end.x - before.x,
+      dy: end.y - before.y,
+      w: box.width,
+      h: box.height,
+    };
+  };
+  /** Входит ли луч от острия по касательной в прямоугольник цели. */
+  const aimsAt = (tip, r, reach = 80) => {
+    const n = Math.hypot(tip.dx, tip.dy) || 1;
+    for (let t = 0; t <= reach; t += 1) {
+      const x = tip.x + (tip.dx / n) * t;
+      const y = tip.y + (tip.dy / n) * t;
+      if (
+        x >= r.left - 1 &&
+        x <= r.right + 1 &&
+        y >= r.top - 1 &&
+        y <= r.bottom + 1
+      )
+        return true;
+    }
+    return false;
   };
   const visible = (tip, where) =>
     assert.ok(
@@ -584,13 +615,12 @@ test("стрелки к резюме попадают в цель на любо�
       [tipOf.toString()],
     );
     visible(nav.tip, `@${width}px под шапкой`);
-    const quarter = (nav.link.right - nav.link.left) / 4;
     assert.ok(
-      nav.tip.x >= nav.link.left + quarter &&
-        nav.tip.x <= nav.link.right - quarter,
-      `@${width}px стрелка под шапкой бьёт мимо About: острие на x=${Math.round(nav.tip.x)}, ` +
-        `пункт ${Math.round(nav.link.left)}…${Math.round(nav.link.right)}. ` +
-        "Разошлись числа шапки и `--nav-*` в tokens.css",
+      aimsAt(nav.tip, nav.link),
+      `@${width}px стрелка под шапкой целится мимо About: острие ` +
+        `(${Math.round(nav.tip.x)}, ${Math.round(nav.tip.y)}), пункт ` +
+        `${Math.round(nav.link.left)}…${Math.round(nav.link.right)}. ` +
+        "Разошлась геометрия шапки и `--nav-*` в tokens.css",
     );
     assert.ok(
       nav.tip.y >= nav.barBottom - 1 && nav.tip.y <= nav.barBottom + 12,
@@ -625,12 +655,8 @@ test("стрелки к резюме попадают в цель на любо�
     );
     visible(about.tip, `@${width}px на /about/`);
     const gap = about.tip.x - about.btn.right;
-    const third = (about.btn.bottom - about.btn.top) / 3;
     assert.ok(
-      gap >= 0 &&
-        gap <= 24 &&
-        about.tip.y >= about.btn.top + third &&
-        about.tip.y <= about.btn.bottom - third,
+      gap >= 0 && gap <= 24 && aimsAt(about.tip, about.btn),
       `@${width}px стрелка на /about/ не указывает на кнопку: острие ` +
         `(${Math.round(about.tip.x)}, ${Math.round(about.tip.y)}), кнопка ` +
         `${Math.round(about.btn.left)}…${Math.round(about.btn.right)} × ` +

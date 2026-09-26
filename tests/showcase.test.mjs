@@ -20,7 +20,7 @@ const ROOT = new URL("../", import.meta.url);
 const DIST = new URL("dist/", ROOT);
 
 /** Ключи `proof`, которые `ProofLinks` превращает в ссылки, в порядке вывода. */
-const PROOF_LINKS = ["github", "case", "video"];
+const PROOF_LINKS = ["brief", "github", "video"];
 /** Своё видео встраивается плеером; внешняя ссылка — остаётся ссылкой. */
 const OWN_VIDEO = /^\/.+\.(mp4|webm|ogv)$/i;
 
@@ -129,20 +129,23 @@ test("B3: неполный proof не оставляет ни пустого б�
       const expected = PROOF_LINKS.filter(
         (k) => p.proof[k] && !(k === "video" && embedded),
       );
-      const actual = [...frag.matchAll(/<a class="glass" href="([^"]*)"/g)].map(
-        (m) => m[1],
-      );
+      // ⚠ Сверяются НАБОРЫ пруфов, а не число ссылок одного класса. Счёт по
+      // `class="glass"` ослеп бы на кнопке брифа — у неё другой вид — и
+      // принимал бы её пропажу за норму.
+      const anchors = [...frag.matchAll(/<a\b[^>]*\bdata-proof="(\w+)"[^>]*>/g)];
+      const actual = anchors.map((m) => m[1]);
 
-      assert.equal(
-        actual.length,
-        expected.length,
-        `${file} / ${p.slug}: proof-ссылок ${actual.length}, а в frontmatter ${expected.length} ` +
-          `(${expected.join(", ") || "ни одной"}). Отсутствующий пруф не должен давать пустую строку`,
+      assert.deepEqual(
+        [...actual].sort(),
+        [...expected].sort(),
+        `${file} / ${p.slug}: на карточке пруфы [${actual.join(", ")}], а в frontmatter ` +
+          `[${expected.join(", ") || "ни одного"}]. Отсутствующий пруф не должен давать пустую строку`,
       );
-      for (const href of actual) {
-        assert.ok(
-          href.trim(),
-          `${file} / ${p.slug}: proof-ссылка с пустым href`,
+      for (const [tag] of anchors) {
+        assert.match(
+          tag,
+          /\bhref="[^"\s][^"]*"/,
+          `${file} / ${p.slug}: proof-ссылка с пустым href — ${tag}`,
         );
       }
 

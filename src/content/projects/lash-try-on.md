@@ -4,8 +4,8 @@ oneLiner: "An AR consultation mirror for lash artists: extension looks rendered 
 metric: "59 fps"
 status: "poc"
 stack: ["Swift", "SwiftUI", "ARKit", "SceneKit", "MediaPipe", "Ollama (VLM)"]
-proof:
-  github: "https://github.com/AnthonyPriceOne2691"
+# Пруфа пока нет: репозиторий приватный, съёмки нет. Черновику это можно.
+proof: {}
 contract: "A local vision-LLM critic proposes parameter tweaks within a whitelist and clamped ranges; a human applies them."
 featured: false
 order: 4

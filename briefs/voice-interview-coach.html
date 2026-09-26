@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Voice Interview Coach — technical brief · Anton Aspidov</title>
+    <link rel="stylesheet" href="brief.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <p class="kicker">
+          <span><b>Technical brief</b> · Anton Aspidov</span>
+          <span class="status">Local demo · fully offline</span>
+        </p>
+        <h1>Voice Interview Coach</h1>
+        <p class="subtitle">An offline voice interviewer</p>
+        <p class="lede">
+          A mock technical interview you talk to, running entirely on one laptop —
+          speech recognition, a local language model and speech synthesis, with
+          every sentence checked against a contract before it is spoken.
+      </p>
+        <ul class="figures">
+          <li><b>1.25&nbsp;s</b><span>median to first audio</span></li>
+          <li><b>176</b><span>backend tests</span></li>
+          <li><b>94.9%</b><span>coverage, lines and branches</span></li>
+          <li><b>21</b><span>contract rules, checked per sentence</span></li>
+        </ul>
+      </header>
+
+      <div class="two">
+        <section>
+          <h2>The problem</h2>
+          <p>
+            A voice turn feels live only if speech starts within seconds of the
+            user stopping — and that window must hold <span class="nb">end-of-turn</span> detection,
+            recognition, a large model’s first sentence and synthesis on one
+            32&nbsp;GB laptop, with nothing sent to a cloud. The shortcuts fail on
+            the numbers: a buffered reply projects to 4.8&nbsp;s at p95, and a
+            reasoning model took <span class="nb">31–52&nbsp;s</span>.
+          </p>
+        </section>
+        <section>
+          <h2>What it does</h2>
+          <ul>
+            <li>Runs a 15-minute English interview: six questions, technical and behavioral</li>
+            <li>Transcribes locally and answers aloud, sentence by sentence</li>
+            <li>Checks every sentence against a contract before it is voiced</li>
+            <li>Writes the review afterwards with a separate reasoning model</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h2>Architecture</h2>
+        <div class="diagram">
+          <svg viewBox="0 0 760 292" role="img" aria-label="Voice Interview Coach architecture: a local speech loop with a per-sentence contract gate">
+            <defs>
+              <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 0 10 5 0 10z" fill="#6f6a85" />
+              </marker>
+              <style>
+                .b { fill: #f1eefc; stroke: #5b3fd0; stroke-width: 1.2; }
+                .k { fill: #5b3fd0; stroke: none; }
+                .x { fill: none; stroke: #8a86a0; stroke-width: 1; stroke-dasharray: 5 4; }
+                .t { font: 700 12px "Helvetica Neue", Arial, sans-serif; fill: #221d33; }
+                .tk { font: 700 12px "Helvetica Neue", Arial, sans-serif; fill: #fff; }
+                .s { font: 10px "Helvetica Neue", Arial, sans-serif; fill: #5c5870; }
+                .sk { font: 10px "Helvetica Neue", Arial, sans-serif; fill: #e6e0ff; }
+                .l { font: italic 9.5px "Helvetica Neue", Arial, sans-serif; fill: #6f6a85; }
+                .lane { font: 700 8.5px "Helvetica Neue", Arial, sans-serif; fill: #8a86a0; letter-spacing: 1.4px; }
+                .a { stroke: #6f6a85; stroke-width: 1.3; fill: none; marker-end: url(#arr); }
+              </style>
+            </defs>
+
+            <rect class="x" x="3" y="3" width="754" height="264" rx="12" />
+            <text class="lane" x="16" y="19">ONE LAPTOP · NOTHING LEAVES IT</text>
+
+            <rect class="b" x="16" y="28" width="164" height="50" rx="9" />
+            <text class="t" x="28" y="49">Browser mic + VAD</text>
+            <text class="s" x="28" y="66">loudness + silence window</text>
+            <rect class="b" x="204" y="28" width="166" height="50" rx="9" />
+            <text class="t" x="216" y="49">Speech recognition</text>
+            <text class="s" x="216" y="66">whisper.cpp · ~0.7&nbsp;s</text>
+            <rect class="b" x="394" y="28" width="170" height="50" rx="9" />
+            <text class="t" x="406" y="49">Interview flow</text>
+            <text class="s" x="406" y="66">state machine, pace requests</text>
+            <rect class="b" x="588" y="28" width="156" height="50" rx="9" />
+            <text class="t" x="600" y="49">Local LLM</text>
+            <text class="s" x="600" y="66">instruct model, streaming</text>
+            <path class="a" d="M180 53h22" />
+            <path class="a" d="M370 53h22" />
+            <path class="a" d="M564 53h22" />
+
+            <rect class="k" x="520" y="118" width="224" height="62" rx="10" />
+            <text class="tk" x="534" y="139">Sentence gate</text>
+            <text class="sk" x="534" y="155">contract, checked per sentence</text>
+            <text class="sk" x="534" y="170">speak · cut · regenerate once</text>
+            <rect class="b" x="290" y="122" width="204" height="54" rx="9" />
+            <text class="t" x="302" y="144">Speech synthesis</text>
+            <text class="s" x="302" y="161">Piper · first clip in 46&nbsp;ms</text>
+            <rect class="b" x="16" y="122" width="248" height="54" rx="9" />
+            <text class="t" x="28" y="144">Playback queue</text>
+            <text class="s" x="28" y="161">mic reopens only when it drains</text>
+            <path class="a" d="M666 78v38" />
+            <text class="l" x="548" y="101">first sentence in 0.48&nbsp;s</text>
+            <path class="a" d="M520 149h-24" />
+            <path class="a" d="M290 149h-24" />
+            <path class="a" d="M98 122V80" />
+            <text class="l" x="104" y="104">half-duplex</text>
+
+            <rect class="b" x="296" y="206" width="216" height="50" rx="9" />
+            <text class="t" x="308" y="227">Session store</text>
+            <text class="s" x="308" y="244">transcript + counters, no audio</text>
+            <rect class="b" x="536" y="206" width="208" height="50" rx="9" />
+            <text class="t" x="548" y="227">Offline review</text>
+            <text class="s" x="548" y="244">reasoning model, after the session</text>
+            <path class="a" d="M540 180v12h-70v12" />
+            <text class="l" x="548" y="197">every turn</text>
+            <path class="a" d="M512 231h22" />
+            <text class="l" x="16" y="284">Dark box: the gate every sentence passes before it is spoken. Dashed: the machine boundary — the only backend URL is local.</text>
+          </svg>
+        </div>
+      </section>
+
+      <section>
+        <h2>How it flows</h2>
+        <ol class="flow">
+          <li>The browser detects the end of your turn; the utterance is transcribed locally.</li>
+          <li>The model streams its reply; each sentence is checked before it reaches synthesis.</li>
+          <li>Valid sentences play back to back; the mic reopens only when playback drains.</li>
+          <li>After the session, a reasoning model writes the review, validated against a schema.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Worth knowing</h2>
+        <ul class="hooks">
+          <li><b>The model may agree to say it; you never hear it.</b>A bad first sentence is regenerated before any sound; a bad later sentence is cut before synthesis.</li>
+          <li><b>A reasoning model meant <span class="nb">31–52&nbsp;s</span> of silence.</b>So it writes only the offline review; the live voice runs on an instruct model at 1.25&nbsp;s.</li>
+          <li><b>“Speak slower” never reaches the LLM.</b>The coach confirms and repeats its last line at the new pace — without spending a question.</li>
+        </ul>
+      </section>
+
+      <div class="foot" data-nosrc>
+        <span>Voice Interview Coach · technical brief · 1 / 2</span>
+        <a href="https://portfolio-site.anthony-priceone.workers.dev"><span class="nb">portfolio-site</span>.<span class="nb">anthony-priceone</span>.workers.dev</a>
+      </div>
+    </div>
+
+    <div class="page">
+      <p class="running">
+        <span><b>Technical brief</b> · Voice Interview Coach</span>
+        <span>How it is built</span>
+      </p>
+
+      <section>
+        <h2>Decisions that shape it</h2>
+        <div class="decisions">
+          <div class="decision">
+            <h3>Split the models: instruct live, reasoning offline</h3>
+            <p class="why">the reasoning model took <span class="nb">31–52&nbsp;s</span> per reply against 0.19&nbsp;s to the first token for the instruct model. Depth moved to the review, where nobody waits.</p>
+            <p class="cost">the live dialogue loses the reasoning model’s depth.</p>
+          </div>
+          <div class="decision">
+            <h3>Stream sentence by sentence, not a buffered reply</h3>
+            <p class="why">a buffered reply projected to 4.8&nbsp;s at p95 against 3.0&nbsp;s streamed; the measured median to first audio is 1.25&nbsp;s.</p>
+            <p class="cost">the contract never sees the whole reply, and pauses are written into the audio itself.</p>
+          </div>
+          <div class="decision">
+            <h3>Check each sentence before it is spoken</h3>
+            <p class="why">the checks are monotone, so what has been said is always compliant. Without recovery, compliance decays: 0.95 per turn leaves 0.36 after 20 turns.</p>
+            <p class="cost">only <span class="nb">word-level</span> checks; tone and persona stay in the prompt.</p>
+          </div>
+          <div class="decision">
+            <h3><span class="nb">Half-duplex</span> <span class="nb">turn-taking</span></h3>
+            <p class="why">an open mic during playback made the coach interrupt itself. The browser detects the end of a turn; the mic reopens only when playback drains.</p>
+            <p class="cost">no <span class="nb">barge-in</span>, and headphones for live demos.</p>
+          </div>
+          <div class="decision">
+            <h3>Fully offline on one laptop</h3>
+            <p class="why">interview audio must not leave the device. It is decoded in a temp folder and discarded; recognition on Metal takes 0.73&nbsp;s, not 2.3&nbsp;s.</p>
+            <p class="cost">a 32&nbsp;GB machine, and cold starts hidden by <span class="nb">warm-up</span>.</p>
+          </div>
+          <div class="decision">
+            <h3>Latency is a release gate</h3>
+            <p class="why">unit tests cannot hear a pause. Every change to the voice path is <span class="nb">re-measured</span> on the real stack against a 3.0&nbsp;s gate, stage by stage.</p>
+            <p class="cost">a live measurement run on every voice change.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>How it is engineered</h2>
+        <ol class="trail">
+          <li><b>Spec</b>a <span class="nb">size-capped</span> slice with acceptance examples</li>
+          <li><b>Plan</b>steps and risks named first</li>
+          <li><b>Build</b>with AI coding agents</li>
+          <li><b>Gates</b>33 hooks, 4 CI workflows</li>
+          <li><b>Verify</b>20 reports, latency measured live</li>
+          <li><b>Decisions</b>145 entries, alternatives named</li>
+        </ol>
+        <div class="stats">
+          <div class="stat"><b>176</b><span>backend tests; 41 on the front end</span></div>
+          <div class="stat"><b>94.9%</b><span>coverage, lines and branches</span></div>
+          <div class="stat"><b>21</b><span>numbered design docs</span></div>
+          <div class="stat"><b>69</b><span>lessons learned, each mapped to code</span></div>
+        </div>
+        <p class="note">
+          <b>The contract is data, not prompt text:</b> 21 rules across three
+          files — English only, no scores, at most three sentences and 400
+          characters, and every turn ends with a question or a short
+          acknowledgement. The loader rejects unknown checks; hard, soft and
+          fallback outcomes are counted every turn.
+        </p>
+      </section>
+
+      <div class="closing">
+        <section class="transfer">
+          <h2>Where it transfers</h2>
+          <p>
+            Anywhere audio must not leave the device — clinical or legal intake,
+            <span class="nb">on-prem</span> <span class="nb">call-centre</span> assistance, bank and insurance voice flows,
+            kiosks, <span class="nb">in-car</span> systems, offline field tools. The shape carries over:
+            a local speech loop that speaks sentence by sentence, a declarative
+            contract checked before each sentence is voiced, and <span class="nb">per-stage</span>
+            latency treated as a release gate. Each model sits behind a narrow
+            interface, so moving to another model or a GPU server is <span class="nb">re-wiring</span>
+            and <span class="nb">re-measuring</span>, not a redesign.
+          </p>
+        </section>
+
+        <section>
+          <h2>Stack</h2>
+          <p class="stack">
+            <b>Backend</b> Python, FastAPI with WebSocket, async SQLAlchemy,
+            SQLite · <b>Speech</b> whisper.cpp on Metal, ffmpeg, Piper (ONNX) ·
+            <b>Models</b> Ollama: Qwen 2.5 instruct live, DeepSeek-R1 offline ·
+            <b>Frontend</b> React, TypeScript, Vite, Web Audio
+          </p>
+        </section>
+      </div>
+
+      <div class="foot" data-nosrc>
+        <span>Voice Interview Coach · technical brief · 2 / 2</span>
+        <span>Private repository; code walkthrough on request.</span>
+      </div>
+    </div>
+
+    <script type="application/json" id="sources">
+      {
+        "1.25": "1,247 ms median, 1,302 ms worst, server side from start of STT to first synthesized audio — delivery/archive/2026-08-13-expressive-speech/verify-report.md:81-90",
+        "176": "backend tests — delivery/archive/2026-08-17-stand-selector-rot/verify-report.md:22; rerun 2026-09-26",
+        "94.9": "94.93% combined line + branch coverage (lines 96.31%, branches 87.89%) — backend/.coverage 2026-09-22, rerun 2026-09-26",
+        "32": "32 GB memory budget — docs/03-voice-pipeline.md:158-169",
+        "4.8": "buffered reply 4.8 s p95 vs 3.0 s streaming (projected) — docs/20-context-token-budget.md:84-85",
+        "31": "deepseek-r1:14b 31.4–52.0 s per turn — docs/14-llm-model-split.md:35-40",
+        "52": "deepseek-r1:14b 31.4–52.0 s per turn — docs/14-llm-model-split.md:35-40",
+        "15": "start screen: ~15 min — frontend/src/pages/InterviewPage.tsx:72-74",
+        "0.7": "STT ~700 ms — delivery/archive/2026-08-13-expressive-speech/verify-report.md:87",
+        "0.48": "LLM to first sentence ~484 ms — same verify-report.md:87",
+        "46": "TTS of the first sentence 46 ms — same verify-report.md:87",
+        "2.5": "live model qwen2.5:14b-instruct — backend/app/config.py:18",
+        "0.19": "qwen warm time to first token 0.19 s — docs/14-llm-model-split.md:38",
+        "3.0": "streamed 3.0 s p95 (projected) — docs/20…:84-85; first-audio gate 3.0 s — expressive-speech/spec.md:78",
+        "0.95": "compliance decay q^T with q = 0.95, T = 20 → 0.358 — docs/13-behavioral-contracts.md:11",
+        "20": "T = 20 turns in the decay example — docs/13…:11; 20 of 21 archived slices have verify-report.md — ls delivery/archive",
+        "0.36": "0.95^20 = 0.358 — docs/13-behavioral-contracts.md:11",
+        "0.73": "whisper.cpp Metal 0.73 s vs faster-whisper 2.3 s — docs/19-*.md:98",
+        "2.3": "faster-whisper 2.3 s — docs/19-*.md:98",
+        "33": "pre-commit hooks — grep -cE '^\\s+- id:' .pre-commit-config.yaml",
+        "4": "CI workflows: ci, quality, main-guard, canon-freshness — .github/workflows/",
+        "145": "unique decision ids across 16 delivery/archive/*/decisions.md",
+        "41": "frontend tests in 9 files — delivery/archive/2026-08-17-stand-selector-rot/verify-report.md:20",
+        "21": "21 numbered design docs docs/00..20; 21 contract rules (18 hard, 3 soft) across 3 files — YAML parse of data/contracts/",
+        "69": "lessons L1–L68 + L50a — delivery/archive/INDEX.md",
+        "400": "max 400 characters per turn — data/contracts/interview.contract.yaml:42-47"
+      }
+    </script>
+  </body>
+</html>
