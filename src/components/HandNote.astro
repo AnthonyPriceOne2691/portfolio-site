@@ -47,6 +47,12 @@ const { id, text, viewBox, stem, tip, class: className, ...rest } = Astro.props;
     color: var(--text-muted);
   }
   .hand-arrow {
+    /* ⚠ Размер рисунку всегда задаёт место использования. Общее
+       `svg { max-width: 100% }` из global.css — для картинок в тексте, а здесь
+       оно считало проценты от корня пометки, у которого при абсолютно
+       поставленных детях ширина НОЛЬ: стрелка сжималась в точку и пропадала,
+       а подпись оставалась висеть одна. */
+    max-width: none;
     overflow: visible;
     fill: none;
     stroke: var(--accent);

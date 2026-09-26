@@ -547,13 +547,24 @@ test("стрелки к резюме попадают в цель на любо�
    * Острие берётся с самого рисунка — концом линии, — а не пересчётом из
    * констант CSS: тест, повторяющий расчёт стиля, согласился бы с ним и в
    * ошибке.
+   *
+   * ⚠ Размер рисунка проверяется отдельно. Общее `svg { max-width: 100% }`
+   * однажды сжало стрелку на /about/ в точку — подпись висела одна, а острие
+   * «попадало» в край кнопки, потому что точка там и лежала.
    */
   const tipOf = (selector) => {
     const stem = document.querySelector(`${selector} .stem`);
     const end = stem.getPointAtLength(stem.getTotalLength());
     const p = new DOMPoint(end.x, end.y).matrixTransform(stem.getScreenCTM());
-    return { x: p.x, y: p.y };
+    const box = stem.ownerSVGElement.getBoundingClientRect();
+    return { x: p.x, y: p.y, w: box.width, h: box.height };
   };
+  const visible = (tip, where) =>
+    assert.ok(
+      tip.w >= 16 && tip.h >= 16,
+      `${where}: стрелка сжата до ${Math.round(tip.w)}×${Math.round(tip.h)} px — ` +
+        "её не видно, осталась одна подпись",
+    );
 
   for (const width of [...WIDTHS, 900, 1280, 1440]) {
     const page = await browser.newPage({ viewport: { width, height: 900 } });
@@ -572,6 +583,7 @@ test("стрелки к резюме попадают в цель на любо�
       },
       [tipOf.toString()],
     );
+    visible(nav.tip, `@${width}px под шапкой`);
     const quarter = (nav.link.right - nav.link.left) / 4;
     assert.ok(
       nav.tip.x >= nav.link.left + quarter &&
@@ -596,16 +608,22 @@ test("стрелки к резюме попадают в цель на любо�
           .getBoundingClientRect();
         const card = document.querySelector("article.card");
         const box = card.getBoundingClientRect();
-        const pad = parseFloat(getComputedStyle(card).paddingRight);
+        const s = getComputedStyle(card);
+        const above = document.querySelector("p.how").getBoundingClientRect();
         return {
           tip,
           btn: btn.toJSON(),
-          noteRight: note.right,
-          innerRight: box.right - pad,
+          note: note.toJSON(),
+          inner: {
+            left: box.left + parseFloat(s.paddingLeft),
+            right: box.right - parseFloat(s.paddingRight),
+          },
+          textAbove: above.bottom,
         };
       },
       [tipOf.toString()],
     );
+    visible(about.tip, `@${width}px на /about/`);
     const gap = about.tip.x - about.btn.right;
     const third = (about.btn.bottom - about.btn.top) / 3;
     assert.ok(
@@ -621,9 +639,16 @@ test("стрелки к резюме попадают в цель на любо�
     // Стекло карточки режет всё, что за краем (`overflow: hidden`), — вылезшую
     // подпись B7 не заметит: страница шире не становится.
     assert.ok(
-      about.noteRight <= about.innerRight + 1,
+      about.note.left >= about.inner.left - 1 &&
+        about.note.right <= about.inner.right + 1,
       `@${width}px подпись у кнопки вылезла за карточку и обрезана: ` +
-        `${Math.round(about.noteRight)} > ${Math.round(about.innerRight)}`,
+        `${Math.round(about.note.left)}…${Math.round(about.note.right)}, ` +
+        `карточка ${Math.round(about.inner.left)}…${Math.round(about.inner.right)}`,
+    );
+    assert.ok(
+      about.note.top >= about.textAbove,
+      `@${width}px подпись у кнопки наехала на абзац над ней: верх ` +
+        `${Math.round(about.note.top)} выше его низа ${Math.round(about.textAbove)}`,
     );
 
     await page.close();
