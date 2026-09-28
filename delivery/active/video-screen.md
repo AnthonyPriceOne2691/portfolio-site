@@ -629,17 +629,54 @@ _Голос: «Four hundred and fifty-one tests, over…»_
 
 ### Команды по порядку
 
-Скопируйте в заметку и вставляйте оттуда.
+Каждая команда — в своём блоке: копируйте блок целиком, без номера. Номер и пояснение — над блоком.
+
+**1 — вопрос из свода (RG-1)**
 
 ```
-1  python3 answer.py --конвейер "Сколько гейтов на механику у контура?"
-2  sed -n 677,694p ../CODE_QUALITY_GATES.md
-3  python3 answer.py --конвейер "Как проводить нагрузочное тестирование?"
-4  python3 retrieve.py "Как проводить нагрузочное тестирование?"
-5  sed -n 23,44p README.md
-6  python3 eval_retrieval.py --all          ← заранее, во второй вкладке
-7  sed -n 31,41p MEASUREMENTS.md
-8  python3 probe_beir_bm25.py
+python3 answer.py --конвейер "Сколько гейтов на механику у контура?"
+```
+
+**2 — раздел, на который сослался ответ (RG-3)**
+
+```
+sed -n 677,694p ../CODE_QUALITY_GATES.md
+```
+
+**3 — вопрос вне свода, ответ (RG-4, до ключевого кадра)**
+
+```
+python3 answer.py --конвейер "Как проводить нагрузочное тестирование?"
+```
+
+**4 — тот же вопрос, только поиск (RG-4)**
+
+```
+python3 retrieve.py "Как проводить нагрузочное тестирование?"
+```
+
+**5 — числа и пределы из README (RG-5)**
+
+```
+sed -n 23,44p README.md
+```
+
+**6 — замер поиска (RG-6): запускать заранее, во второй вкладке**
+
+```
+python3 eval_retrieval.py --all
+```
+
+**7 — реестр взглядов на отложенные вопросы (RG-7)**
+
+```
+sed -n 31,41p MEASUREMENTS.md
+```
+
+**8 — поверка на публичном эталоне (RG-8)**
+
+```
+python3 probe_beir_bm25.py
 ```
 
 `Cmd+K` очищает экран терминала. Где шаг говорит «очистите», жмите его перед вставкой.
@@ -770,19 +807,66 @@ _Голос: «Six hundred and eighty answers…»_
 
 ### Команды по порядку
 
-Скопируйте в заметку и вставляйте оттуда. `Cmd+K` очищает экран.
+Каждая команда — в своём блоке: копируйте блок целиком, без номера. Номер и пояснение — над блоком. `Cmd+K` очищает экран.
+
+**1 — все проверки, только строки итога и «просмотрено N» (QC-1; заранее — и во второй вкладке для QC-9)**
 
 ```
-1  pre-commit run --all-files --verbose --color always | grep -E "Passed|Failed|Skipped|просмотрено"
-2  sed -i '' 's/:-500}/:-50000}/' scripts/lint/check_file_length.sh && git --no-pager diff
-3  pre-commit run file-length --all-files
-4  python3 scripts/lint/contour_doctor.py
-5  git checkout scripts/lint/check_file_length.sh && python3 scripts/lint/contour_doctor.py | tail -5
-6  sed -n 40,51p delivery/archive/2026-08-07-contour-bootstrap/observed.md
-7  sed -i '' "s/grep -oE '\[0-9\]+ modules'/grep -oE '\\\\([0-9]+ modules'/" scripts/lint/check_layers_gate.sh && git --no-pager diff
-8  node --test tests/gates.test.mjs
-9  git checkout scripts/lint/check_layers_gate.sh && sed -n 679,694p ~/Documents/Prepare/CODE_QUALITY_GATES.md
-10 sed -n 11,24p ~/Documents/Prepare/field/FIELD-LOG.md
+pre-commit run --all-files --verbose --color always | grep -E "Passed|Failed|Skipped|просмотрено"
+```
+
+**2 — ломаем гейт: 500 → 50000, и показываем дифф (QC-3)**
+
+```
+sed -i '' 's/:-500}/:-50000}/' scripts/lint/check_file_length.sh && git --no-pager diff
+```
+
+**3 — сломанный гейт всё ещё зелёный (QC-3)**
+
+```
+pre-commit run file-length --all-files
+```
+
+**4 — доктор (QC-4)**
+
+```
+python3 scripts/lint/contour_doctor.py
+```
+
+**5 — откат и снова доктор, только итог (QC-5)**
+
+```
+git checkout scripts/lint/check_file_length.sh && python3 scripts/lint/contour_doctor.py | tail -5
+```
+
+**6 — разбор находки про «0 модулей» (QC-6)**
+
+```
+sed -n 40,51p delivery/archive/2026-08-07-contour-bootstrap/observed.md
+```
+
+**7 — возвращаем старый баг в гейт слоёв и показываем дифф (QC-6)**
+
+```
+sed -i '' "s/grep -oE '\[0-9\]+ modules'/grep -oE '\\\\([0-9]+ modules'/" scripts/lint/check_layers_gate.sh && git --no-pager diff
+```
+
+**8 — тест, который ловит этот баг (QC-6)**
+
+```
+node --test tests/gates.test.mjs
+```
+
+**9 — откат и бюджет гейтов (QC-7)**
+
+```
+git checkout scripts/lint/check_layers_gate.sh && sed -n 679,694p ~/Documents/Prepare/CODE_QUALITY_GATES.md
+```
+
+**10 — журнал находок (QC-8)**
+
+```
+sed -n 11,24p ~/Documents/Prepare/field/FIELD-LOG.md
 ```
 
 Команды 2 и 7 ломают гейт, 5 и 9 откатывают. Если запись оборвалась между ними — `git checkout scripts/lint/` и `git status` пустой, прежде чем начинать заново.
