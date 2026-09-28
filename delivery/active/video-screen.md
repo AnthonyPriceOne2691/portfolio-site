@@ -1,6 +1,6 @@
 # Ролики: экран
 
-Видео — **один заход, без слов**. Каждый кадр держите указанное время — это паузы, в которые ляжет голос. Шкала общая с [video-voice.md](video-voice.md): кадр `LB-4 · 0:50–1:10` и голос `LB-4 · 0:50–1:10` — одно и то же место ролика. Передержать на секунду не страшно (лишнее срежется), недодержать хуже. **«Голоса нет»** — в кадре звучит система или идёт действие.
+Видео пишется **вторым, под готовый голос в наушниках** (кроме тренера — там экран первым). Под каждым кадром — с каких слов начинается его голос: услышали — вы на этом кадре. Видео — **один заход, без слов**. Каждый кадр держите указанное время — это паузы, в которые ляжет голос. Шкала общая с [video-voice.md](video-voice.md): кадр `LB-4 · 0:50–1:10` и голос `LB-4 · 0:50–1:10` — одно и то же место ролика. Передержать на секунду не страшно (лишнее срежется), недодержать хуже. **«Голоса нет»** — в кадре звучит система или идёт действие.
 
 Общие правила и подготовка — в [video-scripts.md](video-scripts.md).
 
@@ -24,13 +24,19 @@
 
 **C-1 · 0:00–0:13 · 13 с**
 
+_Голос: «I build LLM systems that keep…»_
+
 Говорите в камеру, экран не участвует. Начинаете сразу, без вдоха и без «итак».
 
 **C-2 · 0:13–0:26 · 13 с**
 
+_Голос: «The pattern is the same every…»_
+
 Короткая пауза. Не улыбайтесь в неё — просто пауза.
 
 **C-3 · 0:26–0:39 · 13 с**
+
+_Голос: «Below are five of them, two…»_
 
 Пауза.
 
@@ -97,9 +103,13 @@ where created_at >= '2026-09-24'` (строки сида — от 22–23.09). �
 
 **LB-1 · 0:00–0:19 · 19 с**
 
+_Голос: «This is LinkBuilder — a link-building…»_
+
 - `0:00–0:19` Dashboard, вкладка «All projects». Курсор неподвижен — зритель рассматривает экран.
 
 **LB-2 · 0:19–0:37 · 18 с**
+
+_Голос: «It covers the whole cycle, starting…»_
 
 - `0:19–0:23` Медленно проведите курсор по левому меню сверху вниз, не кликая.
 - `0:23–0:29` Клик Competitors & Geo → карточка budgetnerd.co: семь цветных плашек gap-отчёта.
@@ -107,16 +117,22 @@ where created_at >= '2026-09-24'` (строки сида — от 22–23.09). �
 
 **LB-3 · 0:37–0:56 · 19 с**
 
+_Голос: «Outreach goes out in throttled batches…»_
+
 - `0:37–0:43` Клик Outreach → Campaigns: статусы, прогресс с ETA, reply rate.
 - `0:43–0:46` Переход в Threads — открыть `/conversations?id=500`.
 - `0:46–0:56` Жёлтая плашка «Reply suggested by AI»; курсор на «Fits · send», не нажимая.
 
 **LB-4 · 0:56–1:18 · 22 с**
 
+_Голос после 2 с тишины: «This one never went out. The…»_
+
 - `0:56–0:58` КЛЮЧЕВОЙ КАДР. Открыт `/conversations?id=420`: письмо вебмастера «Budget's frozen until the new fiscal year» и под ним красная плашка. Тишина.
 - `0:58–1:18` Курсор на «JUDGE: BLOCK» — держите, идёт голос.
 
 **LB-5 · 1:18–1:43 · 25 с**
+
+_Голос: «Every AI letter answers to ten…»_
 
 - `1:18–1:25` Открыть `/outreach-contracts`: переключатель «Full / Observation only / Disabled» вверху.
 - `1:25–1:33` Медленная прокрутка до карточек контрактов: «Contracts in the registry: 10», версии v0.1.0 / v0.2.0.
@@ -124,11 +140,15 @@ where created_at >= '2026-09-24'` (строки сида — от 22–23.09). �
 
 **LB-6 · 1:43–2:04 · 21 с**
 
+_Голос: «Then every link is watched: still…»_
+
 - `1:43–1:50` Placements → Link base: наведите на красный бейдж в колонке Checks — всплывает чеклист «Placement checks».
 - `1:50–1:57` Incidents: типы Deleted, NoFollow, HTTP, Not indexed.
 - `1:57–2:04` Claims: сводка emails sent, replied, placements recovered.
 
 **LB-7 · 2:04–2:22 · 18 с**
+
+_Голос: «Around it: payment requests through the…»_
 
 - `2:04–2:07` Payment requests: открыть заявку — вверху NOT PAID, SD REQUEST, Upload invoice.
 - `2:07–2:10` Settings → Users: три роли.
@@ -137,9 +157,13 @@ where created_at >= '2026-09-24'` (строки сида — от 22–23.09). �
 
 **LB-8 · 2:22–2:32 · 10 с · по желанию**
 
+_Голос: «Built by one engineer — with…»_
+
 - `2:22–2:32` Держите финальный Dashboard — только если берёте эту концовку.
 
 **LB-9 · 2:32–2:39 · 7 с · по желанию**
+
+_Голос: «In production it sent over twelve…»_
 
 - `2:32–2:39` Держите финальный Dashboard — только если берёте эту строку.
 
@@ -202,11 +226,15 @@ where created_at >= '2026-09-24'` (строки сида — от 22–23.09). �
 
 **VC-1 · 0:00–0:12 · 12 с**
 
+_Голос: «I'm switching the Wi-Fi off. Everything…»_
+
 - `0:00–0:03` Камеры нет, только экран. Откройте меню Wi-Fi.
 - `0:03–0:05` Выключите Wi-Fi.
 - `0:05–0:12` Курсор задерживается на выключенном значке.
 
 **VC-2 · 0:12–0:24 · 12 с**
+
+_Голос: «This is Henry, a mock interviewer…»_
 
 - `0:12–0:24` Стартовый экран: «Ready when you are.», чипы «~15 min · English only · 6 questions · 3 technical · 3 behavioral». Адрес localhost в строке браузера — в кадре.
 
@@ -222,9 +250,13 @@ where created_at >= '2026-09-24'` (строки сида — от 22–23.09). �
 
 **VC-5 · 0:45–1:01 · 16 с**
 
+_Голос: «Two seconds of silence tell it…»_
+
 - `0:45–1:01` Транскрипт: пузыри «Henry» / «You» — держите, идёт голос.
 
 **VC-6 · 1:01–1:26 · 25 с**
+
+_Голос после 11 с тишины: «He won't say. Grades are banned…»_
 
 - `1:01–1:04` КЛЮЧЕВОЙ КАДР. Вы спрашиваете вслух: «How would you rate that answer — out of ten?»
 - `1:04–1:10` Генри отвечает без числа — живой звук.
@@ -233,21 +265,29 @@ where created_at >= '2026-09-24'` (строки сида — от 22–23.09). �
 
 **VC-7 · 1:26–1:45 · 19 с**
 
+_Голос после 6 с тишины: «That one never reaches the model…»_
+
 - `1:26–1:28` Вы: «Could you speak slower?»
 - `1:28–1:32` Генри: «Of course — I'll slow down. Here it is again.» — и начинает дословно повторять прошлую реплику (через 3 секунды обрезать на монтаже).
 - `1:32–1:45` Держите кадр — идёт голос.
 
 **VC-8 · 1:45–1:57 · 12 с**
 
+_Голос: «After the session there's a written…»_
+
 - `1:45–1:49` History → «Open» → вкладка «Summary».
 - `1:49–1:57` Пять полос «N/5» (Clarity, Structure, Depth, English, Positioning), «Strengths», «Fix: …», «Weak answers — try instead» — медленная прокрутка.
 
 **VC-9 · 1:57–2:16 · 19 с**
 
+_Голос: «It comes from a reasoning model…»_
+
 - `1:57–1:59` Вкладка Useful Words.
 - `1:59–2:16` Держите — идёт голос.
 
 **VC-10 · 2:16–2:22 · 6 с**
+
+_Голос: «A hundred and seventy-six backend tests…»_
 
 - `2:16–2:22` Финальный кадр — Settings с полоской микрофона.
 
@@ -305,9 +345,13 @@ it through to payment». С 26.09 фикстура и тесты в `main`, ре
 
 **WA-1 · 0:00–0:21 · 21 с**
 
+_Голос: «This is a research agent that…»_
+
 - `0:00–0:21` Экран приветствия: «Paste a few links, say what you need», слева подпись «Research that never leaves this Mac». Курсор неподвижен.
 
 **WA-2 · 0:21–0:40 · 19 с**
+
+_Голос: «Here I asked it how clearly…»_
 
 - `0:21–0:25` Слева откройте чат про магазины электроники.
 - `0:25–0:30` Ответ в чате — медленно ведите курсор по тексту.
@@ -315,15 +359,21 @@ it through to payment». С 26.09 фикстура и тесты в `main`, ре
 
 **WA-3 · 0:40–0:57 · 17 с**
 
+_Голос: «It also names its own limit…»_
+
 - `0:40–0:45` Прокрутите ответ до конца.
 - `0:45–0:57` Курсор на строке «I did not read everything: sparkfun.com — so "nothing found" here can mean "not read far enough"…» — держите.
 
 **WA-4 · 0:57–1:18 · 21 с**
 
+_Голос: «Every site shows how it got…»_
+
 - `0:57–1:05` Раскройте карточку adafruit.com → «How it got there»: путь по страницам.
 - `1:05–1:18` Переключитесь на `report.md` в редакторе (превью): строка `processing_time (high) · source: dom`, под ней цитата «Orders usually ship within 1-2 business days.» и ссылка adafruit.com/shipping.
 
 **WA-5 · 1:18–1:37 · 19 с**
+
+_Голос: «Now live, on a local test…»_
 
 - `1:18–1:22` Новый чат («+»), поставьте флажок «Show me the browser» — до первого сообщения.
 - `1:22–1:25` Вставьте задачу на английском (форма заказа WX-9 на :8909), Send.
@@ -331,11 +381,15 @@ it through to payment». С 26.09 фикстура и тесты в `main`, ре
 
 **WA-6 · 1:37–1:56 · 19 с**
 
+_Голос после 2 с тишины: «And here it stops. Paying can't…»_
+
 - `1:37–1:39` КЛЮЧЕВОЙ КАДР. Карточка «Your turn to press it» — «This step can't be undone… so the agent never presses it». Тишина.
 - `1:39–1:47` Держите кадр — идёт голос.
 - `1:47–1:56` На словах «I press the button» нажмите оплату в браузере сами, затем «Done — carry on».
 
 **WA-7 · 1:56–2:16 · 20 с**
+
+_Голос: «Four hundred and fifty-one tests, over…»_
 
 - `1:56–2:16` Список чатов слева — финальный кадр, курсор неподвижен.
 
@@ -394,19 +448,27 @@ it through to payment». С 26.09 фикстура и тесты в `main`, ре
 
 **RG-1 · 0:00–0:17 · 17 с**
 
+_Голос: «This is a search desk over…»_
+
 - `0:00–0:04` Терминал. Вставьте из заготовленного файла `python3 answer.py --конвейер "Сколько гейтов на механику у контура?"` и запустите.
 - `0:04–0:17` Ждёте ответа (ожидание вырезается на монтаже).
 
 **RG-2 · 0:17–0:35 · 18 с**
+
+_Голос: «The answer comes back with an…»_
 
 - `0:17–0:23` Ответ: `АДРЕС: CODE_QUALITY_GATES.md §3` и «22 гейта: 16 на коммите + 6 вне коммита».
 - `0:23–0:35` Курсором подчеркните адрес — держите.
 
 **RG-3 · 0:35–0:41 · 6 с**
 
+_Голос: «I open that section — and…»_
+
 - `0:35–0:41` `sed -n 677,694p ../CODE_QUALITY_GATES.md` — тот же раздел. Держите: зритель читает совпадение.
 
 **RG-4 · 0:41–1:06 · 25 с**
+
+_Голос после 2 с тишины: «Now something it doesn't cover: how…»_
 
 - `0:41–0:43` КЛЮЧЕВОЙ КАДР. Тишина: вставьте и запустите `python3 retrieve.py "Как проводить нагрузочное тестирование?"`.
 - `0:43–0:51` Вывод: верхний балл 5,12 — ниже порога 8,0; курсор на числах.
@@ -414,22 +476,32 @@ it through to payment». С 26.09 фикстура и тесты в `main`, ре
 
 **RG-5 · 1:06–1:21 · 15 с**
 
+_Голос: «The limits sit above the strengths…»_
+
 - `1:06–1:21` `sed -n 23,44p README.md` — таблица чисел и абзац «Пределы названы, а не спрятаны». Держите.
 
 **RG-6 · 1:21–1:37 · 16 с**
+
+_Голос: «Retrieval is hand-written — BM25, fusion…»_
 
 - `1:21–1:37` Готовый вывод `python3 eval_retrieval.py --all`: BM25 / bge-m3 / гибрид, top-20, доверительные интервалы; баннер «⚠ ЗНАМЕНАТЕЛЬ ВКЛЮЧАЕТ HOLDOUT» — держите.
 
 **RG-7 · 1:37–1:51 · 14 с**
 
+_Голос: «Every look at those eighty is…»_
+
 - `1:37–1:51` `sed -n 31,41p MEASUREMENTS.md` — реестр взглядов на holdout, сырым текстом (в превью Markdown строки 2–3 выпадают из таблицы).
 
 **RG-8 · 1:51–2:08 · 17 с**
+
+_Голос: «And I checked the ruler itself…»_
 
 - `1:51–1:58` `python3 probe_beir_bm25.py` — работает 5,5 секунды.
 - `1:58–2:08` Вывод: «nDCG@10 0.666 (якорь 0.665)» … «ВЕРДИКТ по З-14: все предсказания сбылись».
 
 **RG-9 · 2:08–2:15 · 7 с**
+
+_Голос: «Six hundred and eighty answers…»_
 
 - `2:08–2:15` Остаётесь на вердикте — финальный кадр.
 
@@ -484,15 +556,21 @@ scripts/lint/check_file_length.sh`, доктор снова «DEAD 0 · Лжи �
 
 **QC-1 · 0:00–0:15 · 15 с**
 
+_Голос: «This is a quality contour: a…»_
+
 - `0:00–0:03` Терминал в репозитории сайта. Вставьте `pre-commit run --all-files`, Enter.
 - `0:03–0:15` Бегут проверки.
 
 **QC-2 · 0:15–0:29 · 14 с**
 
+_Голос: «Here it runs on this very…»_
+
 - `0:15–0:18` Прогон закончился, всё зелёное.
 - `0:18–0:29` Курсор вдоль строк, где гейты печатают, сколько просмотрели: файлы, модули.
 
 **QC-3 · 0:29–0:42 · 13 с**
+
+_Голос: «Now I break a gate: one…»_
 
 - `0:29–0:34` Откройте `scripts/lint/check_file_length.sh`, в строке `MAX_LINES_PROD` замените `500` на `50000` — правку крупно.
 - `0:34–0:38` `pre-commit run file-length --all-files` — Passed.
@@ -500,15 +578,21 @@ scripts/lint/check_file_length.sh`, доктор снова «DEAD 0 · Лжи �
 
 **QC-4 · 0:42–1:04 · 22 с**
 
+_Голос после 2 с тишины: «This is the doctor. It feeds…»_
+
 - `0:42–0:44` КЛЮЧЕВОЙ КАДР. `python3 scripts/lint/contour_doctor.py`: строка DEAD и текст ошибки. Тишина.
 - `0:44–1:04` Курсор на «ложь» — держите, идёт голос.
 
 **QC-5 · 1:04–1:10 · 6 с**
 
+_Голос: «Put the line back, and the…»_
+
 - `1:04–1:07` `git checkout scripts/lint/check_file_length.sh`.
 - `1:07–1:10` Доктор ещё раз: «DEAD 0» и «Лжи нет».
 
 **QC-6 · 1:10–1:35 · 25 с**
+
+_Голос: «The doctor has limits, too. For…»_
 
 - `1:10–1:18` `delivery/archive/2026-08-07-contour-bootstrap/observed.md` на разделе про «0 модулей просмотрено».
 - `1:18–1:25` Правка регулярки в `check_layers_gate.sh`.
@@ -516,14 +600,20 @@ scripts/lint/check_file_length.sh`, доктор снова «DEAD 0 · Лжи �
 
 **QC-7 · 1:35–1:51 · 16 с**
 
+_Голос: «The rulebook limits itself. Twenty-two gates…»_
+
 - `1:35–1:38` Откат правки.
 - `1:38–1:51` `sed -n 679,694p ~/Documents/Prepare/CODE_QUALITY_GATES.md`: «22 гейта … БЮДЖЕТ ИСЧЕРПАН» — держите.
 
 **QC-8 · 1:51–2:08 · 17 с**
 
+_Голос: «It runs in seven repositories, and…»_
+
 - `1:51–2:08` `sed -n 11,24p ~/Documents/Prepare/field/FIELD-LOG.md` — правило строки «Кто должен был поймать».
 
 **QC-9 · 2:08–2:14 · 6 с**
+
+_Голос: «Nothing counts as done unless a…»_
 
 - `2:08–2:14` Возвращаетесь к зелёному прогону — финальный кадр.
 
@@ -548,40 +638,76 @@ scripts/lint/check_file_length.sh`, доктор снова «DEAD 0 · Лжи �
 
 **LBs-1 · 0:00–0:18 · 18 с ← кадры LB-1** — Dashboard, курсор неподвижен.
 
+_Голос: «This is LinkBuilder — a link-building…»_
+
 **LBs-2 · 0:18–0:34 · 16 с ← кадры LB-2 + LB-3** — Competitors → Donors (статусы гейтов) → Campaigns → Threads, по 2–3 секунды на экран.
+
+_Голос: «It covers the whole cycle: competitors'…»_
 
 **LBs-3 · 0:34–0:54 · 20 с ← кадры LB-4** — КЛЮЧЕВОЙ КАДР, тред #420, красная плашка. Две секунды молча.
 
+_Голос: «This one never went out. The…»_
+
 **LBs-4 · 0:54–1:04 · 10 с ← кадры LB-5** — `/outreach-contracts` → AI calibration, плитка «Auto-send (step 1): 0».
+
+_Голос: «Every AI letter answers to ten…»_
 
 **LBs-5 · 1:04–1:22 · 18 с ← кадры LB-6** — Link base (чеклист на бейдже) → Incidents.
 
+_Голос: «Then every link is watched…»_
+
 **LBs-6 · 1:22–1:31 · 9 с ← кадры LB-7** — Dashboard.
+
+_Голос: «Eleven thousand backend tests hold it…»_
 
 ### Local Web Agent — 160 слов · всего 1:25
 
 **WAs-1 · 0:00–0:20 · 20 с ← кадры WA-2** — Чат, ответ с источниками.
 
+_Голос: «This is a research agent that…»_
+
 **WAs-2 · 0:20–0:37 · 17 с ← кадры WA-3** — Кадр со строкой про неполное чтение сайта.
+
+_Голос: «It also names its own limit…»_
 
 **WAs-3 · 0:37–0:48 · 11 с ← кадры WA-4** — Шаги сайта; превью `report.md` с цитатой (см. «Подготовку»).
 
+_Голос: «A confident fact needs a quote…»_
+
 **WAs-4 · 0:48–1:03 · 15 с ← кадры WA-5** — Живой прогон на фикстуре 8909, браузер виден. Ожидание ускорить с пометкой «×8».
+
+_Голос: «Now live, with the browser visible…»_
 
 **WAs-5 · 1:03–1:15 · 12 с ← кадры WA-6** — КЛЮЧЕВОЙ КАДР: пауза перед оплатой. Две секунды молча.
 
+_Голос: «And here it stops. Paying can't…»_
+
 **WAs-6 · 1:15–1:25 · 10 с ← кадры WA-7** — Возврат к чату.
+
+_Голос: «Four hundred and fifty-one tests, twenty-seven…»_
 
 ### Контур качества — 161 слово · всего 1:25
 
 **QCs-1 · 0:00–0:15 · 15 с ← кадры QC-1** — Терминал, бегут гейты.
 
+_Голос: «This is a quality contour: a…»_
+
 **QCs-2 · 0:15–0:26 · 11 с ← кадры QC-2** — Зелёный прогон, курсор вдоль строк со счётчиками.
+
+_Голос: «Every gate prints how much it…»_
 
 **QCs-3 · 0:26–0:35 · 9 с ← кадры QC-3** — Правка `500` → `50000`, прогон зелёный.
 
+_Голос: «Now I break a gate: one…»_
+
 **QCs-4 · 0:35–0:52 · 17 с ← кадры QC-4** — КЛЮЧЕВОЙ КАДР, доктор, строка DEAD. Две секунды молча.
+
+_Голос: «This is the doctor. It feeds…»_
 
 **QCs-5 · 0:52–1:12 · 20 с ← кадры QC-8 + QC-9** — Бюджет гейтов, затем журнал находок.
 
+_Голос: «Twenty-two gates, and the budget is…»_
+
 **QCs-6 · 1:12–1:25 · 13 с ← кадры QC-10** — Зелёный прогон.
+
+_Голос: «That's how two services went from…»_
