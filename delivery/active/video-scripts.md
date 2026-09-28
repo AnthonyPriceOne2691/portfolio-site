@@ -221,9 +221,9 @@ where created_at >= '2026-09-24'` (строки сида — от 22–23.09). �
 
 **0:00 · Dashboard, «All projects». Курсор неподвижен.**
 
-> This is LinkBuilder — a link-building CRM I designed and built on my own: one
-> operator, doing the work of a team of five. It's a demo copy; the sites and
-> people are invented.
+> This is LinkBuilder — a link-building CRM I designed and built with AI coding
+> agents. In production, one operator did the work of a team of five. It's a
+> demo copy; the sites and people are invented.
 
 **0:15 · Медленно ведёте курсор по меню сверху вниз, не кликая. Затем
 Competitors & Geo → карточка budgetnerd.co: семь цветных плашек gap-отчёта.
@@ -256,10 +256,10 @@ registry: 10», версии v0.1.0 / v0.2.0). Потом Outreach → Campaigns
 calibration: плитки «Accepted as is», «Edited», «Rejected», «Auto-send (step 1):
 0».**
 
-> Every AI letter answers to ten versioned contracts, with a kill switch an
-> admin can flip without a restart. And the AI earns its autonomy by
-> measurement, not trust: shadow runs on real mail score every draft before
-> anything goes out on its own.
+> Every AI letter answers to ten versioned contracts, and an admin can switch
+> the checks to full, warn-only or off without a restart. The AI earns its
+> autonomy by measurement, not trust: shadow runs on real mail score every
+> draft, and auto-send stays off until the numbers clear the bar.
 
 **1:27 · Placements → Link base: наводите на красный бейдж в колонке Checks —
 всплывает чеклист «Placement checks». Потом Incidents (типы Deleted, NoFollow,
@@ -274,14 +274,13 @@ recovered).**
 NOT PAID, SD REQUEST, Upload invoice) → Settings → Users (три роли) → бейдж
 Ahrefs на Competitors → Dashboard.**
 
-> Around it: payments through the service desk, three roles, spend meters, and
+> Around it: payment requests through the service desk, three roles, spend meters, and
 > Slack alerts before a balance runs dry. Eleven thousand backend tests, seven
 > hundred on the front end, a hundred and thirty-seven migrations.
 
-**Вариант концовки — решение за вами.** В git 1 096 из 1 951 коммита подписаны
-соавтором-ИИ. Если репозиторий когда-нибудь увидит нанимающий, «built on my
-own» он прочтёт по-своему. Честная и при этом сильная формулировка связывает
-CRM с роликом про контур (+8 секунд):
+**Концовка по желанию (+8 секунд).** С 28.09 «built on my own» из первой фразы
+убрано: код пишут ИИ-агенты под управлением владельца (слово владельца), и
+ролик говорит это сразу. Эта строка связывает CRM с роликом про контур:
 
 > Built by one engineer — with AI coding agents working inside the quality gates
 > from the contour video.
@@ -304,8 +303,9 @@ CRM с роликом про контур (+8 секунд):
 | a team of five                        | со слов владельца                                                         | в репозитории нет; карточка, oneLiner                                                            |
 | two hundred and seventy dollars       | тред #420 демо-базы                                                       | на экране                                                                                        |
 | ten versioned contracts               | 10 YAML-контрактов                                                        | `backend/features/outreach_contracts/contracts/*.yml`; на экране «Contracts in the registry: 10» |
-| a kill switch … without a restart     | full / warn-only / off, в Redis, только Admin                             | `backend/features/outreach_contracts/runtime_mode.py:1-20`                                       |
+| full / warn-only / off … no restart   | full / warn-only / off, в Redis, только Admin; «off» гасит проверки, а не агента | `backend/features/outreach_contracts/runtime_mode.py:1-20`; ревью кода 28.09 |
 | shadow runs … score every draft       | теневой прогон: 109 подсказок, каждая оценена (как есть / правка / отказ) | `docs/MASS_OUTREACH_AI_REPLY_CALIBRATION_DESIGN.md:16-40`                                        |
+| auto-send stays off … clear the bar   | автоотправку включает человек флагом после replay; на экране «Auto-send (step 1): 0» | `config/mass_outreach.py:191-193`; `docs/MASS_OUTREACH_AI_REPLY_CALIBRATION_DESIGN.md` |
 | nearly one "dead" link in five        | 159 живых из 865 «мёртвых»                                                | `docs/MONITORING_DEAD_PAGE_VERIFICATION_2026_08_19.md:22-25`                                     |
 | eleven thousand backend tests         | 11 048 passed, прогон 22.09                                               | `delivery/active/decisions.md` этого репозитория, строка 2026-09-22                              |
 | seven hundred on the front end        | 703 из 703                                                                | коммит CRM `021d9fa5`                                                                            |
@@ -463,7 +463,7 @@ try instead». Медленная прокрутка, потом вкладка 
 
 ---
 
-## 3. Local Web Agent — 443 tests
+## 3. Local Web Agent — 451 tests
 
 **Хронометраж:** ~1:58 · голос 253 слова · одна пауза.
 
@@ -485,12 +485,15 @@ try instead». Медленная прокрутка, потом вкладка 
 «WX-9 industrial widget — $59», кнопка «Place order and pay»; 8 тестов
 (`backend/tests/test_tier3_checkout_fixtures.py`) доказывают паузу перед оплатой.
 Задача для кадра: «Order the WX-9 widget: fill in name, email and address, and take
-it through to payment». ⚠ Правки в репозитории веб-агента пока не закоммичены:
-pre-commit краснеет на чужом неотслеживаемом `backend/probes/inject_navigator.py`.
+it through to payment». С 26.09 фикстура и тесты в `main`, репозиторий публичный
+(MIT).
 
-- **Записывать из текущего рабочего дерева** (ветка
-  `axis-5/cassettes-keyed-by-prompt`). Английские правки интерфейса от 23.09
-  есть только там: запуск из `main` вернёт русские строки.
+- **Записывать из `main`**: с 26.09 там всё — английский интерфейс, фикстура
+  8909, открытый README. Основной клон стоит на `axis-5/…` с неотслеживаемыми
+  копиями фикстуры и её теста (идентичны влитым): перед `git checkout main`
+  убрать `tests/fixtures/sites/store_checkout_en/` и
+  `backend/tests/test_tier3_checkout_fixtures.py`, иначе checkout откажет.
+  Чужие `backend/probes/` и `backend/RAG WEB AGENT.md` не трогать.
 - **Preflight из `DEMO.md`:** `ollama serve`, прогрев `ollama run qwen3:14b ""`,
   сервер фикстур, бэкенд на `127.0.0.1:8001`, `curl /health` →
   `ollama: reachable`.
@@ -559,9 +562,9 @@ undone… so the agent never presses it». Две секунды молча, п�
 
 **1:44 · Список чатов слева, финальный кадр.**
 
-> Four hundred and forty-three tests, over a hundred and forty runs in the log,
+> Four hundred and fifty-one tests, over a hundred and forty runs in the log,
 > twenty-seven real websites — and almost every recent test began as a failure
-> on one of them.
+> on one of them. The code is open; the link is under the video.
 
 ### Цифры ролика
 
@@ -572,7 +575,7 @@ undone… so the agent never presses it». Две секунды молча, п�
 | temperature zero                   | сравнение сайтов при t=0                           | `backend/app/config.py:47-52`                |
 | about half the time                | модель выполнила инструкцию на одном сайте из двух | `knowledge/engineering/llm-canon.md:98`      |
 | fourteen hard rules                | 9 инвариантов + 5 лимитов                          | `data/contracts/crawl.contract.yaml`         |
-| four hundred and forty-three tests | 443 собрано, 23.09                                 | `backend/.venv/bin/pytest --collect-only -q` |
+| four hundred and fifty-one tests   | 451 passed, 28.09 (python:3.14, чистый клон)       | CI `main`; `backend/.venv/bin/pytest -q`    |
 | over a hundred and forty runs      | 143 прогона, 932 шага                              | `data/runs/app.db`                           |
 | twenty-seven real websites         | 73 прогона на 27 реальных сайтах                   | `data/runs/app.db`                           |
 
@@ -647,8 +650,8 @@ undone… so the agent never presses it». Две секунды молча, п�
 вне коммита». Курсором подчёркиваете адрес.**
 
 > The answer comes back with an address — file and section. Twenty-two gates:
-> sixteen at commit, six outside. No address, no answer: that's the rule
-> everything here is built around.
+> sixteen at commit, six outside. An address on every answer is the principle
+> here — and I measure it instead of assuming it.
 
 **0:29 · `sed -n 677,694p ../CODE_QUALITY_GATES.md` — тот же раздел. Держите
 кадр, чтобы зритель прочитал совпадение: это доказательство, а не
@@ -858,21 +861,30 @@ file-length --all-files` — Passed, и курсор на названии ху�
 контура). Числа в общих текстах сайта теперь стережёт `tests/numbers.test.mjs`:
 число, которого нет на карточке, валит сборку.
 
+28.09 карточки и реплики сверены с ревью кода трёх проектов (коммит bec280a):
+авторство CRM (ИИ-агенты), прошедшее время прода, «payment requests», живой
+переключатель проверок вместо «kill switch», автоотправку включает человек,
+веб-агент 451 тест и открытый код, «no address, no answer» — принцип и замер.
+
 Осталось только то, что держится на слове владельца, а не на репозитории:
 
 | Карточка    | Утверждение                                                    | Статус                                                                                       |
 | ----------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| LinkBuilder | «What took a team of five now runs on one operator»            | со слов владельца; в ролике звучит                                                           |
+| LinkBuilder | «What took a team of five ran on one operator»                 | со слов владельца; в ролике звучит                                                           |
 | LinkBuilder | «12,000+ emails, 97.9% delivery on a 5,400-recipient campaign» | источника в репозитории нет, лимит кампании по умолчанию 5 000; в ролике — только по желанию |
 
 ---
 
 ## Порядок съёмки
 
+**Под рассылку владельцам SEO-агентств (28.09)** первыми нужны контур, веб-агент
+и CRM — это три ролика для личных сообщений. RAG, тренер и кружок — после.
+
 1. **Контур и RAG.** Всё в терминале, переснять дёшево. На них набивается рука,
    в том числе на записи голоса отдельно от экрана.
-2. **Веб-агент** — после английской фикстуры формы заказа.
-3. **CRM** — после трёх блокеров. Экранов больше всего, монтажа тоже.
+2. **Веб-агент** — фикстура готова с 26.09, записывать из `main`.
+3. **CRM** — блокеры закрыты 26.09. Экранов больше всего, монтажа тоже.
+   Воркеры не запускать: ключи в `.env` настоящие.
 4. **Тренер** — последним из демо: нужна полная 15-минутная сессия и отдельная
    дорожка голоса.
 5. **Кружок о себе — не раньше, чем готовы два демо.** Он самый лёгкий: не надо
