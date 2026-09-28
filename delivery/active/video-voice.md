@@ -46,7 +46,9 @@
 
 **LB-5 · 1:18–1:43** — говорите ~24 с → пауза 1 с
 
-> Every AI letter answers to ten versioned contracts, and an admin can switch the checks to full, warn-only or off without a restart. The AI earns its autonomy by measurement, not trust: shadow runs on real mail score every draft, and auto-send stays off until the numbers clear the bar.
+_28.09: «full, warn-only or off» заменено на подписи переключателя, которые зритель видит на экране, — «Full / Observation only / Disabled». Слов столько же._
+
+> Every AI letter answers to ten versioned contracts. An admin can switch the checks between full, observation only and disabled — without a restart. The AI earns its autonomy by measurement, not trust: shadow runs on real mail score every draft, and auto-send stays off until the numbers clear the bar.
 
 **LB-6 · 1:43–2:04** — говорите ~20 с → пауза 1 с
 
@@ -78,8 +80,8 @@ _Ещё одна строка по желанию — если готовы от
 | ------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | a team of five                        | со слов владельца                                                         | в репозитории нет; карточка, oneLiner                                                            |
 | two hundred and seventy dollars       | тред #420 демо-базы                                                       | на экране                                                                                        |
-| ten versioned contracts               | 10 YAML-контрактов                                                        | `backend/features/outreach_contracts/contracts/*.yml`; на экране «Contracts in the registry: 10» |
-| full / warn-only / off … no restart   | full / warn-only / off, в Redis, только Admin; «off» гасит проверки, а не агента | `backend/features/outreach_contracts/runtime_mode.py:1-20`; ревью кода 28.09 |
+| ten versioned contracts               | 10 YAML-контрактов: 8 версии 0.1.0, 2 версии 0.2.0 (сверено 28.09)        | `backend/features/outreach_contracts/contracts/*.yml`; на экране карточка «Contracts in the registry» с числом 10 |
+| full, observation only, disabled … without a restart | подписи переключателя «Full / Observation only / Disabled» (в коде full / warn_only / off); режим в Redis, менять может только Admin; «Disabled» выключает проверки, а не агента | `linkbuilder-cms/src/api/outreachContracts.ts:265-269`; `backend/features/outreach_contracts/runtime_mode.py:1-20` |
 | shadow runs … score every draft       | теневой прогон: 109 подсказок, каждая оценена (как есть / правка / отказ) | `docs/MASS_OUTREACH_AI_REPLY_CALIBRATION_DESIGN.md:16-40`                                        |
 | auto-send stays off … clear the bar   | автоотправку включает человек флагом после replay; на экране «Auto-send (step 1): 0» | `config/mass_outreach.py:191-193`; `docs/MASS_OUTREACH_AI_REPLY_CALIBRATION_DESIGN.md` |
 | nearly one "dead" link in five        | 159 живых из 865 «мёртвых»                                                | `docs/MONITORING_DEAD_PAGE_VERIFICATION_2026_08_19.md:22-25`                                     |
@@ -125,7 +127,9 @@ _Ещё одна строка по желанию — если готовы от
 
 **VC-10 · 2:16–2:22** — говорите ~5 с → пауза 1 с
 
-> A hundred and seventy-six backend tests at ninety-five percent coverage.
+_28.09: после починки разбора в тренере тестов стало 181 (было 176), покрытие 95,10 %. Слов столько же._
+
+> A hundred and eighty-one backend tests at ninety-five percent coverage.
 
 ### Цифры ролика
 
@@ -139,8 +143,8 @@ _Ещё одна строка по желанию — если готовы от
 | a second and a quarter                   | 1 247 мс медиана, 1 302 мс худший, от получения звука | `delivery/archive/2026-08-13-expressive-speech/verify-report.md:87-90` |
 | English only, no scores, three sentences | инварианты I1-H1, I1-H3, G1-H1                        | `data/contracts/interview.contract.yaml`                               |
 | thirty-one to fifty-two seconds          | deepseek-r1:14b на реплику                            | `docs/14-llm-model-split.md:35-40`                                     |
-| a hundred and seventy-six backend tests  | 176                                                   | `delivery/archive/2026-08-17-stand-selector-rot/verify-report.md:22`   |
-| ninety-five percent coverage             | 94,93% с ветками                                      | `backend/.coverage` от 22.09                                           |
+| a hundred and eighty-one backend tests   | 181 passed, прогон 28.09 на коммите `bc0cdf4`          | `backend/.venv/bin/pytest -q` в тренере                                |
+| ninety-five percent coverage             | 95,10 % с ветками, тот же прогон                      | вывод pytest-cov: «Total coverage: 95.10%»                             |
 
 ---
 

@@ -21,8 +21,8 @@
       </p>
         <ul class="figures">
           <li><b>1.25&nbsp;s</b><span>median to first audio</span></li>
-          <li><b>176</b><span>backend tests</span></li>
-          <li><b>94.9%</b><span>coverage, lines and branches</span></li>
+          <li><b>181</b><span>backend tests</span></li>
+          <li><b>95.1%</b><span>coverage, lines and branches</span></li>
           <li><b>21</b><span>contract rules, checked per sentence</span></li>
         </ul>
       </header>
@@ -200,8 +200,8 @@
           <li><b>Decisions</b>145 entries, alternatives named</li>
         </ol>
         <div class="stats">
-          <div class="stat"><b>176</b><span>backend tests; 41 on the front end</span></div>
-          <div class="stat"><b>94.9%</b><span>coverage, lines and branches</span></div>
+          <div class="stat"><b>181</b><span>backend tests; 44 on the front end</span></div>
+          <div class="stat"><b>95.1%</b><span>coverage, lines and branches</span></div>
           <div class="stat"><b>21</b><span>numbered design docs</span></div>
           <div class="stat"><b>69</b><span>lessons learned, each mapped to code</span></div>
         </div>
@@ -249,8 +249,8 @@
     <script type="application/json" id="sources">
       {
         "1.25": "1,247 ms median, 1,302 ms worst, server side from start of STT to first synthesized audio — delivery/archive/2026-08-13-expressive-speech/verify-report.md:81-90",
-        "176": "backend tests — delivery/archive/2026-08-17-stand-selector-rot/verify-report.md:22; rerun 2026-09-26",
-        "94.9": "94.93% combined line + branch coverage (lines 96.31%, branches 87.89%) — backend/.coverage 2026-09-22, rerun 2026-09-26",
+        "181": "backend tests — backend/.venv/bin/pytest -q on bc0cdf4, 2026-09-28: 181 passed (176 before the summary list-field fix; frontend vitest 44 passed)",
+        "95.1": "95.10% combined line + branch coverage — the same pytest-cov run on bc0cdf4, 2026-09-28",
         "32": "32 GB memory budget — docs/03-voice-pipeline.md:158-169",
         "4.8": "buffered reply 4.8 s p95 vs 3.0 s streaming (projected) — docs/20-context-token-budget.md:84-85",
         "31": "deepseek-r1:14b 31.4–52.0 s per turn — docs/14-llm-model-split.md:35-40",
@@ -270,7 +270,7 @@
         "33": "pre-commit hooks — grep -cE '^\\s+- id:' .pre-commit-config.yaml",
         "4": "CI workflows: ci, quality, main-guard, canon-freshness — .github/workflows/",
         "145": "unique decision ids across 16 delivery/archive/*/decisions.md",
-        "41": "frontend tests in 9 files — delivery/archive/2026-08-17-stand-selector-rot/verify-report.md:20",
+        "44": "frontend tests in 10 files — npx vitest run on bc0cdf4, 2026-09-28: 44 passed",
         "21": "21 numbered design docs docs/00..20; 21 contract rules (18 hard, 3 soft) across 3 files — YAML parse of data/contracts/",
         "69": "lessons L1–L68 + L50a — delivery/archive/INDEX.md",
         "400": "max 400 characters per turn — data/contracts/interview.contract.yaml:42-47"
