@@ -1,6 +1,6 @@
 # Сценарии демо-видео
 
-Пять роликов, по одному на карточку, **по 2 минуты**, 720p. Плюс шестой, особый:
+Пять роликов, по одному на карточку, **по 2 минуты**, 720p. У трёх из них (LinkBuilder, веб-агент, контур) есть **короткие версии на 60–90 секунд** для личных сообщений — раздел «Короткие версии» в конце; экран снимается один раз, голос пишется отдельно на каждую версию. Плюс шестой, особый:
 короткий кружок о себе в герое главной (§0). Требования к файлам — в
 [content-guide.md](content-guide.md).
 
@@ -850,6 +850,133 @@ file-length --all-files` — Passed, и курсор на названии ху�
 - **Доктор показал DEAD ещё до вашей правки.** Тоже находка; снимать поверх
   нельзя.
 - **Хук упал на неотслеживаемом PDF.** См. подготовку: дерево — до записи.
+
+---
+
+## Короткие версии (60–90 с): для личных сообщений
+
+Для рассылки владельцам SEO-агентств и heads of SEO. Человек открывает ролик из
+сообщения и решает за минуту, поэтому здесь только вкусное: крючок, масштаб одной
+фразой, кадр, где система говорит «нет», два-три числа и призыв.
+
+**Как снимать.** Экран — тот же, что для двухминутной версии: короткая собирается
+на монтаже из её кусков (время в квадратных скобках — метки длинной раскадровки).
+Голос — отдельной дорожкой, по блокам, как в общих правилах. Новых чисел здесь нет:
+всё из таблиц «Цифры ролика», кроме одного, которое внесено в таблицу ниже.
+
+### LinkBuilder — ~80 с, 175 слов
+
+**[0:00] Dashboard, курсор неподвижен.**
+
+> This is LinkBuilder — a link-building CRM I designed and built with AI coding
+> agents. In production, one operator did the work of a team of five. This is a
+> demo copy; the data is invented.
+
+**[0:15 → 0:30] Competitors → Donors (статусы гейтов) → Campaigns → Threads, по
+2–3 секунды на экран.**
+
+> It covers the whole cycle: competitors' backlinks come in, every site passes
+> quality gates, outreach goes out in throttled batches, and replies land in one
+> inbox where the AI drafts an answer.
+
+**[0:48] КЛЮЧЕВОЙ КАДР, тред #420, красная плашка. Две секунды молча.**
+
+> This one never went out. The webmaster said the budget is frozen — and the AI
+> still wrote that two hundred and seventy dollars works for us. The check
+> blocked it. Only a person can answer.
+
+**[1:08] `/outreach-contracts` → AI calibration, плитка «Auto-send (step 1): 0».**
+
+> Every AI letter answers to ten versioned contracts, and auto-send stays off
+> until the numbers clear the bar.
+
+**[1:27] Link base (чеклист на бейдже) → Incidents.**
+
+> Then every link is watched — still there, still dofollow, still indexed. A
+> lost link gets a second check before anyone asks for it back: nearly one
+> "dead" link in five turned out to be alive.
+
+**[1:47] Dashboard.**
+
+> Eleven thousand backend tests hold it together. If your team still does this
+> by hand, message me.
+
+### Local Web Agent — ~75 с, 160 слов
+
+**[0:00] Чат, ответ с источниками.**
+
+> This is a research agent that lives on my laptop. I paste links and ask a
+> question — it opens each site in a real browser and quotes where it found the
+> answer. No cloud: every model runs right here.
+
+**Кадр со строкой про неполное чтение сайта.**
+
+> It also names its own limit: it didn't read all of one site. That sentence is
+> written by code — when I asked the model to say it, it did about half the
+> time.
+
+**Шаги сайта; превью `report.md` с цитатой (см. «Подготовку»).**
+
+> A confident fact needs a quote from the page — if the quote isn't really
+> there, the fact is thrown out.
+
+**Живой прогон на фикстуре 8909, браузер виден. Ожидание ускорить с пометкой «×8».**
+
+> Now live, with the browser visible. It looks at the page, plans and acts — and
+> fourteen hard rules are checked in code before any action reaches the
+> browser.
+
+**КЛЮЧЕВОЙ КАДР: пауза перед оплатой. Две секунды молча.**
+
+> And here it stops. Paying can't be undone, so the agent prepares everything,
+> and I press the button.
+
+**Возврат к чату.**
+
+> Four hundred and fifty-one tests, twenty-seven real websites. The code is
+> open; the link is under the video.
+
+### Контур качества — ~75 с, 161 слово
+
+**[0:00] Терминал, бегут гейты.**
+
+> This is a quality contour: a rulebook plus gates that deploy into any
+> repository. It exists because an AI coding agent will happily report green on
+> something nobody checked.
+
+**[0:13] Зелёный прогон, курсор вдоль строк со счётчиками.**
+
+> Every gate prints how much it actually looked at — "no problems found" means
+> nothing if it saw no code.
+
+**[0:25] Правка `500` → `50000`, прогон зелёный.**
+
+> Now I break a gate: one number, and a five-hundred-line limit becomes fifty
+> thousand. It still passes.
+
+**[0:35] КЛЮЧЕВОЙ КАДР, доктор, строка DEAD. Две секунды молча.**
+
+> This is the doctor. It feeds every gate a planted violation. A gate that stays
+> silent on its own canary isn't weak — it's lying, and that fails the run.
+
+**[1:22 → 1:36] Бюджет гейтов, затем журнал находок.**
+
+> Twenty-two gates, and the budget is spent: a new one gets in only by swapping
+> one out. It runs in seven repositories, and the field log holds twenty-five
+> findings — each must name the check that should have caught it.
+
+**[1:52] Зелёный прогон.**
+
+> That's how two services went from a bare spec to production in under three
+> weeks. Nothing counts as done unless a mechanism can refuse it.
+
+### Число, которого нет в длинных версиях
+
+| Звучит            | Значение                                                                    | Источник                                                                                          |
+| ----------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| under three weeks | два сервиса SEO-агентства, 10.09 → 24.09 (SEO-кейсы), 16.09 → 24.09 (outreach) | слово владельца 28.09; git `Ahrefs cases` (первый коммит 10.09, выкладка 24.09) и `Parsing and Outri` |
+
+Сервисы под NDA агентства: в ролике — только срок, без названий, экранов и клиентов.
 
 ---
 
