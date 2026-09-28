@@ -1,7 +1,7 @@
 ---
 title: "Local Web Agent"
-oneLiner: "A private research agent: drop in links, it browses the real sites, compares them and answers only with what it can quote."
-metric: "443 tests"
+oneLiner: "A private research agent: drop in links, it browses the real sites, compares them and backs its answer with quotes checked against the pages it read."
+metric: "451 tests"
 status: "local-demo"
 stack: ["Python", "FastAPI", "Playwright", "Ollama", "Qwen3 14B", "React"]
 proof:

@@ -18,7 +18,7 @@ Speech in, speech out, nothing leaves the machine. The real work was not wiring
 the pipeline but the latency: a pause longer than three seconds turns a
 conversation into correspondence.
 
-- Sentence-level streaming: Henry's first word lands ~1.3 s after your turn ends — 1.30 s even in the worst measured run, against a 3 s budget
+- Sentence-level streaming: Henry's first word lands ~1.3 s after the end of your turn is detected — 1.30 s even in the worst measured run, against a 3 s budget
 - A reasoning model was measured and rejected for dialogue: 31–52 s per turn, kept for the offline review
 - The interview structure is code, not prompting: alternating questions, a deterministic follow-up policy
 - 176 backend tests at 94.9% coverage, 41 on the front end, gates before every commit

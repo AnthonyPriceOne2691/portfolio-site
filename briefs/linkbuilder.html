@@ -16,7 +16,7 @@
         <p class="subtitle">Outreach automation CRM</p>
         <p class="lede">
           A <span class="nb">link-building</span> team’s whole pipeline, run by one operator: finding
-          donor sites, outreach, <span class="nb">AI-drafted</span> replies, payments and placement
+          donor sites, outreach, <span class="nb">AI-drafted</span> replies, payment requests and placement
           monitoring. Every AI draft passes versioned contracts before it can be
           sent.
       </p>
@@ -24,7 +24,7 @@
           <li><b>11,000+</b><span>backend tests, full run green</span></li>
           <li><b>69</b><span>contract rules on every AI draft</span></li>
           <li><b>16,000+</b><span>placed links tracked</span></li>
-          <li><b>20+</b><span>queue workers in one stack</span></li>
+          <li><b>20+</b><span>background workers in one stack</span></li>
         </ul>
       </header>
 
@@ -45,7 +45,7 @@
             <li>Mines competitors’ backlinks and gates every site, the paid check last</li>
             <li>Sends from a fleet of domains with caps and a bounce breaker</li>
             <li>Classifies each reply, drafts an answer, checks it against contracts</li>
-            <li>Registers the payment, then keeps verifying the placement</li>
+            <li>Registers the payment request, then keeps verifying the placement</li>
           </ul>
         </section>
       </div>
@@ -109,7 +109,7 @@
 
             <text class="lane" x="8" y="199">DEAL &amp; RETAIN</text>
             <rect class="b" x="8" y="205" width="190" height="50" rx="9" />
-            <text class="t" x="20" y="226">Payments</text>
+            <text class="t" x="20" y="226">Payment requests</text>
             <text class="s" x="20" y="243">register first, then invoice</text>
             <rect class="b" x="224" y="205" width="214" height="50" rx="9" />
             <text class="t" x="236" y="226">Placement monitoring</text>
@@ -124,7 +124,7 @@
             <rect class="x" x="614" y="196" width="138" height="68" rx="9" />
             <text class="t" x="626" y="216">Shared services</text>
             <text class="s" x="626" y="233">Postgres · Redis/RQ</text>
-            <text class="s" x="626" y="247">21 queue workers</text>
+            <text class="s" x="626" y="247">21 background workers</text>
             <text class="s" x="626" y="259">one embedding service</text>
             <text class="l" x="8" y="284">Dark box: the gate every AI draft passes. Dashed: shared infrastructure. External LLM, mail and SEO-data vendors sit behind budget gates.</text>
           </svg>
@@ -137,7 +137,7 @@
           <li><b>Acquire</b> — discover sites, gate them, enrich contacts, launch a campaign.</li>
           <li><b>Converse</b> — reply → classify → draft → contract check → a human approves → send.</li>
           <li><b>Deal &amp; retain</b> — payment runs <span class="nb">register-first</span>; an incident opens only after a confirming pass.</li>
-          <li><b>Control</b> — drift score and vendor balances raise alerts; a live switch sets full, <span class="nb">warn-only</span> or off.</li>
+          <li><b>Control</b> — vendor balances raise alerts; a live switch sets checks to full, <span class="nb">warn-only</span> or off.</li>
         </ol>
       </section>
 
@@ -264,8 +264,8 @@
         "11,000": "backend 11,038 passed, 18 skipped — full run 2026-09-26, 8 workers",
         "69": "38 hard + 31 soft invariants — YAML parse of backend/features/outreach_contracts/contracts/**/*.yml",
         "16,000": "16,188 placed links tracked — docs/HANDOVER.md:47 (prod, 2026-09-10)",
-        "20": "dev compose: 28 services, 21 of them RQ workers — the public phrasing is 20+",
-        "21": "RQ workers in dev compose (28 services)",
+        "20": "dev compose: 28 services, 21 of them background workers (RQ queues and loops); prod template 23 = 15 RQ + 8 loops (code review 2026-09-28) — the public phrasing is 20+",
+        "21": "background workers in dev compose (28 services)",
         "63": "63 of 69 invariants checked by code, 6 by an LLM judge — YAML parse of contracts",
         "109": "109 of 109 shadow drafts allowed by the safety judge — docs/MASS_OUTREACH_AI_REPLY_CALIBRATION_DESIGN.md:53; 25% of the 84 decided sent as-is — :31-39",
         "159": "alive with our link on re-check — docs/MONITORING_DEAD_PAGE_VERIFICATION_2026_08_19.md:22-25",

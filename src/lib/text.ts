@@ -16,21 +16,21 @@
 export const text = {
   "about.title": "About",
   "about.description":
-    "AI automation engineer: production SaaS and local AI agents.",
+    "AI automation engineer: production AI platforms and local AI agents.",
   "about.body":
-    "AI / full-stack product engineer. I ship LLM products end to end and run them in production: a sole-built outreach CRM with 11,000+ backend tests, two client services taken from first commit to production-ready in 5 and 8 days, and fully-local agents that listen, browse and cite.",
+    "AI / full-stack product engineer. I ship LLM products end to end and run them in production: a sole-built outreach CRM with 11,000+ backend tests, two client services shipped to production in 8 and 14 days, and fully-local agents that listen, browse and cite.",
   "about.how":
     "I build with AI coding agents at team speed, inside a quality contour I designed — specs, 22 gates under a hard cap, and a doctor that audits the gates themselves. Architecture, contracts and the final review stay mine.",
   "about.cv": "Download CV",
   "about.cvHint": "Here",
   "home.title": "Anton Aspidov — AI Automation Engineer",
   "home.description":
-    "Production AI SaaS plus fully-local voice, web and AR agents. LLMs under contract.",
+    "Production AI platforms plus fully-local voice, web and AR agents. LLMs under contract.",
   "home.role": "AI Automation / LLM Application Engineer",
   "home.photoAlt": "Anton Aspidov",
   "home.introPlay": "Play the intro video (with sound)",
   "home.pitch":
-    "I put LLMs under contract: a production SaaS built to run with a single operator, and fully-local agents that listen, browse and see.",
+    "I put LLMs under contract: a production platform built to run with a single operator, and fully-local agents that listen, browse and see.",
   "home.status": "🟢 Open to remote / contract · UTC+3",
   "home.projectsHint":
     "Open any card to see the full case, proof links and implementation details.",
