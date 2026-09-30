@@ -1,20 +1,20 @@
 {
   "_": "Провенанс снимка (AGENT_STACK §7.1). Пересоздаётся при каждом перевендоривании — CQG §5 шаг 11.",
   "upstream": "https://github.com/AnthonyPriceOne2691/agent-canon-stack.git",
-  "commit": "87a5284fe068fe6c95bd070d51a1a8a7f5b7f82b",
+  "commit": "f70cb3bd7e8e76f57451e21edd1a1b0645945180",
   "branch": "main",
   "dirty": false,
   "vendored_at": "2026-09-30",
   "versions": {
     "delivery": "1.95",
     "stack-map": "1.52",
-    "cqg": "2.37",
+    "cqg": "2.38",
     "okf": "1.18"
   },
   "sha256": {
     "AGENT_DELIVERY_HARNESS.md": "d2ccb585d4bef5c5761b8cb4f7d9ad3a00d8c467659ca042b92d95524a3739a1",
-    "AGENT_STACK.md": "8b067c13ce6700254f7970acd1421b0cbe15dd4c2b386973abbef2fa3c247562",
-    "CODE_QUALITY_GATES.md": "324bcb713014d2201641bc83b60847955e9ea200c8656554df638692d7ab1130",
+    "AGENT_STACK.md": "d50d52cc37d0e2f742e0bca8ac97f9bcddcf212989354d7310295385083fff19",
+    "CODE_QUALITY_GATES.md": "ea30a75104daa01e530d26e6fb232dee1f0e92020899ac248bb39ba61468d1d2",
     "OKF_KNOWLEDGE_BUNDLE.md": "4bcf04755c18d479782e986d9d82370d663156a4264cb88d6b86505401815df4",
     "README.md": "6c4ef2c441fc4fe67799e2113f09446a6bfd945609eab59a53c43b27fe8bfb7d",
     "extract_payload.py": "9957f34a08280b42fa6a2756a47b01a8951ae7eaf390e1c7ef84a675e97dc73d",

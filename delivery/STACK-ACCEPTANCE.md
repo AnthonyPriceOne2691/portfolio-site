@@ -1,7 +1,7 @@
 # Приёмка контура — portfolio-site
 
 **Стек проекта:** Astro 7 / TypeScript, статическая генерация, без бэкенда.
-**Stack:** `delivery@1.95 · cqg@2.37 · okf@absent`.
+**Stack:** `delivery@1.95 · cqg@2.38 · okf@absent`.
 <!-- Метка именно `**Stack:**`, а не прежняя «Каноны»: доктор ищет третью запись о
      версии по МЕТКЕ строки (`doctor_versions.STACK_RECORDS`), и с прежней меткой
      он два обновления подряд печатал «нет записи в delivery/STACK-ACCEPTANCE.md»

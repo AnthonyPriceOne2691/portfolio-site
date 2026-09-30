@@ -1,7 +1,7 @@
 # Active delivery status
 
 - **slug:** mvp-foundation
-- **stack:** delivery@1.95, cqg@2.37, okf@absent
+- **stack:** delivery@1.95, cqg@2.38, okf@absent
 - **class:** M
 - **kind:** feature
 - **repro_test:** n/a reason=не bugfix, новая функциональность
