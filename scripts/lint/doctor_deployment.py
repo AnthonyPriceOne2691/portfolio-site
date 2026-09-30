@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 
@@ -160,6 +161,96 @@ class DeploymentScreen:
             return "github" in url, "gitlab" in url
         return (any(f.startswith(".github/workflows/") for f in files),
                 ".gitlab-ci.yml" in files)
+
+    def check_snapshot_integrity(self) -> None:
+        """Провенанс снимка ЧИТАЕТСЯ, а не только пишется (§5 шаг 11).
+
+        Находка обновления-3 (lab-15, F23), и она про молчание, а не про сбой.
+        `SHA256SUMS` и `VENDORED.json` пересчитывались при КАЖДОМ
+        перевендоривании — и не читались никем: замер прямым поиском по живому
+        проекту дал ноль вызовов `sha256sum`/`shasum`/`hashlib.sha256` и ноль
+        чтений обоих файлов. Провенанс писался в пустоту.
+
+        Цена молчания замерена там же. Едущий `stack_selftest.py`, развёрнутый
+        КОПИЕЙ вне снимка, отстал на 23 дня и ТРИ обновления; `selftest_sizes.py`
+        не был развёрнут вовсе, хотя его sha256 в провенансе записан. Селфтест
+        канона всё это время печатал `0 failures`, молча пропуская 36 блоков.
+
+        ⚠ Едущие файлы НЕ в манифесте извлекателя — у них своего заголовка в
+        канонах нет, они и есть снимок. Поэтому население тут второе и берётся у
+        второго владельца — записанного провенанса. Взять `scripts/**` было бы
+        четвёртым промахом того же префикса подряд.
+        """
+        recorded, why = self._provenance()
+        if why:
+            self.add(SKIP, "провенанс снимка", why)
+            return
+        adapted = self._declared_adaptations()
+        torn, gone, stale = [], [], []
+        for name, want in sorted(recorded.items()):
+            snap = self.root / self.CANON_DIR / name
+            if not snap.is_file():
+                gone.append(name)
+                continue
+            body = snap.read_bytes()
+            if hashlib.sha256(body).hexdigest() != want:
+                torn.append(name)
+                continue
+            stale += self._diverged_copies(name, body, adapted)
+        self._provenance_verdict(len(recorded), torn, gone, stale)
+
+    def _provenance(self) -> tuple[dict[str, str], str]:
+        """`{имя: sha256}` из `VENDORED.json` либо причина, почему не вышло."""
+        f = self.root / self.CANON_DIR / "VENDORED.json"
+        if not f.is_file():
+            return {}, (f"нет {self.CANON_DIR}/VENDORED.json — провенанс снимка "
+                        "не записан, сверять нечем (§5 шаг 11)")
+        try:
+            raw = json.loads(f.read_text(encoding="utf-8")) or {}
+        except (OSError, ValueError) as exc:
+            return {}, f"{self.CANON_DIR}/VENDORED.json не разобран ({exc})"
+        table = raw.get("sha256") or {}
+        return table, "" if table else "VENDORED.json без раздела sha256"
+
+    def _diverged_copies(self, name: str, body: bytes, adapted: dict) -> list[str]:
+        """Копии едущего файла ВНЕ снимка, разошедшиеся с ним.
+
+        Исполняют именно копию: `run_stack_selftest.sh` зовёт `stack_selftest.py`
+        из корня, а не из `docs/canon/`. Сверка тел её не видит — та ходит по
+        манифесту, а едущих файлов там нет; сверка состава тоже — она судит
+        наличие, а не тело. Между двумя проверками была щель ровно в один файл,
+        и он в неё провалился на 23 дня.
+        """
+        code, listing = run(["git", "ls-files"], self.root)
+        out = []
+        for rel in (listing.splitlines() if code == 0 else []):
+            if rel.startswith(f"{self.CANON_DIR}/") or rel.rsplit("/", 1)[-1] != name:
+                continue
+            if rel in adapted or name in adapted:
+                continue
+            f = self.root / rel
+            if f.is_file() and f.read_bytes() != body:
+                out.append(rel)
+        return out
+
+    def _provenance_verdict(self, total: int, torn: list[str], gone: list[str],
+                            stale: list[str]) -> None:
+        """Три беды снимка, и все со ЗНАМЕНАТЕЛЕМ."""
+        point = "провенанс снимка"
+        if torn:
+            self.add(DEAD, point, f"тело разошлось с записанным sha256: "
+                                  f"{', '.join(torn)} — снимок переписан после "
+                                  "вендоринга (линтер проекта? §6), провенанс лжёт")
+        elif gone:
+            self.add(DEAD, point, f"в провенансе {total}, на диске нет: "
+                                  f"{', '.join(gone)} — снимок неполон")
+        elif stale:
+            self.add(DEAD, point, f"развёрнутая копия разошлась со снимком: "
+                                  f"{', '.join(stale)} — исполняют её, а не "
+                                  f"снимок; доложи из {self.CANON_DIR}/ либо "
+                                  f"объяви в {self.ADAPTED} с причиной")
+        else:
+            self.add(AUTO, point, f"{total} файл(ов) сверены с записанным sha256")
 
     def check_white_spots(self) -> None:
         """Роль применима к этому стеку — и не закрыта, и не объявлена (§5.0).

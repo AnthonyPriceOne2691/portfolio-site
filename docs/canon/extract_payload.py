@@ -28,6 +28,8 @@
     extract_payload.py --manifest          # пути payload'а, по одному на строку
     extract_payload.py --extract <каталог> # разложить payload в каталог
     extract_payload.py --canon-dir <путь>  # где лежат четыре *.md (дефолт: рядом)
+    extract_payload.py --check-local <репо>   # вариант D: тексты контура вне git?
+    extract_payload.py --uninstall <репо>     # снять механику (показ; `--apply` снимает)
 """
 
 from __future__ import annotations
@@ -35,6 +37,7 @@ from __future__ import annotations
 import argparse
 import functools
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -63,6 +66,10 @@ SCRIPTS = {
     "scripts/delivery_journals.py": ("delivery", "# Приложение B9 — `scripts/delivery_journals.py`", "python"),
     "scripts/delivery_artifact.py": ("delivery", "# Приложение B11 — `scripts/delivery_artifact.py`", "python"),
     "scripts/delivery_limits.py": ("delivery", "# Приложение B10 — `scripts/delivery_limits.py`", "python"),
+    "scripts/check_irreversible_signature.sh": (
+        "delivery", "# Приложение B12 — `scripts/check_irreversible_signature.sh`", "bash"),
+    "scripts/sign_irreversible.sh": (
+        "delivery", "# Приложение B13 — `scripts/sign_irreversible.sh`", "bash"),
     "scripts/delivery_metrics.py": ("delivery", "# Приложение C — `scripts/delivery_metrics.py`", "python"),
     "scripts/lint/check_grep_gate.sh": ("cqg", "### `scripts/lint/check_grep_gate.sh`", "bash"),
     "scripts/lint/check_ast_gate.py": ("cqg", "### `scripts/lint/check_ast_gate.py`", "python"),
@@ -418,6 +425,118 @@ class Payload:
         return written
 
 
+# ─── вариант D: контур ставится локально, в чужом репозитории (карта §7.1a) ───
+
+#: Тексты контура в проекте: каноны, их снимок и едущие рядом файлы самопроверки.
+#: Под вариантом D они НЕ коммитятся — раскладываются локально, а запрет держит
+#: `.git/info/exclude`: git не ставит в индекс игнорируемый путь, и исполнителем
+#: правила становится платформа, а не память агента.
+#:
+#: ⚠ Границу проводит ПРИРОДА файла, а не каталог. Сюда попадает то, что судит
+#: каноны, и не попадает то, что судит код проекта: `delivery/**` и `knowledge/**`
+#: остаются отслеживаемыми, потому что их читает механика в CI (`delivery_check`,
+#: `okf_validate`, `okf_sync_gate`) — локальное дерево сделало бы CI красным на
+#: первом же прогоне, и это было бы «контур сломан», а не «контур скрыт».
+LOCAL_ONLY = (
+    "docs/canon",
+    "extract_payload.py",
+    "selftest_sizes.py",
+    "stack_selftest.py",
+    *sorted(CANON_FILES.values()),
+)
+
+#: Что снятие механики НЕ трогает и обязано назвать человеку. Список объявлен,
+#: а не выведен: у хука и у дописанного блока нет своего файла в манифесте,
+#: поэтому «не нашлось» здесь неотличимо от «нечего снимать».
+LEFT_TO_THE_HUMAN = (
+    "pre-commit uninstall (и pre-push, если ставился отдельно)",
+    "блок «Canon stack» в AGENTS.md / Cursor rule — дописан, а не свой файл",
+    ("delivery/** и knowledge/** — артефакты поставки, а не механика: "
+     "решает человек, остаются они записью или уходят"),
+    ".git/info/exclude — строки локального игнора",
+)
+
+#: Вердикты снятия. Разбиение обязано покрывать инвентарь механики ЦЕЛИКОМ:
+#: путь, не попавший ни в одно ведро, тихо остаётся в чужом репозитории — каждая
+#: доля при этом верна, а сумма молчит.
+GONE, REMOVABLE, MANUAL = "нет", "снимается", "руками"
+
+
+def _git(repo: Path, *args: str, stdin: str | None = None) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", "-C", str(repo), *args], input=stdin,
+                          capture_output=True, text=True, check=False)
+
+
+def tracked_texts(repo: str | Path) -> list[str]:
+    """Тексты контура, которые git ОТСЛЕЖИВАЕТ. Под вариантом D их ноль."""
+    out = _git(Path(repo), "ls-files", "-z", "--", *LOCAL_ONLY).stdout
+    return sorted(p for p in out.split("\0") if p)
+
+
+def unignored_texts(repo: str | Path) -> list[str]:
+    """Разложенные тексты контура, которые git НЕ игнорирует.
+
+    ⚠ `--no-index` здесь несущий, и это замерено. Без него `check-ignore`
+    МОЛЧИТ про отслеживаемый путь — то есть ровно про самый опасный случай,
+    который проверка и ищет: файл уже в индексе, правила игнора на него нет, а
+    вывод пуст и читается как «всё чисто». Признак, слепой именно там, где
+    предмет есть, хуже отсутствующего.
+    """
+    root = Path(repo)
+    paths = [p for p in LOCAL_ONLY if (root / p).exists()]
+    if not paths:
+        return []
+    r = _git(root, "check-ignore", "--no-index", "-z", "--stdin",
+             stdin="\0".join(paths))
+    if r.returncode not in (0, 1):
+        raise RuntimeError("git check-ignore: " + (r.stderr.strip() or str(r.returncode)))
+    ignored = {p for p in r.stdout.split("\0") if p}
+    return sorted(set(paths) - ignored)
+
+
+def uninstall_plan(pl: Payload, repo: str | Path) -> dict[str, list[str]]:
+    """Механика контура в чужом репозитории — по одному вердикту на путь.
+
+    Различитель — ТЕЛО файла, а не список путей. Снимается только то, что дословно
+    совпадает с каноном; расхождение значит одно из двух — проект правил файл под
+    себя (`adapted.json`, `cqg@1.71`) или канон даёт туда лишь фрагмент
+    (`backend/pyproject.toml` так и объявлен в маркере), — и в обоих случаях
+    удаление унесло бы код проекта. Второй список «эти не удалять» разъехался бы
+    с первым молча, как два парсера блоков; тело не разъедется.
+    """
+    root = Path(repo)
+    plan: dict[str, list[str]] = {GONE: [], REMOVABLE: [], MANUAL: []}
+    for rel in sorted({*SCRIPTS, *CONFIGS}):
+        path = root / rel
+        if not path.exists():
+            plan[GONE].append(rel)
+            continue
+        try:
+            same = path.read_text(encoding="utf-8").strip("\n") == pl.body(rel).strip("\n")
+        except (OSError, UnicodeDecodeError, ValueError, KeyError, AssertionError):
+            same = False
+        plan[REMOVABLE if same else MANUAL].append(rel)
+    return plan
+
+
+def uninstall(pl: Payload, repo: str | Path, apply: bool = False) -> int:
+    """Показать (или снять с `--apply`) механику контура. Дефолт — показать."""
+    plan = uninstall_plan(pl, repo)
+    for verdict in (REMOVABLE, MANUAL):
+        for rel in plan[verdict]:
+            print(f"  {verdict}: {rel}")
+    for line in LEFT_TO_THE_HUMAN:
+        print(f"  руками (своего файла нет): {line}")
+    if apply:
+        for rel in plan[REMOVABLE]:
+            if _git(Path(repo), "rm", "-q", "--", rel).returncode != 0:
+                (Path(repo) / rel).unlink()
+    total = sum(len(v) for v in plan.values())
+    print(f"uninstall: снимается {len(plan[REMOVABLE])}, руками {len(plan[MANUAL])}, "
+          f"нет {len(plan[GONE])} из {total}"
+          + (" — СНЯТО" if apply else " — показ, снимает `--apply`"))
+    return 0
+
 @functools.lru_cache(maxsize=None)
 def _cached_text(path: str, mtime: float, size: int) -> str:
     """Кэш ПО ОТПЕЧАТКУ файла: ключ включает mtime и размер."""
@@ -440,8 +559,35 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--by-canon", action="store_true",
                     help="с --manifest: печатать `канон<TAB>путь`")
     ap.add_argument("--extract", metavar="DIR")
+    # ⚠ Два режима варианта D (карта §7.1a) разведены НАМЕРЕННО: первый отвечает
+    # «уехало ли уже», второй — «чем снять». Один флаг на оба ответа означал бы,
+    # что проверка состояния меняет состояние, а такую не станут звать в приёмке.
+    ap.add_argument("--check-local", metavar="REPO",
+                    help="тексты контура не отслеживаются и игнорируются (вариант D)")
+    ap.add_argument("--uninstall", metavar="REPO",
+                    help="снять механику контура из чужого репозитория")
+    ap.add_argument("--apply", action="store_true",
+                    help="с --uninstall: снять, а не показать")
     args = ap.parse_args(argv)
     pl = Payload(args.canon_dir)
+
+    if args.apply and not args.uninstall:
+        print("--apply без --uninstall ничего не значит", file=sys.stderr)
+        return 2
+
+    if args.check_local:
+        tracked = tracked_texts(args.check_local)
+        unignored = unignored_texts(args.check_local)
+        for rel in tracked:
+            print(f"  отслеживается: {rel}")
+        for rel in unignored:
+            print(f"  без игнора: {rel}")
+        print(f"check-local: отслеживается {len(tracked)}, без игнора "
+              f"{len(unignored)} — под вариантом D оба числа нулевые")
+        return 1 if tracked or unignored else 0
+
+    if args.uninstall:
+        return uninstall(pl, args.uninstall, apply=args.apply)
 
     if args.manifest:
         if args.by_canon:
