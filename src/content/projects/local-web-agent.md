@@ -1,25 +1,26 @@
 ---
-title: "Local Web Agent"
-oneLiner: "A private research agent: drop in links, it browses the real sites, compares them and backs its answer with quotes checked against the pages it read."
-metric: "451 tests"
+title: "Local Web Agent: competitor research in minutes"
+oneLiner: "Give it a few links and a question — it reads the real sites, compares them, scores each one and shows the quote behind every confident fact. Runs on your laptop."
+metric: "Every confident fact quoted"
 status: "local-demo"
 stack: ["Python", "FastAPI", "Playwright", "Ollama", "Qwen3 14B", "React"]
 proof:
   github: "https://github.com/AnthonyPriceOne2691/local-web-agent"
-contract: "Every action is checked against 14 hard rules before it reaches the browser — bounded recovery, auto-tightening on drift."
+contract: "Every action is checked against 14 hard rules before it reaches the browser, and anything that can’t be undone — like paying — waits for a person."
 featured: false
 order: 3
-updated: 2026-09-26
+updated: 2026-09-30
 draft: false
 ---
 
-Not a scraper with selectors but an observe → plan → act loop over a real
-browser, with vision over screenshots. Every model call runs on the laptop.
+**The problem:** comparing competitors by hand means hours of clicking through sites
+and copying notes nobody double-checks.
 
-- A high-confidence fact must match a quote on the real page, or it is downgraded
-- Facts read from a screenshot are tagged as vision and never get top confidence
-- Actions are tiered by autonomy and reversibility: destructive ones are forbidden
-- No anti-bot spoofing: the agent pauses and a human passes the challenge
-- It states its own limit — "I did not read everything" is appended by code, because the model obeyed that instruction about half the time
+**The result:** one question in — a scored comparison and a winner out, with a quote
+behind every confident fact.
 
-An honest "not found" instead of an invention. Task in German, three sites, answer in German: the language comes from the question, not from a setting.
+- **Reads the real web:** opens each site in a real browser and finds the pages that matter
+- **A verdict you can act on:** every site is scored on the same criteria, side by side
+- **Proof, not guesses:** a confident fact must match a quote on the page, or it is dropped; it also says what it didn't read
+- **Safe on live sites:** fills in forms itself but stops before paying; captchas are left to a person
+- **Private and open:** all AI runs on the laptop; 451 automated tests; the code is public

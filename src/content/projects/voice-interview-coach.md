@@ -1,26 +1,30 @@
 ---
-title: "Voice Interview Coach"
-oneLiner: "A voice interviewer that never goes online: 15 minutes of technical interview in English, then a spoken review."
-metric: "~3 s per turn"
+title: "Voice agent: talks in real time, works offline"
+oneLiner: "An AI you talk to by voice — shown here as Henry, an English job interviewer. The same engine can run a support line, a booking assistant or a voice bot for your chat."
+metric: "100% offline"
 status: "local-demo"
 stack:
   ["Python", "FastAPI", "WebSocket", "whisper.cpp", "Ollama", "Piper", "React"]
 proof:
   brief: "/briefs/voice-interview-coach.pdf"
-contract: "Every sentence passes a contract before it is spoken: English only, no scores, at most three sentences, and every turn ends in a question or a short acknowledgement."
+contract: "Every sentence is checked before it is spoken: English only, no scores during the interview, three sentences at most."
 featured: false
-order: 2
-updated: 2026-09-26
+order: 4
+updated: 2026-09-30
 draft: false
 ---
 
-Speech in, speech out, nothing leaves the machine. The real work was not wiring
-the pipeline but the latency: a pause longer than three seconds turns a
-conversation into correspondence.
+**The problem:** voice AI usually means a cloud bill, a pause that kills the
+conversation, and your data on someone else's server.
 
-- Sentence-level streaming: Henry's first word lands ~1.3 s after the end of your turn is detected — 1.30 s even in the worst measured run, against a 3 s budget
-- A reasoning model was measured and rejected for dialogue: 31–52 s per turn, kept for the offline review
-- The interview structure is code, not prompting: alternating questions, a deterministic follow-up policy
-- 181 backend tests at 95.1% coverage, 44 on the front end, gates before every commit
+**The result:** a voice agent that holds a real conversation on one laptop — here, a
+mock job interviewer.
 
-The review is grounded in the transcript rather than generated from scratch.
+- **Feels like a conversation:** it answers within about three seconds of your last word, sentence by sentence
+- **Smart, not chatty:** it knows the context, asks about what you actually said, and handles side requests — "slower, please", "where do I start?" — without losing the thread
+- **Rules it can't be talked out of:** English only, no scores mid-interview, three sentences at most — checked in code before every sentence
+- **Useful afterwards:** a written review with five scores, what to fix and better versions of weak answers
+- **Built to last:** 205 automated tests covering 95% of the code
+
+The same engine can become a support line, a booking assistant or a voice bot for
+your chat — offline, or with the data kept in-house.

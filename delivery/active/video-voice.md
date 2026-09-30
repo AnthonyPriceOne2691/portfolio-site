@@ -1,391 +1,376 @@
 # Ролики: голос
 
-Голос пишется **первым** (кроме тренера — там после экрана, в оставленную тишину). Закадровый голос, **по-английски**, — **один заход с паузами** на ролик; перед первым блоком — 2 секунды тишины. Читаете блоки по порядку; «тишина» перед блоком и «пауза» после — держите по секундомеру. Шкала общая с [video-screen.md](video-screen.md), поэтому дорожка кладётся на видео с 0:00. Разъехалось — растяните или сократите паузу, речь не режете. Сбились в блоке — пауза 3 секунды и прочитайте блок заново: лишний дубль вырежется по паузе.
+Голос пишется **первым** (кроме голосового агента — там после экрана, в места без живого звука). Закадровый голос **по-английски**, **один заход с паузами** на ролик; перед первым блоком — 2 секунды тишины. «Тишина» перед блоком и «пауза» после — по секундомеру. Шкала общая с [video-screen.md](video-screen.md): дорожка кладётся на видео с 0:00. Разъехалось — растяните или сократите паузу, речь не режете. Сбились в блоке — пауза 3 секунды и блок заново.
 
-**Темп — 130 слов в минуту** (≈2,2 слова в секунду): средний спокойный темп дикторского английского; под него посчитана каждая длина. Тренировка: читайте блок под секундомер и укладывайтесь в «говорите ~N с» ±1 с. Быстрее — делайте паузы между фразами, медленнее — сокращайте их, но не слова. Реплики разговорные, с сокращениями (it's, doesn't); споткнулись — говорите полную форму. Числа записаны так, как произносятся. **Цифры и формулировки контрактов — слово в слово.**
+**30.09 голос переписан под заказчика** — руководителей и CPO SEO- и маркетинговых агентств, а заодно рекрутёров. Сначала выгода (сроки, люди, риск), потом доказательство на экране, в конце — что это даёт им. Никакого жаргона вроде BM25, nDCG, канареек и храповиков: техника — в PDF-брифах на сайте.
 
-**Произношение:** LLM — «эл-эл-эм», BM25 — «би-эм твенти-файв», nDCG — «эн-ди-си-джи», dofollow — «ду-фоллоу», RAG — «рэг».
+**Темп — 130 слов в минуту**, но длительность считана **по слогам** (3,2 слога в секунду): числа словами и аббревиатуры длиннее, чем кажутся по числу слов. Тренировка: блок под секундомер, укладывайтесь в «говорите ~N с» ±1 с. Реплики разговорные, короткими фразами; споткнулись на сокращении — говорите полную форму. **Цифры — слово в слово.**
+
+**Произношение:** AI — «эй-ай», SEO — «эс-и-оу», dofollow — «ду-фоллоу», Wi-Fi — «вай-фай».
 
 ---
 
-## 0. Кружок о себе — ~35 секунд · всего 0:39
+## 0. Кружок о себе · всего 0:38
 
 **Один живой дубль в камеру** — голос пишется вместе с видео.
 
-**C-1 · 0:00–0:13** — говорите ~12 с → пауза 1 с
+**C-1 · 0:00–0:12** — говорите ~11 с → пауза 1 с
 
 > I build LLM systems that keep working when the model is wrong. Not demos that work once — products with rules the model can't break.
 
-**C-2 · 0:13–0:26** — говорите ~12 с → пауза 1 с
+**C-2 · 0:12–0:26** — говорите ~13 с → пауза 1 с
 
 > The pattern is the same every time. The model proposes. A check decides. And a person confirms anything that costs money or can't be undone.
 
-**C-3 · 0:26–0:39** — говорите ~12 с → пауза 1 с
+**C-3 · 0:26–0:38** — говорите ~11 с → пауза 1 с
 
-> Below are five of them, two minutes each. In every video, watch for the moment the system says no. That moment is the work.
+> Below are five of them, about two minutes each. In every video, watch for the moment the system says no. That moment is the work.
 
 ---
 
-## 1. LinkBuilder — 97.9% delivery · всего 2:22 (концовки по желанию: с LB-8 — 2:32; с LB-9 — 2:29; лимит 2:30 — не больше одной)
+## 1. LinkBuilder — link building on autopilot · всего 2:16 · 266 слов
 
-**LB-1 · 0:00–0:19** — говорите ~18 с → пауза 1 с
+**LB-1 · 0:00–0:22** — говорите ~21 с → пауза 1 с
 
-> This is LinkBuilder — a link-building CRM I designed and built with AI coding agents. In production, one operator did the work of a team of five. It's a demo copy; the sites and people are invented.
+> Link building usually eats a whole team: finding sites, writing to webmasters, negotiating, paying, and checking the links. In production, this platform let one operator do the work of five people. This is a demo copy — the sites and people are invented.
 
-**LB-2 · 0:19–0:37** — говорите ~17 с → пауза 1 с
+**LB-2 · 0:22–0:37** — говорите ~14 с → пауза 1 с
 
-> It covers the whole cycle, starting with competitors: their backlinks come in, and every new site goes through a chain of quality gates — stop list, traffic, spam, editorial fit. What passes becomes a donor.
+> It covers the whole cycle. It takes a competitor's backlinks and checks every site — quality, traffic, spam, topic. The ones that pass become donors, with a grade.
 
-**LB-3 · 0:37–0:56** — говорите ~18 с → пауза 1 с
+**LB-3 · 0:37–0:51** — говорите ~13 с → пауза 1 с
 
-> Outreach goes out in throttled batches. Replies land in one inbox, where each thread shows the deal stage and its owner. The AI drafts an answer; a person sends it — or rejects it and has to say why.
+> Outreach goes out in safe batches. Every reply lands in one inbox, where you see the deal stage and who owns the thread. The AI writes a draft; a person sends it.
 
-**LB-4 · 0:56–1:18** — тишина 2 с (ключевой кадр) → говорите ~19 с → пауза 1 с
+**LB-4 · 0:51–1:11** — тишина 2 с (ключевой кадр) → говорите ~17 с → пауза 1 с
 
-> This one never went out. The webmaster said the budget is frozen — and the AI still wrote that two hundred and seventy dollars works for us. The check blocked it, so there's no send button. Only a person can answer.
+> This one never went out. The webmaster said the budget is frozen, and the AI still offered two hundred and seventy dollars. The check caught it, so there's no send button. Only a person can answer.
 
-**LB-5 · 1:18–1:43** — говорите ~24 с → пауза 1 с
+**LB-5 · 1:11–1:30** — говорите ~18 с → пауза 1 с
 
-_28.09: «full, warn-only or off» заменено на подписи переключателя, которые зритель видит на экране, — «Full / Observation only / Disabled». Слов столько же._
+> Every AI letter has to pass ten written rules, and an admin can make the checks stricter or softer, live. The AI earns more freedom only with results: auto-send stays off until it proves itself on real mail.
 
-> Every AI letter answers to ten versioned contracts. An admin can switch the checks between full, observation only and disabled — without a restart. The AI earns its autonomy by measurement, not trust: shadow runs on real mail score every draft, and auto-send stays off until the numbers clear the bar.
+**LB-6 · 1:30–1:51** — говорите ~20 с → пауза 1 с
 
-**LB-6 · 1:43–2:04** — говорите ~20 с → пауза 1 с
+> Then every bought link is watched: is it still there, still dofollow, still indexed? A lost link becomes a ticket, then a letter asking for it back — but only after a second check, because almost one dead link in five was actually alive.
 
-> Then every link is watched: still there, still dofollow, still indexed. A lost link becomes an incident, then a letter asking for it back — but only after a second check, because nearly one "dead" link in five turned out to be alive.
+**LB-7 · 1:51–2:06** — говорите ~14 с → пауза 1 с
 
-**LB-7 · 2:04–2:22** — говорите ~17 с → пауза 1 с
+> Around it: payment requests, three user roles, spend meters and alerts before a balance runs out. More than eleven thousand automated tests keep it all working.
 
-> Around it: payment requests through the service desk, three roles, spend meters, and Slack alerts before a balance runs dry. Eleven thousand backend tests, seven hundred on the front end, a hundred and thirty-seven migrations.
+**LB-8 · 2:06–2:16** — говорите ~9 с → пауза 1 с
 
-**LB-8 · 2:22–2:32 · по желанию** — говорите ~9 с → пауза 1 с
-
-_Концовка по желанию (+8 секунд). С 28.09 «built on my own» из первой фразы убрано: код пишут ИИ-агенты под управлением владельца (слово владельца), и ролик говорит это сразу. Эта строка связывает CRM с роликом про контур:_
-
-> Built by one engineer — with AI coding agents working inside the quality gates from the contour video.
-
-**LB-9 · 2:32–2:39 · по желанию** — говорите ~6 с → пауза 1 с
-
-_Ещё одна строка по желанию — если готовы отвечать за неё на интервью:_
-
-⚠ Это единственное число ролика без источника в репозитории: ни 12 000, ни 97.9% там нет, а лимит кампании по умолчанию — 5 000 получателей, при заявленных на карточке 5 400.
-
-> In production it sent over twelve thousand emails, with ninety-eight percent delivered.
+> I build systems like this fast. My latest outreach service went live for an SEO agency in eight days.
 
 ### Цифры ролика
 
 Пути — от `Linkbuilding Automatization P/` в каталоге CRM.
 
-| Звучит                                | Значение                                                                  | Источник                                                                                         |
-| ------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| a team of five                        | со слов владельца                                                         | в репозитории нет; карточка, oneLiner                                                            |
-| two hundred and seventy dollars       | тред #420 демо-базы                                                       | на экране                                                                                        |
-| ten versioned contracts               | 10 YAML-контрактов: 8 версии 0.1.0, 2 версии 0.2.0 (сверено 28.09)        | `backend/features/outreach_contracts/contracts/*.yml`; на экране карточка «Contracts in the registry» с числом 10 |
-| full, observation only, disabled … without a restart | подписи переключателя «Full / Observation only / Disabled» (в коде full / warn_only / off); режим в Redis, менять может только Admin; «Disabled» выключает проверки, а не агента | `linkbuilder-cms/src/api/outreachContracts.ts:265-269`; `backend/features/outreach_contracts/runtime_mode.py:1-20` |
-| shadow runs … score every draft       | теневой прогон: 109 подсказок, каждая оценена (как есть / правка / отказ) | `docs/MASS_OUTREACH_AI_REPLY_CALIBRATION_DESIGN.md:16-40`                                        |
-| auto-send stays off … clear the bar   | автоотправку включает человек флагом после replay; на экране «Auto-send (step 1): 0» | `config/mass_outreach.py:191-193`; `docs/MASS_OUTREACH_AI_REPLY_CALIBRATION_DESIGN.md` |
-| nearly one "dead" link in five        | 159 живых из 865 «мёртвых»                                                | `docs/MONITORING_DEAD_PAGE_VERIFICATION_2026_08_19.md:22-25`                                     |
-| eleven thousand backend tests         | 11 048 passed, прогон 22.09                                               | `delivery/active/decisions.md` этого репозитория, строка 2026-09-22                              |
-| seven hundred on the front end        | 703 из 703                                                                | коммит CRM `021d9fa5`                                                                            |
-| a hundred and thirty-seven migrations | 137 файлов                                                                | `backend/shared/database/migrations/versions/`                                                   |
+| Звучит | Значение | Источник |
+| --- | --- | --- |
+| one operator do the work of five people | со слов владельца | карточка сайта (metric, oneLiner) |
+| two hundred and seventy dollars | тред #420 демо-базы | на экране |
+| ten written rules | 10 YAML-контрактов | `backend/features/outreach_contracts/contracts/*.yml`; на экране «Contracts in the registry» 10 |
+| stricter or softer, live | «Full / Observation only / Disabled», без перезапуска | `linkbuilder-cms/src/api/outreachContracts.ts:265-269`; подсказка «?» на экране |
+| auto-send stays off | «Auto-send (step 1)»: 0; включает человек флагом | `config/mass_outreach.py:191-193`; на экране |
+| almost one dead link in five | 159 живых из 865 «мёртвых» | `docs/MONITORING_DEAD_PAGE_VERIFICATION_2026_08_19.md:22-25` |
+| three user roles | Administrator / Linkbuilder / User (read-only) | на экране `/users` |
+| more than eleven thousand automated tests | 11 048 passed (22.09), 11 028 собрано (28.09) | `delivery/active/decisions.md` сайта, 2026-09-22; ревью 28.09 |
+| eight days | outreach-сервис агентства: ТЗ 16.09 → прод 24.09 (первый коммит 18.09) | слово владельца 28.09; git `Parsing and Outri`; «8 and 14 days» на странице About |
 
 ---
+## 2. Голосовой агент (Voice Interview Coach) · всего 2:12 · 154 слов
 
-## 2. Voice Interview Coach — ~3 s per turn · всего 2:22
+**Живой звук — это вы и Генри в записи экрана.** Закадровый голос пишется потом, в оставшиеся места. Ваши реплики в самом интервью — ниже, в «Ваши реплики Генри».
 
-**VC-1 · 0:00–0:12** — говорите ~11 с → пауза 1 с
+**VC-1 · 0:00–0:18** — говорите ~17 с → пауза 1 с
 
-> I'm switching the Wi-Fi off. Everything you'll hear from now on runs on this laptop: speech recognition, a fourteen-billion-parameter model, and the voice.
+> I build voice agents that talk in real time. This one doesn't even need the internet: I'm switching the Wi-Fi off. From now on, everything runs on this laptop — speech recognition, the AI and the voice.
 
-**VC-2 · 0:12–0:24** — говорите ~11 с → пауза 1 с
+**VC-2 · 0:18–0:28** — говорите ~9 с → пауза 1 с
 
-> This is Henry, a mock interviewer: fifteen minutes in English, six questions. He's read my portfolio, so we talk about my real projects.
+> Here the agent is Henry, an interviewer for English job interviews. He has read my portfolio.
 
-**VC-3 · 0:24–0:34** — **тишина 10 с**: «Start interview». ГОЛОС ГЕНРИ, закадра нет: приветствие и первый вопрос, ~10 секунд (середину приветствия можно вырезать).
+**VC-3 · 0:28–0:38** — **живой звук 10 с, закадра нет:** Start interview: приветствие Генри и первый вопрос (середину приветствия можно вырезать)
 
-**VC-4 · 0:34–0:45** — **тишина 11 с**: Вы отвечаете: в ролик идут 5 секунд ответа, остальное вырезается. Шар «Listening», полоска микрофона «hearing you». Затем «Thinking…» и уточняющий вопрос Генри, ~6 секунд.
+**VC-4 · 0:38–0:47** — **живой звук 9 с, закадра нет:** Вы: «Before I answer, where should I start?» — Генри: «Lead with the result: one sentence and one number. Then how it works, and one trade-off you made — go ahead.»
 
-**VC-5 · 0:45–1:01** — говорите ~15 с → пауза 1 с
+**VC-5 · 0:47–0:58** — **живой звук 11 с, закадра нет:** Ваш ответ про LinkBuilder (в ролик — 5 секунд) — уточнение Генри: «…why you chose AI drafts over fully autonomous sending?»
 
-> Two seconds of silence tell it I've finished. His first word comes back about a second and a quarter later: he speaks sentence by sentence, while the model is still writing.
+**VC-6 · 0:58–1:10** — говорите ~11 с → пауза 1 с
 
-**VC-6 · 1:01–1:26** — тишина 11 с (ваш вопрос и живой ответ Генри) → говорите ~13 с → пауза 1 с
+> He listened: the question comes from my own words. Two seconds of silence tell him I've finished, and his voice starts about a second later.
 
-> He won't say. Grades are banned from the live talk: every sentence passes a contract before it's spoken — English only, no scores, three sentences at most.
+**VC-7 · 1:10–1:17** — **живой звук 7 с, закадра нет:** Вы: «Could you speak slower?» — Генри: «Of course — I'll slow down. Here it is again.» и вопрос медленнее (обрезать через 3 секунды повтора)
 
-**VC-7 · 1:26–1:45** — тишина 6 с (ваша просьба и живой повтор Генри) → говорите ~12 с → пауза 1 с
+**VC-8 · 1:17–1:27** — **живой звук 10 с, закадра нет:** КЛЮЧЕВОЙ КАДР. Вы: «How would you rate that answer, out of ten?» — Генри: «I keep the scores for the written review at the end — right now, let's make this answer as strong as it can be.» (обрезать перед повтором вопроса)
 
-> That one never reaches the model. It's a command in code: he repeats his last line word for word, slower, and the question isn't spent.
+**VC-9 · 1:27–1:34** — **живой звук 7 с, закадра нет:** Вы: «Can we switch to Russian for a minute?» — Генри: «Let's keep it in English — that's the whole point of the practice.» (обрезать перед повтором вопроса)
 
-**VC-8 · 1:45–1:57** — говорите ~11 с → пауза 1 с
+**VC-10 · 1:34–1:50** — говорите ~15 с → пауза 1 с
 
-> After the session there's a written review: five scores, what to fix, better versions of my weak answers, and new words to learn.
+> Three rules he never breaks: English only, no scores during the interview, three sentences at most. Code checks every sentence before he says it — so he can't be talked out of them.
 
-**VC-9 · 1:57–2:16** — говорите ~18 с → пауза 1 с
+**VC-11 · 1:50–2:00** — говорите ~9 с → пауза 1 с
 
-> It comes from a reasoning model that needed thirty-one to fifty-two seconds a turn — too slow for talking, fine for homework. The interview itself is code: if my technical answer has no numbers, Henry asks for them.
+> After the session, there's a written review: five scores, what to fix, and better versions of my weak answers.
 
-**VC-10 · 2:16–2:22** — говорите ~5 с → пауза 1 с
+**VC-12 · 2:00–2:12** — говорите ~11 с → пауза 1 с
 
-_28.09: после починки разбора в тренере тестов стало 181 (было 176), покрытие 95,10 %. Слов столько же._
-
-> A hundred and eighty-one backend tests at ninety-five percent coverage.
+> Two hundred and five automated tests. The same engine can become a support line, a booking assistant, or a voice bot for your chat.
 
 ### Цифры ролика
 
 Пути — от `~/Documents/voice-interview-coach/`.
 
-| Звучит                                   | Значение                                              | Источник                                                               |
-| ---------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------- |
-| a fourteen-billion-parameter model       | qwen2.5:14b-instruct                                  | `backend/app/config.py:18-22`                                          |
-| fifteen minutes, six questions           | чипы стартового экрана                                | `frontend/src/pages/InterviewPage.tsx:52-96`                           |
-| two seconds of silence                   | 2,0 с — незакоммиченная правка                        | `frontend/src/lib/vad.ts:4`                                            |
-| a second and a quarter                   | 1 247 мс медиана, 1 302 мс худший, от получения звука | `delivery/archive/2026-08-13-expressive-speech/verify-report.md:87-90` |
-| English only, no scores, three sentences | инварианты I1-H1, I1-H3, G1-H1                        | `data/contracts/interview.contract.yaml`                               |
-| thirty-one to fifty-two seconds          | deepseek-r1:14b на реплику                            | `docs/14-llm-model-split.md:35-40`                                     |
-| a hundred and eighty-one backend tests   | 181 passed, прогон 28.09 на коммите `bc0cdf4`          | `backend/.venv/bin/pytest -q` в тренере                                |
-| ninety-five percent coverage             | 95,10 % с ветками, тот же прогон                      | вывод pytest-cov: «Total coverage: 95.10%»                             |
+| Звучит | Значение | Источник |
+| --- | --- | --- |
+| everything runs on this laptop | whisper.cpp, qwen2.5:14b, Piper — локально | `backend/app/config.py:18-35` |
+| Two seconds of silence | 2,0 с — незакоммиченная правка VAD | `frontend/src/lib/vad.ts:4` |
+| about a second later | 1 247 мс медиана от получения звука | `delivery/archive/2026-08-13-expressive-speech/verify-report.md:87-90` |
+| English only, no scores, three sentences at most | инварианты контракта; отказы оценки и языка — код (коммит `23082f4`) | `data/contracts/interview.contract.yaml`; `backend/app/orchestrator/meta_request.py` |
+| five scores | Clarity, Structure, Depth, English, Positioning | на экране «Summary» |
+| Two hundred and five automated tests | 205 passed, покрытие 95,23 %, 30.09 | `backend/.venv/bin/pytest -q` на `23082f4` |
+
+### Ваши реплики Генри
+
+**Для кадров — ровно эти фразы** (их распознаёт код; отрепетировано 30.09, ответы Генри в [video-screen.md](video-screen.md)):
+
+1. «Before I answer, where should I start?»
+2. Ответ на первый вопрос (20–30 с):
+   > Sure. The biggest one is LinkBuilder, a platform for link-building outreach. Before it, a team of five people did this work by hand. I designed it and built it with AI coding agents. In production, one operator ran the whole cycle: finding sites, writing to webmasters, paying for links and checking that they stay live. It has more than 11,000 automated tests. The AI drafts every reply, but a person approves the send.
+3. «Could you speak slower?»
+4. «How would you rate that answer, out of ten?»
+5. «Can we switch to Russian for a minute?»
+
+**Дальше — вне кадра, до конца интервью** (нужно для разбора в VC-11). Вопросы 2–6 Генри берёт из банка случайно и формулирует своими словами. Ниже — ответы на все вопросы банка. ⚠ Whisper пишет маленькие числа словами: говорите многозначные («eleven thousand», «eight hundred and sixty-five»), иначе Генри решит, что цифр нет, и переспросит.
+
+Технические:
+- *Architecture — main services:* «It's split by business area: competitors and prospecting, outreach, payments, and link monitoring. Each area has its own API and background workers — more than 20 of them — talking through queues, so a slow crawl never blocks a reply to a webmaster.»
+- *Inbound replies and where the LLM sits:* «A reply comes in, the system checks the language and the deal stage, then the AI drafts an answer. A second check tests the draft against ten written contracts. After three failed attempts, a person gets a red card and answers by hand.»
+- *Auto-send vs human review:* «Nothing is auto-sent by default. We ran the AI in shadow mode on real mail — 109 drafts — and people marked each one: sent as is, edited or rejected. Auto-send can be switched on only by a person, when those numbers are good enough.»
+- *Separate queues for inbound and AI calls:* «Because they fail differently. Incoming mail must never wait, and AI calls are slow and rate-limited. With 15 separate queue workers, a burst of AI calls never delays an incoming reply.»
+- *Impact on team size:* «The outreach work of a 5-person team moved to 1 operator. And on one campaign of 5,471 recipients, 97.9 percent of the emails were delivered.»
+- *What would you rebuild:* «The link monitor. At first a dead page went straight to an incident. Then we re-checked 865 "dead" pages and 159 were alive. Today I'd build the second check from day one.»
+- *A production issue:* «Our monitor was marking live links as dead. I pulled 865 "dead" pages and re-checked them: 159 were alive. The fix was a second check before any incident turns into a letter to the webmaster.»
+
+Поведенческие (⚠ — только если так было; иначе своя история по схеме «ситуация → что сделал → результат с числом»):
+- *Learning fast under pressure:* «In September an SEO agency needed two new services at once. I shipped the case-study platform to production in 14 days and the outreach platform in 8.»
+- *Two urgent things at once:* «Those same two services came in parallel. I wrote a clear spec for each, ran AI coding agents on both, and let the automatic checks catch mistakes, so I didn't re-check everything by hand. Both went live in under three weeks.»
+- *Feedback that stung:* ⚠ «A review of my projects rated production operations lowest — 2.5 out of 4. It stung. So on the next services I added off-site backups, alerts to Telegram and a container watchdog.»
+- *Explaining a trade-off to a non-technical person:* «The team wanted every dead link to trigger a letter. I showed them that 159 of 865 "dead" links were alive, so we'd be annoying partners for nothing. They agreed to a second check in one meeting.»
+- *Saying no:* ⚠ «I was asked to switch on auto-send for AI replies. I said no until the shadow-run numbers were good enough, and offered a middle step: the AI drafts, a person sends.»
+- *Disagreement, missed deadline, async gone wrong:* ⚠ шаблон — ваша реальная история по схеме выше.
 
 ---
+## 3. Local Web Agent — competitor research in minutes · всего 1:42 · 205 слов
 
-## 3. Local Web Agent — 451 tests · всего 2:16
+**WA-1 · 0:00–0:17** — говорите ~16 с → пауза 1 с
 
-**WA-1 · 0:00–0:21** — говорите ~20 с → пауза 1 с
+> Comparing competitors by hand takes hours. This research agent does it for you: give it a few links and a question, and it reads each site in a real browser — on my laptop, with no cloud AI.
 
-> This is a research agent that lives on my laptop. I paste a few links and ask a question — it opens each site in a real browser and quotes where it found the answer. No cloud: every model runs right here.
+**WA-2 · 0:17–0:30** — говорите ~12 с → пауза 1 с
 
-**WA-2 · 0:21–0:40** — говорите ~18 с → пауза 1 с
+> Here I ask which of three well-known link-building guides gives a small agency the most practical advice. It opens every site by itself.
 
-> Here I asked it how clearly three electronics stores explain shipping and returns. It read all three, scored them against a rubric and picked a winner — at temperature zero, so the same pages always get the same scores.
+**WA-3 · 0:30–0:45** — говорите ~14 с → пауза 1 с
 
-**WA-3 · 0:40–0:57** — говорите ~16 с → пауза 1 с
+> The verdict: Backlinko wins with ninety-five out of a hundred — over a hundred and seventy concrete strategies. Ahrefs gets eighty-five, and Moz seventy-five.
 
-> It also names its own limit: it didn't read all of one site. That sentence is written by code — when I asked the model to say it, it did about half the time.
+**WA-4 · 0:45–0:59** — говорите ~13 с → пауза 1 с
 
-**WA-4 · 0:57–1:18** — говорите ~20 с → пауза 1 с
+> Every confident fact has a quote behind it. The hundred and seventy comes straight from the page — and if a quote isn't really there, the fact is thrown out.
 
-> Every site shows how it got there, page by page. A confident fact needs a quote from the page — if the quote isn't really there, the fact is thrown out. And anything seen only on a screenshot never gets top confidence.
+**WA-5 · 0:59–1:11** — говорите ~11 с → пауза 1 с
 
-**WA-5 · 1:18–1:37** — говорите ~18 с → пауза 1 с
+> It also tells you what it didn't finish reading — here, two of the three sites. That line is written by code, so it's never skipped.
 
-> Now live, on a local test shop, with the browser visible. It doesn't scrape with selectors: it looks at the page, plans and acts — and fourteen hard rules are checked in code before any action reaches the browser.
+**WA-6 · 1:11–1:28** — говорите ~16 с → пауза 1 с
 
-**WA-6 · 1:37–1:56** — тишина 2 с (ключевой кадр) → говорите ~16 с → пауза 1 с
+> It reads a page, plans the next step and acts — and fourteen hard rules are checked in code before any action reaches the browser. Anything that can't be undone, like paying, it leaves to a person.
 
-> And here it stops. Paying can't be undone, so the agent prepares everything, and I press the button. Captchas work the same way — it waits for me. No anti-bot tricks, by design.
+**WA-7 · 1:28–1:42** — говорите ~13 с → пауза 1 с
 
-**WA-7 · 1:56–2:16** — говорите ~19 с → пауза 1 с
-
-> Four hundred and fifty-one tests, over a hundred and forty runs in the log, twenty-seven real websites — and almost every recent test began as a failure on one of them. The code is open; the link is under the video.
+> Four hundred and fifty-one automated tests, thirty-one real websites in the log, and the code is open. Need a bot like this for your market? Message me.
 
 ### Цифры ролика
 
 Пути — от `~/Documents/local-web-agent/`.
 
-| Звучит                             | Значение                                           | Источник                                     |
-| ---------------------------------- | -------------------------------------------------- | -------------------------------------------- |
-| temperature zero                   | сравнение сайтов при t=0                           | `backend/app/config.py:47-52`                |
-| about half the time                | модель выполнила инструкцию на одном сайте из двух | `knowledge/engineering/llm-canon.md:98`      |
-| fourteen hard rules                | 9 инвариантов + 5 лимитов                          | `data/contracts/crawl.contract.yaml`         |
-| four hundred and fifty-one tests   | 451 passed, 28.09 (python:3.14, чистый клон)       | CI `main`; `backend/.venv/bin/pytest -q`    |
-| over a hundred and forty runs      | 143 прогона, 932 шага                              | `data/runs/app.db`                           |
-| twenty-seven real websites         | 73 прогона на 27 реальных сайтах                   | `data/runs/app.db`                           |
+| Звучит | Значение | Источник |
+| --- | --- | --- |
+| on my laptop, with no cloud AI | модели в Ollama на этом компьютере | `backend/app/config.py` |
+| ninety-five / eighty-five / seventy-five | вердикт репетиции 30.09 | на экране «How they scored»; `data/runs/artifacts/*/comparison_report.md` |
+| over a hundred and seventy concrete strategies | «you’ll find 170+ strategies, tips and tactics on this page» | цитата в `data/runs/artifacts/c69d48faf0b8/report.md:17`; backlinko.com/link-building-strategies |
+| two of the three sites | «I did not read everything: ahrefs.com, backlinko.com» | на экране |
+| fourteen hard rules | 9 инвариантов + 5 лимитов | `data/contracts/crawl.contract.yaml` |
+| four hundred and fifty-one automated tests | 451 passed, 28.09, `main` без изменений с тех пор | CI `main`; `backend/.venv/bin/pytest -q` |
+| thirty-one real websites | 79 прогонов на 31 реальном сайте (30.09) | `data/runs/app.db`, таблица `crawl_runs` |
 
 ---
+## 4. RAG — answers from your documents · всего 1:38 · 186 слов
 
-## 4. RAG over a rulebook — 0 uncited answers · всего 2:15
+**RG-1 · 0:00–0:10** — говорите ~9 с → пауза 1 с
 
-**RG-1 · 0:00–0:17** — говорите ~16 с → пауза 1 с
+> Every company has documents nobody has time to read — and a chatbot that guesses is worse than none.
 
-> This is a search desk over my own engineering rulebook: four documents, about a hundred and ten thousand tokens. It's in Russian, so I'll translate. I'm asking how many quality gates the rulebook allows.
+**RG-2 · 0:10–0:27** — говорите ~16 с → пауза 1 с
 
-**RG-2 · 0:17–0:35** — говорите ~17 с → пауза 1 с
+> This is a search desk over my own engineering rulebook: four documents, twenty-two thousand lines, in Russian — so I'll translate. I ask how many quality checks the rulebook allows.
 
-> The answer comes back with an address — file and section. Twenty-two gates: sixteen at commit, six outside. An address on every answer is the principle here — and I measure it instead of assuming it.
+**RG-3 · 0:27–0:38** — говорите ~10 с → пауза 1 с
 
-**RG-3 · 0:35–0:41** — говорите ~5 с → пауза 1 с
+> The answer comes back with an address: the file and the section. Twenty-two checks: sixteen at every commit, six outside.
+
+**RG-4 · 0:38–0:44** — говорите ~5 с → пауза 1 с
 
 > I open that section — and it says exactly that.
 
-**RG-4 · 0:41–1:06** — тишина 2 с (ключевой кадр) → говорите ~22 с → пауза 1 с
+**RG-5 · 0:44–1:03** — тишина 2 с (ключевой кадр) → говорите ~16 с → пауза 1 с
 
-> Now something it doesn't cover: how to run load tests. Search finds nothing close enough, so not a single line of the rulebook reaches the model. And with an empty context, it answered "not covered" two hundred and ten times out of two hundred and ten.
+> Now a question the documents don't cover: how to run load tests. Search finds nothing close enough, so the AI gets no text at all — and it says not covered, instead of making something up.
 
-**RG-5 · 1:06–1:21** — говорите ~14 с → пауза 1 с
+**RG-6 · 1:03–1:14** — говорите ~10 с → пауза 1 с
 
-> The limits sit above the strengths in the README. The gate mostly reacts to how long a question is, and exact file-and-section accuracy is fifty percent on an independent set.
+> That's the rule here: an answer with an address, or no answer. In six hundred and eighty answers, not one broke that rule.
 
-**RG-6 · 1:21–1:37** — говорите ~15 с → пауза 1 с
+**RG-7 · 1:14–1:26** — говорите ~11 с → пауза 1 с
 
-> Retrieval is hand-written — BM25, fusion, parent documents, standard library only. Recall at twenty: seventy-six percent on three hundred and fourteen independent questions, and seventy-two on the eighty I held out.
+> And it's measured, not assumed. On three hundred and fourteen questions it had never seen, the right section comes up three times out of four.
 
-**RG-7 · 1:37–1:51** — говорите ~13 с → пауза 1 с
+**RG-8 · 1:26–1:38** — говорите ~11 с → пауза 1 с
 
-> Every look at those eighty is logged. Three so far — and one is marked unsanctioned, because a design decision was made with them inside the numbers.
-
-**RG-8 · 1:51–2:08** — говорите ~16 с → пауза 1 с
-
-> And I checked the ruler itself on a public benchmark: nDCG at ten, zero point six six six, against a published zero point six six five. The predictions were written down before the run.
-
-**RG-9 · 2:08–2:15** — говорите ~6 с → пауза 1 с
-
-> Six hundred and eighty answers — and not one without an address.
+> It all runs on a laptop, so no document leaves the building. Your policies, contracts or knowledge base can work the same way.
 
 ### Цифры ролика
 
 Пути — от `~/Documents/Prepare/`.
 
-| Звучит                                            | Значение                                            | Источник                                             |
-| ------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------- |
-| four documents, a hundred and ten thousand tokens | 4 свода, ~110K токенов                              | `rag/README.md:3-7`; `rag/MEASUREMENTS.md:2767-2774` |
-| twenty-two gates: sixteen at commit, six outside  | на экране                                           | `CODE_QUALITY_GATES.md:679-684`                      |
-| two hundred and ten out of two hundred and ten    | отказов при пустом контексте                        | `rag/README.md:1820-1821`                            |
-| fifty percent                                     | 12/24, точная пара (файл, §) на независимом holdout | `rag/README.md:27, 2058-2069`                        |
-| seventy-six percent on three hundred and fourteen | 76% [71..80], гибрид, все 314 независимых вопросов  | `rag/README.md:1300-1304`                            |
-| seventy-two on the eighty                         | 72% [62..83], 58 из 80, чистый holdout              | `rag/MEASUREMENTS.md:161-174`                        |
-| three looks, one unsanctioned                     | реестр взглядов                                     | `rag/MEASUREMENTS.md:31-41`                          |
-| zero point six six six / six six five             | nDCG@10 на BEIR/SciFact, 300 запросов               | `rag/MEASUREMENTS.md:3010-3029`                      |
-| six hundred and eighty answers                    | 0 без адреса, 0,3% выдуманных пар                   | `rag/README.md:1782-1791`                            |
+| Звучит | Значение | Источник |
+| --- | --- | --- |
+| four documents, twenty-two thousand lines | 4 свода, 22 926 строк (30.09) | команда 0 на экране (`wc -l`) |
+| Twenty-two checks: sixteen at every commit, six outside | на экране | `CODE_QUALITY_GATES.md:679` |
+| not one broke that rule (680 answers) | 460 с настоящим адресом, 218 «не покрыто», 2 с несуществующим разделом — ответа без строки «АДРЕС» нет | `rag/README.md:1782-1790`; на экране |
+| three hundred and fourteen questions, three times out of four | гибрид top-20: 239/314 = 76 % (замер 30.09) | вторая вкладка, `eval_retrieval.py --all` |
 
 ---
+## 5. Quality contour — senior-team standards · всего 1:46 · 204 слов
 
-## 5. Quality contour — 22 gates, hard-capped · всего 2:14
+**QC-1 · 0:00–0:13** — говорите ~12 с → пауза 1 с
 
-**QC-1 · 0:00–0:15** — говорите ~14 с → пауза 1 с
+> AI coding agents write code fast — and they happily report done on things nobody checked. That's how prototypes end up in production.
 
-> This is a quality contour: a rulebook plus gates that deploy into any repository. It exists because an AI coding agent will happily report green on something nobody checked.
+**QC-2 · 0:13–0:26** — говорите ~12 с → пауза 1 с
 
-**QC-2 · 0:15–0:29** — говорите ~13 с → пауза 1 с
+> Every service I ship runs under this quality contour: a catalog of twenty-two automatic checks. Here it runs on this very site.
 
-> Here it runs on this very site. Every gate prints how much it actually looked at — because "no problems found" means nothing if it saw no code.
+**QC-3 · 0:26–0:36** — говорите ~9 с → пауза 1 с
 
-**QC-3 · 0:29–0:42** — говорите ~12 с → пауза 1 с
+> Each check reports how much it actually looked at — because no problems found means nothing if it saw no code.
 
-> Now I break a gate: one number, and a five-hundred-line limit becomes fifty thousand. It still passes — and still calls itself a five-hundred-line check.
+**QC-4 · 0:36–0:49** — говорите ~12 с → пауза 1 с
 
-**QC-4 · 0:42–1:04** — тишина 2 с (ключевой кадр) → говорите ~19 с → пауза 1 с
+> Now I break one on purpose: a five-hundred-line limit becomes fifty thousand. It still passes — and still calls itself a five-hundred-line check.
 
-> This is the doctor. It feeds every gate a planted violation — a canary. A gate that's declared, wired in, and silent on its own canary isn't weak. It's lying — and that's the one thing that fails the run.
+**QC-5 · 0:49–1:04** — тишина 2 с (ключевой кадр) → говорите ~12 с → пауза 1 с
 
-**QC-5 · 1:04–1:10** — говорите ~5 с → пауза 1 с
+> This is the doctor. It plants a known mistake in front of every check. A check that stays silent isn't just weak — it's lying, and that fails the whole run.
+
+**QC-6 · 1:04–1:09** — говорите ~4 с → пауза 1 с
 
 > Put the line back, and the lie is gone.
 
-**QC-6 · 1:10–1:35** — говорите ~24 с → пауза 1 с
+**QC-7 · 1:09–1:19** — говорите ~9 с → пауза 1 с
 
-> The doctor has limits, too. For a month, one gate here misread its own tool: whenever there was a warning, it reported "zero modules checked" — and the doctor still rated it fine. Now a test replays that bug, so if an update brings it back, it goes red the same day.
+> The contour also limits itself: the number of checks is capped at twenty-two, so it can't quietly bloat.
 
-**QC-7 · 1:35–1:51** — говорите ~15 с → пауза 1 с
+**QC-8 · 1:19–1:31** — говорите ~11 с → пауза 1 с
 
-> The rulebook limits itself. Twenty-two gates, and the budget is spent: a twenty-third gets in only by swapping one out. Old debt is frozen in a snapshot that can only shrink.
+> It runs in eight repositories. Every problem it missed is logged — and each new one has to name the check that should have caught it.
 
-**QC-8 · 1:51–2:08** — говорите ~16 с → пауза 1 с
+**QC-9 · 1:31–1:46** — говорите ~14 с → пауза 1 с
 
-> It runs in seven repositories, and the field log holds twenty-five findings, each one classified. From the next one on, a test rejects any finding that doesn't name which check should have caught it.
-
-**QC-9 · 2:08–2:14** — говорите ~5 с → пауза 1 с
-
-> Nothing counts as done unless a mechanism can refuse it.
+> That's how two services went from a bare spec to production in under three weeks — checked like a corporate product. Nothing counts as done unless a mechanism can refuse it.
 
 ### Цифры ролика
 
-| Звучит               | Значение                                                  | Источник                                                                                                  |
-| -------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| for a month          | урок L6: два гейта месяц судили неверно при вердикте AUTO | `delivery/archive/INDEX.md:24`; `delivery/archive/2026-08-07-contour-bootstrap/observed.md:40-51`         |
-| twenty-two gates     | 16 на коммите + 6 вне                                     | `~/Documents/Prepare/CODE_QUALITY_GATES.md:679-694`                                                       |
-| seven repositories   | контур с доктором и хуками                                | portfolio-site, voice-interview-coach, local-web-agent, lash-try-on, Fake office, G connect, Ahrefs cases |
-| twenty-five findings | F1–F25 по шести развёртываниям                            | `~/Documents/Prepare/field/FIELD-LOG.md`; `~/Documents/Prepare/CONTOUR-EN.md:99-109`                      |
+| Звучит | Значение | Источник |
+| --- | --- | --- |
+| a catalog of twenty-two automatic checks | 16 на коммите + 6 вне | `~/Documents/Prepare/CODE_QUALITY_GATES.md:679-694` |
+| five-hundred-line limit becomes fifty thousand | правка команды 2 | на экране |
+| capped at twenty-two | «22 из 22 по бюджету — БЮДЖЕТ ИСЧЕРПАН» | на экране (команда 6) |
+| eight repositories | контур с доктором и хуками (30.09) | portfolio-site, voice-interview-coach, local-web-agent, lash-try-on, Fake office, G connect, Ahrefs cases, Parsing and Outri |
+| each new one has to name the check | поле обязательно с F26; сейчас F1–F25 | `~/Documents/Prepare/field/FIELD-LOG.md:11-24` |
+| two services ... under three weeks | 10.09 → 24.09 и 16.09 → 24.09 | слово владельца 28.09; git `Ahrefs cases`, `Parsing and Outri` |
 
 ---
-
 ## Короткие версии (60–90 с)
 
-Для личных сообщений владельцам SEO-агентств. Свой голос, свои блоки.
+Для личных сообщений владельцам агентств. Свой голос, свои блоки; экран режется из длинной записи.
 
-### LinkBuilder — 175 слов · всего 1:31
+### LinkBuilder — 133 слов · всего 1:09
 
-**LBs-1 · 0:00–0:18** — говорите ~17 с → пауза 1 с
+**LBs-1 · 0:00–0:16** — говорите ~15 с → пауза 1 с
 
-> This is LinkBuilder — a link-building CRM I designed and built with AI coding agents. In production, one operator did the work of a team of five. This is a demo copy; the data is invented.
+> Link building usually eats a whole team. In production, this platform let one operator do the work of five people. This is a demo copy — the data is invented.
 
-**LBs-2 · 0:18–0:34** — говорите ~15 с → пауза 1 с
+**LBs-2 · 0:16–0:28** — говорите ~11 с → пауза 1 с
 
-> It covers the whole cycle: competitors' backlinks come in, every site passes quality gates, outreach goes out in throttled batches, and replies land in one inbox where the AI drafts an answer.
+> It checks every site before outreach, sends in safe batches, and puts every reply in one inbox, where the AI writes a draft.
 
-**LBs-3 · 0:34–0:54** — тишина 2 с (ключевой кадр) → говорите ~17 с → пауза 1 с
+**LBs-3 · 0:28–0:46** — тишина 2 с (ключевой кадр) → говорите ~15 с → пауза 1 с
 
-> This one never went out. The webmaster said the budget is frozen — and the AI still wrote that two hundred and seventy dollars works for us. The check blocked it. Only a person can answer.
+> This one never went out. The webmaster said the budget is frozen, and the AI still offered two hundred and seventy dollars. The check caught it. Only a person can answer.
 
-**LBs-4 · 0:54–1:04** — говорите ~9 с → пауза 1 с
+**LBs-4 · 0:46–0:55** — говорите ~8 с → пауза 1 с
 
-> Every AI letter answers to ten versioned contracts, and auto-send stays off until the numbers clear the bar.
+> Then every bought link is watched, and a lost one comes back with a letter — after a second check.
 
-**LBs-5 · 1:04–1:22** — говорите ~17 с → пауза 1 с
+**LBs-5 · 0:55–1:09** — говорите ~13 с → пауза 1 с
 
-> Then every link is watched — still there, still dofollow, still indexed. A lost link gets a second check before anyone asks for it back: nearly one "dead" link in five turned out to be alive.
+> I build systems like this fast: my latest outreach service went live for an SEO agency in eight days. If your team still does this by hand, message me.
 
-**LBs-6 · 1:22–1:31** — говорите ~8 с → пауза 1 с
+### Веб-агент — 112 слов · всего 1:01
 
-> Eleven thousand backend tests hold it together. If your team still does this by hand, message me.
+**WAs-1 · 0:00–0:13** — говорите ~12 с → пауза 1 с
 
-### Local Web Agent — 160 слов · всего 1:25
+> Comparing competitors by hand takes hours. This agent does it for you: a few links and a question, and it reads each site in a real browser.
 
-**WAs-1 · 0:00–0:20** — говорите ~19 с → пауза 1 с
+**WAs-2 · 0:13–0:22** — говорите ~8 с → пауза 1 с
 
-> This is a research agent that lives on my laptop. I paste links and ask a question — it opens each site in a real browser and quotes where it found the answer. No cloud: every model runs right here.
+> Here I ask which of three well-known link-building guides is the most practical for a small agency.
 
-**WAs-2 · 0:20–0:37** — говорите ~16 с → пауза 1 с
+**WAs-3 · 0:22–0:38** — тишина 2 с (ключевой кадр) → говорите ~13 с → пауза 1 с
 
-> It also names its own limit: it didn't read all of one site. That sentence is written by code — when I asked the model to say it, it did about half the time.
+> The verdict: Backlinko, ninety-five out of a hundred — over a hundred and seventy concrete strategies. Ahrefs eighty-five, Moz seventy-five.
 
-**WAs-3 · 0:37–0:48** — говорите ~10 с → пауза 1 с
+**WAs-4 · 0:38–0:51** — говорите ~12 с → пауза 1 с
 
-> A confident fact needs a quote from the page — if the quote isn't really there, the fact is thrown out.
+> Every confident fact has a quote from the page behind it, and it says honestly what it didn't finish reading — that line is written by code.
 
-**WAs-4 · 0:48–1:03** — говорите ~14 с → пауза 1 с
+**WAs-5 · 0:51–1:01** — говорите ~9 с → пауза 1 с
 
-> Now live, with the browser visible. It looks at the page, plans and acts — and fourteen hard rules are checked in code before any action reaches the browser.
+> It all runs on my laptop, and the code is open. Need a bot like this for your market? Message me.
 
-**WAs-5 · 1:03–1:15** — тишина 2 с (ключевой кадр) → говорите ~9 с → пауза 1 с
+### Контур качества — 116 слов · всего 1:00
 
-> And here it stops. Paying can't be undone, so the agent prepares everything, and I press the button.
+**QCs-1 · 0:00–0:12** — говорите ~11 с → пауза 1 с
 
-**WAs-6 · 1:15–1:25** — говорите ~9 с → пауза 1 с
+> AI coding agents write code fast — and happily report done on things nobody checked. That's how prototypes end up in production.
 
-> Four hundred and fifty-one tests, twenty-seven real websites. The code is open; the link is under the video.
+**QCs-2 · 0:12–0:25** — говорите ~12 с → пауза 1 с
 
-### Контур качества — 161 слово · всего 1:25
+> Every service I ship runs under this quality contour: automatic checks on every change, and each one shows how much it actually looked at.
 
-**QCs-1 · 0:00–0:15** — говорите ~14 с → пауза 1 с
+**QCs-3 · 0:25–0:31** — говорите ~5 с → пауза 1 с
 
-> This is a quality contour: a rulebook plus gates that deploy into any repository. It exists because an AI coding agent will happily report green on something nobody checked.
+> Now I break a check on purpose. It still passes.
 
-**QCs-2 · 0:15–0:26** — говорите ~10 с → пауза 1 с
+**QCs-4 · 0:31–0:44** — тишина 2 с (ключевой кадр) → говорите ~10 с → пауза 1 с
 
-> Every gate prints how much it actually looked at — "no problems found" means nothing if it saw no code.
+> But the doctor plants a known mistake in front of every check. A check that stays silent is lying — and that fails the whole run.
 
-**QCs-3 · 0:26–0:35** — говорите ~8 с → пауза 1 с
+**QCs-5 · 0:44–1:00** — говорите ~15 с → пауза 1 с
 
-> Now I break a gate: one number, and a five-hundred-line limit becomes fifty thousand. It still passes.
+> It runs in eight repositories. That's how two services went from a bare spec to production in under three weeks — checked like a corporate product. Want yours built the same way? Message me.
 
-**QCs-4 · 0:35–0:52** — тишина 2 с (ключевой кадр) → говорите ~14 с → пауза 1 с
-
-> This is the doctor. It feeds every gate a planted violation. A gate that stays silent on its own canary isn't weak — it's lying, and that fails the run.
-
-**QCs-5 · 0:52–1:12** — говорите ~19 с → пауза 1 с
-
-> Twenty-two gates, and the budget is spent: a new one gets in only by swapping one out. It runs in seven repositories, and the field log holds twenty-five findings — each must name the check that should have caught it.
-
-**QCs-6 · 1:12–1:25** — говорите ~12 с → пауза 1 с
-
-> That's how two services went from a bare spec to production in under three weeks. Nothing counts as done unless a mechanism can refuse it.
-
-### Число, которого нет в длинных версиях
-
-| Звучит            | Значение                                                                    | Источник                                                                                          |
-| ----------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| under three weeks | два сервиса SEO-агентства, 10.09 → 24.09 (SEO-кейсы), 16.09 → 24.09 (outreach) | слово владельца 28.09; git `Ahrefs cases` (первый коммит 10.09, выкладка 24.09) и `Parsing and Outri` |
-
-Сервисы под NDA агентства: в ролике — только срок, без названий, экранов и клиентов.
-
----

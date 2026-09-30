@@ -16,24 +16,24 @@
 export const text = {
   "about.title": "About",
   "about.description":
-    "AI automation engineer: production AI platforms and local AI agents.",
+    "AI automation engineer: AI services for agencies — MVP in a week, production in two.",
   "about.body":
-    "AI / full-stack product engineer. I ship LLM products end to end and run them in production: a sole-built outreach CRM with 11,000+ backend tests, two client services shipped to production in 8 and 14 days, and fully-local agents that listen, browse and cite.",
+    "I build AI services that take manual work off a team. My latest two, for an SEO agency, went from a bare spec to production in 8 and 14 days. My outreach platform let one operator do the work of a team of five. My research and voice agents run entirely on a laptop: no cloud AI, no data leaving the machine.",
   "about.how":
-    "I build with AI coding agents at team speed, inside a quality contour I designed — specs, 22 gates under a hard cap, and a doctor that audits the gates themselves. Architecture, contracts and the final review stay mine.",
+    "How one engineer ships at team speed: AI coding agents write the code inside a quality contour I designed — 22 automatic checks on every change, and the checks themselves are tested. Anything that costs money or can't be undone waits for a person. Architecture, contracts and the final review stay mine.",
   "about.cv": "Download CV",
   "about.cvHint": "Here",
   "home.title": "Anton Aspidov — AI Automation Engineer",
   "home.description":
-    "Production AI platforms plus fully-local voice, web and AR agents. LLMs under contract.",
+    "AI automation for SEO and marketing agencies: MVP in a week, production in two, checked to senior-team standards. Outreach platforms, research agents, voice assistants.",
   "home.role": "AI Automation / LLM Application Engineer",
   "home.photoAlt": "Anton Aspidov",
   "home.introPlay": "Play the intro video (with sound)",
   "home.pitch":
-    "I put LLMs under contract: a production platform built to run with a single operator, and fully-local agents that listen, browse and see.",
-  "home.status": "🟢 Open to remote / contract · UTC+3",
+    "MVP in a week, production in two. I build AI services that take manual work off your team — checked to the standards of a senior engineering team.",
+  "home.status": "🟢 Open to projects and remote roles · UTC+3",
   "home.projectsHint":
-    "Open any card to see the full case, proof links and implementation details.",
+    "Each card: the problem it solves and the result. Open a card for the demo and the engineering details.",
   "nav.projects": "Projects",
   "nav.about": "About",
   "nav.contact": "Contact",
@@ -44,13 +44,13 @@ export const text = {
   "theme.light": "Switch to light theme",
   "theme.dark": "Switch to dark theme",
   "projects.title": "Projects",
-  "project.contract": "Under contract",
+  "project.contract": "Built-in safeguard",
   "project.stack": "Stack",
   "project.updated": "Updated",
   "project.proof": "Proof",
   "project.video": "Watch demo",
   "proof.github": "Code on GitHub",
-  "proof.brief": "Technical brief · PDF",
+  "proof.brief": "Engineering details · PDF",
   "status.production": "Production",
   "status.local-demo": "Local demo",
   "status.poc": "PoC",

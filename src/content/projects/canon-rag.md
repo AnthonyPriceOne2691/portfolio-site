@@ -1,26 +1,26 @@
 ---
-title: "RAG over a rulebook"
-oneLiner: "A search desk over 110K tokens of rules: it answers with a citation, or it says the question is not covered."
-metric: "0 uncited answers"
+title: "Answers from your documents — with the source"
+oneLiner: "Ask your company’s documents a question and get an answer with the exact file and section — or an honest “not covered” instead of a made-up reply."
+metric: "680 answers, 0 without an address"
 status: "local-demo"
 stack: ["Python", "Ollama", "qwen3:8b", "bge-m3", "BM25", "RRF"]
 proof:
   brief: "/briefs/canon-rag.pdf"
-contract: 'A question the rulebook does not cover stops at the gate: the model never sees a line of rule text and says "not covered". Across 680 answers, not one came without a (file, §) address.'
+contract: "A question the documents don’t cover stops at the gate: the AI never sees a line of them and answers “not covered”. Across 680 answers, not one came without an address — a real file and section, or “not covered”."
 featured: false
 order: 5
-updated: 2026-09-26
+updated: 2026-09-30
 draft: false
 ---
 
-Search across four rulebooks: question → hybrid retrieval → selector → local
-model → an answer with an address, or a refusal. All on the laptop, no cloud.
+**The problem:** a team asks the same questions about internal rules, and a chatbot
+that guesses is worse than none.
 
-- BM25, RRF fusion and parent-document retrieval written by hand, no dependencies outside stdlib
-- The instrument is calibrated against someone else's benchmark: nDCG@10 **0.666** vs a 0.665 anchor (BEIR/SciFact, 300 queries)
-- recall@20 — **76%** [71..80] on 314 independent questions, **72%** [62..83] on the 80 held out
-- Across 680 answers: none without an address, 0.3% fabricated pairs
-- Every look at the holdout is logged — three so far, and one is recorded as unsanctioned, because an architectural choice was made with the holdout inside the denominator
+**The result:** a search desk that answers only from your documents and shows where
+each answer came from.
 
-Limits are stated, not hidden: exact (file, section) accuracy is 50% on an
-independent holdout, and that line sits in the README above the strengths.
+- **Checkable answers:** an answer names the file and section it came from — open it and the same words are there
+- **Knows its limits:** a question the documents don't cover gets “not covered”, not an invention
+- **Measured, not assumed:** tested on 314 independent questions, with the weak spots written down next to the strong ones
+- **Private:** runs on a laptop; no document leaves the building
+- **Proven on a real rulebook:** four documents, 110K tokens — the rules my own development follows

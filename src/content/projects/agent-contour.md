@@ -1,28 +1,27 @@
 ---
-title: "A quality contour for AI agents"
-oneLiner: "A rulebook plus gates that deploy into any repository and stop an agent from reporting green on something unchecked."
-metric: "22 gates, hard-capped"
+title: "Quality contour: senior-team standards for AI-built software"
+oneLiner: "The quality system behind every service I ship: AI coding agents write at team speed, and automatic checks on every change hold the result to the level of a senior engineering team."
+metric: "2 services live in under 3 weeks"
 status: "production"
 stack: ["Python", "Bash", "pre-commit", "GitHub Actions", "dependency-cruiser"]
 proof:
   brief: "/briefs/agent-contour.pdf"
 contract: "Only what a mechanism can reject counts as done: a gate that cannot turn red is treated as broken."
 featured: false
-order: 6
-updated: 2026-09-26
+order: 2
+updated: 2026-09-30
 draft: false
 ---
 
-An agent ships work that **looks** finished. The usual failure is not bad code —
-it is a green light over a check that verified nothing.
+**The problem:** AI coding agents are fast — and happily report “done” on things
+nobody checked. That is how prototypes end up in production.
 
-- 22,600 lines of canon across four documents; 22 gates under a hard cap — a twenty-third comes in only by swapping one out
-- Deployed in seven repositories, including this site: gates run on every push
-- A separate doctor audits the gates themselves: declared, wired and silent on its own canary counts as a lie
-- Ratchets instead of bans: debt is legalised by a snapshot and may only shrink
-- A fifth axis covers model output: prompts, pins, schemas — and corrupting a prompt takes the place of a mutation gate
-- A field log from six deployments: 25 findings, each classified — and a test now rejects any new finding that does not name the check that should have caught it
-- A separate rig canon covers the agent _inside_ a product — tools, authority, untrusted input — with a sensitivity stand: 50 runs proving the mechanics can actually go red
+**The result:** software built at AI speed and checked like a corporate product. Two
+services for an SEO agency went from a bare spec to production in under three weeks,
+in parallel.
 
-Proven on itself: while this site was being built, the contour surfaced three
-checks that looked alive but judged wrong.
+- **22 automatic checks on every change** — tests, code quality, architecture, security; nothing merges while a check is red
+- **The checks are checked:** a “doctor” plants a known mistake in front of every check — a check that stays silent is flagged as broken
+- **Lean on purpose:** the number of checks is capped; a new one comes in only by replacing an old one
+- **Proven in the field:** runs in eight repositories, including this site; every missed problem is logged together with the check that should have caught it
+- **A written rulebook behind it:** 22,000+ lines across four documents — searchable through my RAG desk
