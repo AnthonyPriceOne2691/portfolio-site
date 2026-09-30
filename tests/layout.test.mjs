@@ -401,7 +401,8 @@ test("аккордеон на телефоне: раскрытая карточ�
     requestAnimationFrame(tick);
   });
 
-  await cards.nth(1).locator("summary").click();
+  // По заголовку, не по шапке: Playwright докручивает шапку, не видимую целиком (30.09: +12 px на шрифте Linux).
+  await cards.nth(1).locator("summary .title").click();
   await until(
     page,
     (target) => document.getElementById(target).open === true,
