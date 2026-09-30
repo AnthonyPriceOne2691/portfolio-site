@@ -14,41 +14,15 @@
  *
  * и закоммить результат.
  */
-import { readFileSync, readdirSync, mkdirSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 
-const ROOT = fileURLToPath(new URL("../", import.meta.url));
-const read = (rel) => readFileSync(ROOT + rel, "utf8");
+import { hook, ogInputs, projects, read, role, ROOT } from "./og-inputs.mjs";
+
 const TOKENS = read("src/styles/tokens.css");
 const CANVAS = read("src/styles/canvas.css");
 const FONT =
   '"Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
-
-/** Роль — из словаря, чтобы не разошлась с сайтом. */
-function role() {
-  return read("src/lib/text.ts").match(/"home\.role":\s*"([^"]+)"/)?.[1] ?? "";
-}
-
-/** Метрика и название каждого опубликованного проекта, в порядке order. */
-function projects() {
-  const dir = ROOT + "src/content/projects/";
-  return readdirSync(dir)
-    .filter((f) => f.endsWith(".md"))
-    .map((f) => {
-      const fm = readFileSync(dir + f, "utf8").split("---")[1] ?? "";
-      const get = (k) =>
-        fm.match(new RegExp("^" + k + ': "(.*)"$', "m"))?.[1] ?? "";
-      return {
-        metric: get("metric"),
-        title: get("title"),
-        order: Number(fm.match(/^order:\s*(\d+)/m)?.[1] ?? 99),
-        draft: /^draft:\s*true/m.test(fm),
-      };
-    })
-    .filter((p) => !p.draft)
-    .sort((a, b) => a.order - b.order);
-}
 
 const ogPage = () =>
   [
@@ -65,6 +39,7 @@ const ogPage = () =>
     "     padding:0 5rem;font-family:" + FONT + ";color:var(--text)}",
     "h1{font-size:5rem;line-height:1;letter-spacing:-.04em;margin:0 0 .9rem}",
     ".role{font-size:1.9rem;font-weight:600;color:var(--text-muted);margin:0}",
+    ".hook{font-size:2.1rem;font-weight:700;color:var(--accent);margin:.35rem 0 0}",
     ".metrics{display:flex;gap:1.1rem}",
     "/* flex:1 1 0 + min-width:0 обязательны: у флекс-элемента базовый",
     "   min-width:auto, он НЕ сжимается меньше своего текста. Длинное название",
@@ -77,7 +52,11 @@ const ogPage = () =>
     ".host{position:absolute;inset:auto 5rem 2.6rem auto;font-size:1.15rem;",
     "      font-weight:600;color:var(--accent)}",
     "</style></head><body><div><h1>Anton Aspidov</h1>",
-    '<p class="role">' + role() + '</p></div><div class="metrics">',
+    '<p class="role">' +
+      role() +
+      '</p><p class="hook">' +
+      hook() +
+      '</p></div><div class="metrics">',
     projects()
       .map(
         (p) =>
@@ -140,6 +119,12 @@ mkdirSync(ROOT + "public", { recursive: true });
     quality: 90,
   });
   console.log("  public/og.jpg — метрик: " + projects().length);
+  // Снимок текстов, из которых собран кадр: по нему `tests/og-fresh.test.mjs`
+  // узнаёт, что карточки или герой поменялись, а превью — нет.
+  writeFileSync(
+    ROOT + "scripts/og-inputs.json",
+    JSON.stringify(ogInputs(), null, 2) + "\n",
+  );
   await p.close();
 }
 

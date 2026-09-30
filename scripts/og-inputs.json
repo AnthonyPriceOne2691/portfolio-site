@@ -1,0 +1,26 @@
+{
+  "role": "AI Automation / LLM Application Engineer",
+  "hook": "MVP in a week, production in two.",
+  "projects": [
+    {
+      "metric": "5 people → 1 operator",
+      "title": "LinkBuilder: link building on autopilot"
+    },
+    {
+      "metric": "2 services live in under 3 weeks",
+      "title": "Quality contour: senior-team standards for AI-built software"
+    },
+    {
+      "metric": "Every confident fact quoted",
+      "title": "Local Web Agent: competitor research in minutes"
+    },
+    {
+      "metric": "100% offline",
+      "title": "Voice agent: talks in real time, works offline"
+    },
+    {
+      "metric": "680 answers, 0 without an address",
+      "title": "Answers from your documents — with the source"
+    }
+  ]
+}
