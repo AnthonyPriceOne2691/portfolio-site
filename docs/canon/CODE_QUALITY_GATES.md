@@ -9,7 +9,7 @@
 > ([AGENT_STACK.md](AGENT_STACK.md) §2.A), потом этот канон.
 > © 2026 — proprietary; правообладатель и условия — в [LICENSE](LICENSE).
 
-**Canon version:** `cqg@2.38` · 2026-09-30 (Changelog — в конце файла). Версию впиши в
+**Canon version:** `cqg@2.42` · 2026-09-30 (Changelog — в конце файла). Версию впиши в
 `delivery/CONSTITUTION.md` / `STATUS.md` (`stack:`) при развёртывании.
 
 **Самодостаточный документ.** Всё, что нужно для этой системы качества, — здесь: правила с порогами,
@@ -2388,6 +2388,24 @@ jobs:
           # скажут о своей беде сами, а предупреждение называет причину.
           if [ -f backend/pyproject.toml ]; then
             backend/.venv/bin/pip install -e backend || echo "::warning::editable-установка backend не удалась — mypy может не видеть рантайм-зависимости проекта"
+          fi
+          # ⚠ Продукт ставится ИЗ LOCK, если он есть. `pip install -e .` решает
+          # версии по диапазонам из pyproject и тянет с PyPI свежее того, что
+          # поедет в прод: mypy strict тогда судит не те версии, что образ, а
+          # аудит зависимостей считает не то дерево. Замер `outreach-donors`
+          # 30.09: `py_total` 12 в CI против 0 по `uv export --frozen` — lock
+          # обходили ровно этой строкой.
+          # uv ставится В VENV ОСНАСТКИ, если его нет на раннере: без него ветвь
+          # ниже молча не срабатывала, и гейты мерили окружение вместо продукта.
+          if [ -f uv.lock ] && ! command -v uv >/dev/null 2>&1; then
+            "$VENV_DIR"/bin/pip install uv >/dev/null 2>&1 || echo "::warning::uv не поставился — версии в гейтах могут разойтись с прод-образом"
+          fi
+          UV_BIN=$(command -v uv 2>/dev/null || echo "$VENV_DIR/bin/uv")
+          if [ -f uv.lock ] && [ -x "$UV_BIN" ]; then
+            echo "deps: продукт из uv.lock (версии как в проде)"
+            "$UV_BIN" export --frozen --no-hashes --no-emit-project --all-extras \
+              | backend/.venv/bin/pip install -r /dev/stdin \
+              || echo "::warning::установка из uv.lock не удалась — гейты увидят версии, отличные от прод-образа"
           fi
 
       - name: Install frontend deps
@@ -8879,7 +8897,49 @@ if [[ -n "$PIP_AUDIT" && -n "$py_manifest" ]]; then
   #
   # Различать «упал» и «нашёл ноль» по коду возврата НЕЛЬЗЯ: pip-audit выходит
   # ненулём и когда честно нашёл уязвимости. Признак — разобрался ли JSON.
-  pa_json=$("$PIP_AUDIT" --format=json --progress-spinner=off 2>/dev/null || true)
+  # ⚠ НАСЕЛЕНИЕ аудита — дерево ПРОДУКТА, а не окружение, из которого зовут.
+  # `pip-audit` без аргументов проверяет текущий venv, и это два разных населения
+  # сразу: в CI джоба ставит в него инструменты гейтов, а локально venv отстаёт от
+  # lock-файла. Замер `outreach-donors` 30.09: CI дал `py_total: 12`, локальный
+  # venv — 1 (pyjwt 2.14.0), а по `uv export --frozen` — **ноль**, потому что в
+  # lock давно 2.15.0 и прод ставится `uv sync --locked`. Три числа об одном
+  # проекте, и ни одно не про то, что поедет в прод.
+  #
+  # Поэтому при наличии lock-файла спрашиваем ЕГО: `--no-deps --disable-pip`,
+  # чтобы pip-audit не разрешал зависимости заново по сети (иначе `>=` уедет к
+  # свежей версии с PyPI — ровно тот обход lock, который и дал 12).
+  pa_src="окружение"
+  pa_req=""
+  # ⚠ `uv` ищется И В VENV ОСНАСТКИ, не только в PATH. Раннер CI не обязан его
+  # иметь: замер 30.09 — ветвь с lock молча не сработала, гейт напечатал «мерено
+  # по ОКРУЖЕНИЮ» и предъявил 12. Само сообщение спасло разбор (без него
+  # молчаливый фолбэк неотличим от измерения продукта), но правка без
+  # инструмента на раннере остаётся объявлением.
+  UV_BIN=$(command -v uv 2>/dev/null || true)
+  for c in "$VENV/bin/uv" "$BE_DIR/.venv/bin/uv" ".venv/bin/uv"; do
+    [[ -n "$UV_BIN" ]] && break
+    [[ -x "$c" ]] && UV_BIN="$c"
+  done
+  if [[ -n "$UV_BIN" ]]; then
+    for lock in uv.lock "$BE_DIR/uv.lock"; do
+      [[ -f "$lock" ]] || continue
+      pa_req=$(mktemp)
+      if (cd "$(dirname "$lock")" && "$UV_BIN" export --frozen --no-hashes \
+            --no-emit-project --all-extras) > "$pa_req" 2>/dev/null; then
+        pa_src="uv.lock"
+      else
+        rm -f "$pa_req"; pa_req=""
+      fi
+      break
+    done
+  fi
+  if [[ -n "$pa_req" ]]; then
+    pa_json=$("$PIP_AUDIT" -r "$pa_req" --no-deps --disable-pip \
+              --format=json --progress-spinner=off 2>/dev/null || true)
+    rm -f "$pa_req"
+  else
+    pa_json=$("$PIP_AUDIT" --format=json --progress-spinner=off 2>/dev/null || true)
+  fi
   py_total=$(printf '%s' "$pa_json" | python3 -c 'import json,sys
 try: d=json.load(sys.stdin)
 except Exception: raise SystemExit(1)
@@ -8925,6 +8985,16 @@ py_total=$(num "$py_total"); js_crit=$(num "$js_crit")
 js_high=$(num "$js_high");  js_total=$(num "$js_total")
 
 current="py_total=$py_total js_critical=$js_crit js_high=$js_high js_total=$js_total"
+# ⚠ НАСЕЛЕНИЕ печатается рядом с числом, а не подразумевается. «12 уязвимостей»
+# без ответа на вопрос «в чём именно» отправляет чинить продукт, когда дело в
+# окружении гейтов (замер 30.09, три разных числа об одном проекте).
+# if, а не `test && cmd`: под `set -e` ложный тест уронил бы шаг — грабля,
+# которую канон уже разбирал у установки зависимостей (lab-11 F9).
+if [[ "${pa_src:-}" == "окружение" && "$py_unchecked" -eq 0 ]]; then
+  printf 'deps-audit: python-половина мерена по ОКРУЖЕНИЮ (lock не найден) — числа включают оснастку гейтов\n' >&2
+elif [[ "${pa_src:-}" == "uv.lock" ]]; then
+  printf 'deps-audit: python-половина мерена по uv.lock — дерево продукта, как в проде\n'
+fi
 # Сколько манифестов реально проверено — нужно ОБЕИМ веткам вывода.
 checked=$(( (1 - py_unchecked) + (1 - js_unchecked) ))
 
@@ -9143,15 +9213,48 @@ def scan_manifests(merge_base: str, paths: list[str]) -> tuple[list[str], int, l
     return findings, checked, locks
 
 
-def report(findings: list[str], strict: bool) -> int:
+def status_sources(window: str) -> list[str]:
+    """Где искать объявления: активная поставка И та, что архивируется В ЭТОМ ЖЕ окне.
+
+    ⚠ **Читать только `delivery/active/STATUS.md` — уже случившийся дефект**
+    (поле `voice-interview-coach`, урок L50a). Объявление живёт одну поставку и на
+    handoff уезжает в `archive/` вместе с ней, а окно диффа при этом ещё содержит
+    коммит, где зависимость появилась: первый же push ПОСЛЕ архивации падал на
+    зависимостях, которые час назад были честно объявлены и проверены. Гейт
+    требовал невозможного — вернуть файл на место, которого у него больше нет.
+
+    Точность важнее удобства: берётся не весь `archive/`, а только те STATUS,
+    которые ИЗМЕНИЛИСЬ в том же окне `merge_base..HEAD`. Старое объявление из
+    прошлогодней поставки не должно молча оправдывать сегодняшнюю зависимость —
+    иначе гейт перестанет что-либо значить на второй архивации.
+    """
+    texts: list[str] = []
+    for path in ["delivery/active/STATUS.md", *_archived_in_window(window)]:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                texts.append(fh.read())
+        except OSError:
+            continue
+    return texts
+
+
+def _archived_in_window(window: str) -> list[str]:
+    changed = git("diff", "--name-only", window).splitlines()
+    return [
+        p
+        for p in changed
+        if p.startswith("delivery/archive/") and p.endswith("STATUS.md")
+    ]
+
+
+def report(findings: list[str], strict: bool, window: str) -> int:
     """Сверка находок с объявлениями в STATUS и починка словами."""
-    status = ""
-    try:
-        with open("delivery/active/STATUS.md", encoding="utf-8") as fh:
-            status = fh.read()
-    except OSError:
-        pass
-    ok, malformed = declared(status)
+    ok: set[str] = set()
+    malformed: list[str] = []
+    for status in status_sources(window):
+        found, bad = declared(status)
+        ok |= found
+        malformed.extend(bad)
 
     for bad in malformed:
         print(
@@ -9236,7 +9339,10 @@ def main() -> int:
               "new-dependency: новых зависимостей нет В ПРОЧИТАННОМ — "
               "проверено не всё (причины выше)")
         return 0
-    return report(findings, strict)
+    # Окно — ТО ЖЕ, по которому искали зависимости: объявление и находка
+    # обязаны браться из одного диапазона, иначе архивный STATUS из другого окна
+    # оправдает сегодняшнюю зависимость (см. `status_sources`).
+    return report(findings, strict, f"{merge_base}..HEAD")
 
 
 if __name__ == "__main__":
@@ -10145,10 +10251,30 @@ if (( ${#skipped[@]} )); then
 fi
 
 if (( judged == 0 )); then
-  printf '%s⚠ гейт слоёв пропущен — ни одного конфига контрактов не найдено.\n' "$yellow"
-  printf 'Слои без контракта не проверяет никто: заведи %s/.importlinter (§3.6) или\n' "$BE_DIR"
-  printf '.dependency-cruiser.cjs (§3.6a). Это НЕ «нарушений нет».%s\n' "$reset"
-  exit 0
+  # ⚠ Здесь стоял `exit 0` — при СОБСТВЕННОМ сообщении «Это НЕ «нарушений нет»».
+  # То есть класс был назван верно и лечился надписью о самом себе: хук печатал
+  # жёлтое и проходил за 0,01 с, а в отчёте оставался зелёным. Ровно то, что
+  # `okf@1.16` закрыл у гейта синхронизации доводом «гейт, вышедший 0 и не
+  # посмотревший ни одного файла, хуже отсутствующего» (Delivery §3.1a) — и не
+  # перенёс сюда. **Поле, `outreach-donors` 30.09:** после правки `LINT_BE_DIR=.`
+  # (ради mypy) гейт искал `./.importlinter` вместо `backend/.importlinter`,
+  # печатал этот текст и был зелёным — контракты слоёв не проверял НИКТО, и
+  # заметил это человек глазами, а не прогон.
+  #
+  # Законное отсутствие не исчезает, оно ОБЪЯВЛЯЕТСЯ: роль, которой у проекта
+  # нет, называется в `not-applicable.json` с причиной — тот же приём, что у
+  # шага «Инструменты гейтов на месте».
+  na="scripts/lint/not-applicable.json"
+  if [[ -f "$na" ]] && grep -q '"check_layers_gate.sh"' "$na"; then
+    printf '%s⚠ гейт слоёв объявлен неприменимым в %s — пропуск НАЗВАН, а не тих.%s\n' \
+      "$yellow" "$na" "$reset"
+    exit 0
+  fi
+  printf '%s✗ гейт слоёв не просудил НИЧЕГО — ни одного конфига контрактов не найдено.\n' "$red"
+  printf 'Слои без контракта не проверяет никто: заведи .importlinter (§3.6) или\n'
+  printf '.dependency-cruiser.cjs (§3.6a) — либо объяви роль неприменимой в\n'
+  printf '%s с причиной. Это НЕ «нарушений нет».%s\n' "$na" "$reset"
+  exit 1
 fi
 
 if (( failures == 0 )); then
@@ -11651,22 +11777,29 @@ repos:
         entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && bash scripts/lint/check_grep_gate.sh --rule no-grab-bag-module'
         files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
+      # ⚠ Интерпретатор РЕЗОЛВИТСЯ лестницей, а не берётся вслепую. Зашитый
+      # `backend/.venv/bin/python` отказывает там, где venv лежит не по канонному
+      # пути: `bash: backend/.venv/bin/python: No such file or directory` — гейт
+      # не судит, а ОТКАЗЫВАЕТ, и четыре правила молчат разом. Замер
+      # `outreach-donors` 30.09 (venv и pyproject в корне). Тот же приём и по той
+      # же причине уже стоит у хука mypy и в `merge_guard.sh`; сюда он перенесён
+      # не был — третий рецидив одного класса, и первый, найденный раскаткой.
       - id: silent-except-gate
         name: silent-except — broad-except без raise/лога (AST)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && backend/.venv/bin/python scripts/lint/check_ast_gate.py --rule silent-except'
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" || exit 1; P=""; for c in "${LINT_BE_DIR:-backend}/${LINT_VENV:-.venv}/bin/python" "${LINT_VENV:-.venv}/bin/python" "backend/.venv/bin/python"; do [ -x "$c" ] && { P="$c"; break; }; done; [ -n "$P" ] || P="$(command -v python3)"; "$P" scripts/lint/check_ast_gate.py --rule silent-except'
         files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
       - id: inline-prompt-gate
         name: inline-prompt — LLM-промпт инлайном в .py (AST)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && backend/.venv/bin/python scripts/lint/check_ast_gate.py --rule inline-prompt'
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" || exit 1; P=""; for c in "${LINT_BE_DIR:-backend}/${LINT_VENV:-.venv}/bin/python" "${LINT_VENV:-.venv}/bin/python" "backend/.venv/bin/python"; do [ -x "$c" ] && { P="$c"; break; }; done; [ -n "$P" ] || P="$(command -v python3)"; "$P" scripts/lint/check_ast_gate.py --rule inline-prompt'
         files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
       - id: cpu-in-async-gate
         name: cpu-in-async — разбор/регулярка в цикле внутри async def (AST)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && backend/.venv/bin/python scripts/lint/check_ast_gate.py --rule cpu-in-async'
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" || exit 1; P=""; for c in "${LINT_BE_DIR:-backend}/${LINT_VENV:-.venv}/bin/python" "${LINT_VENV:-.venv}/bin/python" "backend/.venv/bin/python"; do [ -x "$c" ] && { P="$c"; break; }; done; [ -n "$P" ] || P="$(command -v python3)"; "$P" scripts/lint/check_ast_gate.py --rule cpu-in-async'
         files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
 
@@ -11678,7 +11811,7 @@ repos:
       - id: unbounded-list-gate
         name: unbounded-list — эндпоинт отдаёт список без границы (AST)
         language: system
-        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && backend/.venv/bin/python scripts/lint/check_ast_gate.py --rule unbounded-list'
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" || exit 1; P=""; for c in "${LINT_BE_DIR:-backend}/${LINT_VENV:-.venv}/bin/python" "${LINT_VENV:-.venv}/bin/python" "backend/.venv/bin/python"; do [ -x "$c" ] && { P="$c"; break; }; done; [ -n "$P" ] || P="$(command -v python3)"; "$P" scripts/lint/check_ast_gate.py --rule unbounded-list'
         files: ^(backend/.*\.py|pyproject\.toml|setup\.cfg|\.pre-commit-config\.yaml|scripts/lint/.*)$
         pass_filenames: false
 
@@ -11840,6 +11973,10 @@ import-linter>=2.0
 
 | Дата | Версия | Изменение |
 |---|---|---|
+| 2026-09-30 | **2.42** | **Гейт зависимостей требовал вернуть файл на место, которого больше нет.** Объявление живёт одну поставку и на handoff уезжает в `archive/` ВМЕСТЕ С НЕЙ, а окно диффа при этом ещё содержит коммит, где зависимость появилась: первый же push после архивации падал на зависимостях, которые час назад были честно объявлены и проверены. Гейт читал только `delivery/active/STATUS.md`. **Поле — `voice-interview-coach`, урок L50a:** проект починил это у себя, и правка всплыла адаптацией при обновлении; канон за 34 ревизии её не вобрал. Теперь источников два: активный STATUS и те архивные, что ИЗМЕНИЛИСЬ в том же окне `merge_base..HEAD`. ⚠ **Точность важнее удобства:** берётся не весь `archive/` — прошлогоднее объявление не должно молча оправдывать сегодняшнюю зависимость, иначе гейт перестанет значить что-либо на второй архивации. **Два прогона:** объявление, уехавшее в архив В ТОМ ЖЕ окне, засчитывается (на прежнем каноне красное); объявление ВНЕ окна не оправдывает — без второго правка читается как «ищи объявление где угодно». **вес: +36 строк, за что** — `status_sources` с разбором цены, `_archived_in_window` и передача окна. **объём: +1 строк** — эта запись. **класс:** gate-mask-misses-the-population @ scripts/lint/check_new_dependency.py::status_sources |
+| 2026-09-30 | **2.41** | **Гейт слоёв проходил зелёным, не найдя ни одного конфига — при СОБСТВЕННОМ сообщении «Это НЕ „нарушений нет“».** Класс был назван верно и лечился надписью о самом себе: хук печатал жёлтое и выходил нулём за 0,01 с, а в отчёте оставался зелёным. ⚠ **Прежний прогон сьюта это решение ЗАКРЕПЛЯЛ** (`test_no_config_is_a_named_skip` требовал `exit 0`) — то есть канон охранял собственный дефект оракулом. **Поле, `outreach-donors` 30.09:** правка `LINT_BE_DIR=.` (ради mypy, моя же) увела гейт от `backend/.importlinter` к `./.importlinter`; он печатал эту жёлтую строку, и контракты слоёв **не проверял никто**. Нашёл человек глазами при ревью, не прогон. Довод перенесён дословно из `okf@1.16`: «гейт, вышедший 0 и не посмотревший ни одного файла, хуже отсутствующего» (Delivery §3.1a) — там он был применён к одному гейту и не проведён по остальным. **Законное отсутствие не исчезает, оно ОБЪЯВЛЯЕТСЯ:** роль называется в `not-applicable.json` с причиной, как у шага «Инструменты гейтов на месте». **Два прогона:** без конфигов — красное с «не просудил НИЧЕГО» (прежний прогон переписан, а не удалён: он закреплял отменённое решение и обязан сказать об этом); роль объявлена неприменимой — тихо, иначе правка неотличима от «краснеть всегда» (§4.3b). **вес: +20 строк, за что** — ветвь объявления и красный вердикт с разбором. **объём: +1 строк** — эта запись. **класс:** green-without-the-thing @ scripts/lint/check_layers_gate.sh::judged |
+| 2026-09-30 | **2.40** | **Правка `2.39` молча не сработала на первом же прогоне — инструмента не было на раннере.** Ветвь «спроси lock» стояла под `command -v uv`, а раннер CI его иметь не обязан: гейт честно напечатал «мерено по ОКРУЖЕНИЮ (lock не найден)» и предъявил те же `py_total: 12`. ⚠ **Сообщение о населении, добавленное в `2.39`, спасло разбор** — без него молчаливый фолбэк был бы неотличим от измерения продукта, и правку записали бы сделанной. Это ровно то, ради чего печать населения и заводилась, и она окупилась в тот же день. Теперь `uv` ищется И В VENV ОСНАСТКИ, а шаг установки ставит его туда, если на раннере нет. **Класс: правка, чья работа зависит от инструмента, которого правка не обеспечивает** — сама она объявление, а не механизм. **вес: +10 строк, за что** — поиск `uv` лестницей и установка в venv оснастки. **объём: +7 строк, за что** — ветвь установки в шаблоне и эта запись. **класс:** rule-without-an-executor @ scripts/lint/check_deps_audit.sh::UV_BIN |
+| 2026-09-30 | **2.39** | **Три числа об одном проекте, и ни одно не про то, что поедет в прод.** Раскатка на `outreach-donors` дала: CI `py_total: 12`, локальный venv 1, `uv export --frozen` **0**. Причина у всех трёх одна — **население меряется не то**. ① `pip-audit` без аргументов проверяет ТЕКУЩЕЕ окружение, а джоба §8.3 кладёт в тот же venv инструменты гейтов: аудит предъявляет проекту счёт за собственную оснастку. Класс канон уже называл (`cqg@1.9x`, «гейт измерил сам себя») и закрыл тогда ТОЛЬКО случай «манифеста нет». Теперь при наличии lock спрашивается он: `pip-audit -r <export> --no-deps --disable-pip`, и население **печатается рядом с числом** — молчаливый фолбэк на окружение и есть дефект, потому что число из другого населения читается как число про продукт. ② Шаг установки ставил продукт `pip install -e .`, то есть решал версии по диапазонам из pyproject и тянул с PyPI свежее прод-образа: **lock обходили ровно этой строкой**, и mypy strict судил не те версии, что поедут. Теперь при наличии `uv.lock` продукт ставится из него. ③ Четыре AST-хука зашивали `backend/.venv/bin/python` и на раскладке с venv в корне отвечали `No such file` — гейт не судит, а ОТКАЗЫВАЕТ, и четыре правила молчат разом. Лестница поиска та же, что у хука mypy и в `merge_guard.sh`; **третий рецидив одного класса**, и первый, найденный раскаткой, а не полем. **Два прогона на настоящем гейте:** с lock аудит зовётся с `-r` и печатает «мерено по uv.lock» (на прежнем каноне красное); без lock мерится окружение — законно, но НАЗВАНО вслух. ⚠ Правки нашла соседняя сессия проекта разбором прогона, не сьют: сьют судит канон на своём стенде, а раскладка чужого проекта — вход, которого у стенда нет. **вес: +42 строк, за что** — выбор населения с экспортом lock (+22), печать населения (+7), лестница интерпретатора в четырёх хуках и врезка (+9). **объём: +20 строк, за что** — ветвь установки из lock в шаблоне и эта запись. **класс:** gate-mask-misses-the-population @ scripts/lint/check_deps_audit.sh::pa_src |
 | 2026-09-30 | **2.38** | **Доктор объявлял ложь на чужих `README.md` — сверка копий шла по ИМЕНИ файла.** Снимок варианта C несёт свой `README.md` («Снимок канонов»), а `git ls-files` находит файл с этим именем в каждом втором каталоге проекта. Замер `portfolio-site` 30.09 при обновлении: DEAD на `delivery/README.md` и `delivery/evals/smoke/README.md` — файлах, к канону не относящихся вовсе. ⚠ **Ложное КРАСНОЕ на верной раскладке, и починка по такому диагнозу ПОРТИТ проект:** сообщение велит «доложи из docs/canon/», то есть перезаписать рабочие документы канонными. Население сужено до пути: канон и его селфтест кладутся в КОРЕНЬ проекта, оттуда их и зовут, а файл с тем же именем глубже в дереве — чужой. **Два прогона:** чужой `README.md` в `delivery/` и `docs/` не судится (на прежнем каноне красное); копия В КОРНЕ, разошедшаяся со снимком, по-прежнему ловится — без второго правка неотличима от снятия самой проверки. ⚠ **Полигон пришлось научить объявлять провенанс** (`VENDORED.json` с разделом `sha256`): без него доктор честно отвечал SKIP, и оба прогона судили бы пустоту. **вес: +11 строк, за что** — врезка с замером и сужение населения. **объём: +1 строк** — эта запись. **класс:** gate-mask-misses-the-population @ scripts/lint/doctor_deployment.py::_diverged_copies |
 | 2026-09-30 | **2.37** | **Гейт слоёв объявлял «0 модулей просмотрено» от одного предупреждения.** `depcruise` печатает счётчик в ДВУХ формах: «✔ no dependency violations found (9 modules, … cruised)» — со скобкой, и «x 2 dependency violations (0 errors, 2 warnings). 9 modules, … cruised.» — где скобка принадлежит числу ОШИБОК. Шаблон требовал скобку и находил только первую: стоило появиться одному предупреждению, как счётчик обнулялся и гейт заявлял, что не видел кода. ⚠ **Это хуже красного:** диагноз отправлял чинить ОБЛАСТЬ ПОИСКА, а с областью всё было в порядке — час на поиск несуществующей беды. Замер `portfolio-site` 29.09; правка пришла из поля тем же путём, что и `delivery@1.95`. **Прогон** на стенде `LayersGate`: вывод формы «предупреждения» → счётчик 9, а не 0; прежние три прогона роли (нарушение / чисто / ноль модулей) не тронуты — без них правка неотличима от «гейт перестал требовать население». **вес и объём оплачены одной строкой в `delivery@1.95`** — обе правки дня пришли из одного поля и разделены между канонами; двойная запись цены сломала бы сверку числа с приростом. **класс:** gate-mask-misses-the-population @ scripts/lint/check_layers_gate.sh::dc_seen |
 | 2026-09-30 | **2.36** | **Хук контура ронял коммиты в ветке, которая старше самого контура, — и обходили это невидимой переменной.** `.git/hooks` — ОДИН каталог на репозиторий, включая связанные деревья, а §5.1 сам велит вести поставку в `git worktree`. Значит любая ветка, отведённая до развёртывания (или любая ветка от `main`, пока развёртывание ещё в PR), своего `.pre-commit-config.yaml` не имеет, и хук падает `No .pre-commit-config.yaml file was found` на КАЖДОМ коммите в таком дереве. **Поле, `outreach-donors` 30.09:** исполнитель обошёл это переменной `PRE_COMMIT_ALLOW_NO_CONFIG=1` — обход, невидимый ревьюеру и легко становящийся привычкой; нашла его соседняя сессия чтением, а не гейт. Процедура §5.5 теперь ставит хуки флагом `--allow-missing-config` (оба типа), и причина написана рядом: конфига нет не потому, что его сняли, а потому, что ветка старше развёртывания. ⚠ **Почему это НЕ ослабление:** флаг меняет поведение только там, где конфига нет вовсе; в дереве с конфигом хук работает как работал, а «конфиг есть, хук не установлен» по-прежнему ловит доктор отдельной проверкой. **вес: 0** — тронута проза процедуры. **объём: +13 строк, за что** — врезка с разбором причины и эта запись. **класс:** none reason=правка процедуры, дефекта в механике нет; обход переменной был симптомом ненаписанного шага |
