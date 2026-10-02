@@ -254,7 +254,7 @@
 | three hundred and fourteen questions, three times out of four | гибрид top-20: 239/314 = 76 % (замер 30.09) | вторая вкладка, `eval_retrieval.py --all` |
 
 ---
-## 5. Quality contour — senior-team standards · всего 1:46 · 204 слов
+## 5. Quality contour — senior-team standards · всего 1:51 · 214 слов
 
 **QC-1 · 0:00–0:13** — говорите ~12 с → пауза 1 с
 
@@ -272,23 +272,23 @@
 
 > Now I break one on purpose: a five-hundred-line limit becomes fifty thousand. It still passes — and still calls itself a five-hundred-line check.
 
-**QC-5 · 0:49–1:04** — тишина 2 с (ключевой кадр) → говорите ~12 с → пауза 1 с
+**QC-5 · 0:49–1:09** — тишина 2 с (ключевой кадр) → говорите ~17 с → пауза 1 с
 
-> This is the doctor. It plants a known mistake in front of every check. A check that stays silent isn't just weak — it's lying, and that fails the whole run.
+> This is the doctor. It plants a known mistake in front of every check. A check that stays silent isn't just weak — it's lying. It even noticed that the check itself was edited. And a lie fails the whole run.
 
-**QC-6 · 1:04–1:09** — говорите ~4 с → пауза 1 с
+**QC-6 · 1:09–1:14** — говорите ~4 с → пауза 1 с
 
 > Put the line back, and the lie is gone.
 
-**QC-7 · 1:09–1:19** — говорите ~9 с → пауза 1 с
+**QC-7 · 1:14–1:24** — говорите ~9 с → пауза 1 с
 
 > The contour also limits itself: the number of checks is capped at twenty-two, so it can't quietly bloat.
 
-**QC-8 · 1:19–1:31** — говорите ~11 с → пауза 1 с
+**QC-8 · 1:24–1:36** — говорите ~11 с → пауза 1 с
 
 > It runs in eight repositories. Every problem it missed is logged — and each new one has to name the check that should have caught it.
 
-**QC-9 · 1:31–1:46** — говорите ~14 с → пауза 1 с
+**QC-9 · 1:36–1:51** — говорите ~14 с → пауза 1 с
 
 > That's how two services went from a bare spec to production in under three weeks — checked like a corporate product. Nothing counts as done unless a mechanism can refuse it.
 
