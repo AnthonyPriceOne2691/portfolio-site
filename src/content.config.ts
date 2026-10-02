@@ -21,6 +21,11 @@ const mediaRef = z
       "относительный вид «teaser.mp4» резолвится от адреса страницы и ломается",
   });
 
+/** Файл субтитров WebVTT в `public/`. */
+const vttRef = z.string().regex(/^\/[\w./-]+\.vtt$/, {
+  message: "субтитры — файл WebVTT в public/: «/demo-<slug>.vtt»",
+});
+
 const projectSchema = z
   .object({
     title: z.string().min(1),
@@ -49,6 +54,15 @@ const projectSchema = z
         video: mediaRef.optional(),
         teaser: mediaRef.optional(),
         poster: mediaRef.optional(),
+        /**
+         * Субтитры к своему видео — WebVTT в public/, по языкам (решение владельца
+         * 2026-10-02): `en` — язык голоса, включён сразу (`<track default>`);
+         * `ru` — для тех, кто не знает английского, выбирается в меню CC плеера.
+         */
+        captions: z
+          .object({ en: vttRef, ru: vttRef.optional() })
+          .strict()
+          .optional(),
         /** Технический бриф — PDF с сайта, `/briefs/<slug>.pdf`. */
         brief: z
           .string()
@@ -78,6 +92,11 @@ const projectSchema = z
     order: z.number().int().nonnegative(),
     updated: z.coerce.date(),
     draft: z.boolean().default(false),
+  })
+  .refine((d) => !d.proof.captions || Boolean(d.proof.video?.startsWith("/")), {
+    message:
+      "субтитры крепятся к своему видео: без proof.video с файлом в public/ им негде играть",
+    path: ["proof", "captions"],
   })
   .refine((d) => d.draft || Object.values(d.proof).some(Boolean), {
     /* Требование — к опубликованной карточке: черновик может ждать пруфа, а

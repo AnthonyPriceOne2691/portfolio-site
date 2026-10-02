@@ -1,0 +1,117 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:03.050
+AI coding agents write code fast —
+
+2
+00:00:03.100 --> 00:00:06.780
+and they happily report done on things nobody checked.
+
+3
+00:00:06.830 --> 00:00:10.220
+That's how prototypes end up in production.
+
+4
+00:00:11.980 --> 00:00:15.660
+Every service I ship runs under this quality contour:
+
+5
+00:00:15.710 --> 00:00:18.860
+a catalog of twenty-two automatic checks.
+
+6
+00:00:18.910 --> 00:00:21.470
+Here it runs on this very site.
+
+7
+00:00:22.980 --> 00:00:26.750
+Each check reports how much it actually looked at —
+
+8
+00:00:26.800 --> 00:00:32.270
+because no problems found means nothing if it saw no code.
+
+9
+00:00:33.980 --> 00:00:36.270
+Now I break one on purpose:
+
+10
+00:00:36.320 --> 00:00:40.100
+a five-hundred-line limit becomes fifty thousand.
+
+11
+00:00:40.150 --> 00:00:41.630
+It still passes —
+
+12
+00:00:41.680 --> 00:00:45.310
+and still calls itself a five-hundred-line check.
+
+13
+00:00:48.980 --> 00:00:50.710
+This is the doctor.
+
+14
+00:00:50.760 --> 00:00:54.380
+It plants a known mistake in front of every check.
+
+15
+00:00:54.430 --> 00:00:59.590
+A check that stays silent isn't just weak — it's lying.
+
+16
+00:00:59.640 --> 00:01:03.360
+It even noticed that the check itself was edited.
+
+17
+00:01:03.410 --> 00:01:05.940
+And a lie fails the whole run.
+
+18
+00:01:06.980 --> 00:01:10.290
+Put the line back, and the lie is gone.
+
+19
+00:01:11.940 --> 00:01:14.440
+The contour also limits itself:
+
+20
+00:01:14.490 --> 00:01:17.700
+the number of checks is capped at twenty-two,
+
+21
+00:01:17.750 --> 00:01:20.080
+so it can't quietly bloat.
+
+22
+00:01:21.920 --> 00:01:24.110
+It runs in eight repositories.
+
+23
+00:01:24.160 --> 00:01:27.570
+Every problem it missed is logged —
+
+24
+00:01:27.620 --> 00:01:30.570
+and each new one has to name the check
+
+25
+00:01:30.620 --> 00:01:32.250
+that should have caught it.
+
+26
+00:01:33.980 --> 00:01:36.810
+That's how two services went from a bare spec
+
+27
+00:01:36.860 --> 00:01:39.900
+to production in under three weeks —
+
+28
+00:01:39.950 --> 00:01:42.330
+checked like a corporate product.
+
+29
+00:01:42.380 --> 00:01:46.670
+Nothing counts as done unless a mechanism can refuse it.

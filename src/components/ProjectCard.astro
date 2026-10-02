@@ -42,6 +42,11 @@ const d = entry.data;
 const OWN_VIDEO = /^\/.+\.(mp4|webm|ogv)$/i;
 const demo =
   d.proof.video && OWN_VIDEO.test(d.proof.video) ? d.proof.video : null;
+/** Дорожки субтитров: английская — язык голоса, включена сразу; русская — по выбору в CC. */
+const CAPTIONS = [
+  { lang: "en", label: "English" },
+  { lang: "ru", label: "Русский" },
+] as const;
 // Плеер уже в карточке — пункт «Смотреть демо» рядом с ним был бы ссылкой на
 // то, что и так на экране.
 const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
@@ -78,6 +83,10 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
       <ProofLinks proof={proofLinks} />
 
       {
+        /* Субтитры — дорожками, а не вшиты в кадр: английская включена сразу
+          (`default`), русская выбирается в меню CC плеера, там же их снимают.
+          Под строку в кадре ролика оставлена пустая полоса снизу — она не
+          ложится на терминал. */
         demo && (
           <video
             class="demo"
@@ -86,7 +95,20 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
             controls
             preload="none"
             playsinline
-          />
+          >
+            {CAPTIONS.map(
+              (c) =>
+                d.proof.captions?.[c.lang] && (
+                  <track
+                    kind="subtitles"
+                    src={d.proof.captions[c.lang]}
+                    srclang={c.lang}
+                    label={c.label}
+                    default={c.lang === "en"}
+                  />
+                ),
+            )}
+          </video>
         )
       }
 

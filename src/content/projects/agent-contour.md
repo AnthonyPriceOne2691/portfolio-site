@@ -6,10 +6,15 @@ status: "production"
 stack: ["Python", "Bash", "pre-commit", "GitHub Actions", "dependency-cruiser"]
 proof:
   brief: "/briefs/agent-contour.pdf"
+  video: "/demo-agent-contour.mp4"
+  captions:
+    en: "/demo-agent-contour.vtt"
+    ru: "/demo-agent-contour.ru.vtt"
+  poster: "/poster-agent-contour.jpg"
 contract: "Only what a mechanism can reject counts as done: a gate that cannot turn red is treated as broken."
 featured: false
 order: 2
-updated: 2026-09-30
+updated: 2026-10-02
 draft: false
 ---
 

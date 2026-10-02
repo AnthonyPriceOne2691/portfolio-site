@@ -13,7 +13,7 @@
  * правящего, а не поломку витрины.
  */
 import { strict as assert } from "node:assert";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import test from "node:test";
 
 const ROOT = new URL("../", import.meta.url);
@@ -35,9 +35,16 @@ function frontmatter(text) {
   const draft = /^draft:\s*true\s*$/m.test(fm);
   const proof = {};
   const block = fm.match(/^proof:\s*$([\s\S]*?)(?=^\S)/m)?.[1] ?? "";
+  // Вложенный ключ (`captions:` → `en:`, `ru:`) — словарь: строки глубже двух
+  // пробелов относятся к последнему ключу без значения.
+  let parent = null;
   for (const line of block.split("\n")) {
-    const kv = line.match(/^\s+(\w+):\s*"?([^"]*)"?\s*$/);
-    if (kv) proof[kv[1]] = kv[2];
+    const kv = line.match(/^(\s+)(\w+):\s*"?([^"]*)"?\s*$/);
+    if (!kv) continue;
+    const [, indent, key, value] = kv;
+    if (indent.length > 2 && parent) proof[parent][key] = value;
+    else if (value === "") [proof[key], parent] = [{}, key];
+    else [proof[key], parent] = [value, null];
   }
   return { order, draft, proof };
 }
@@ -172,6 +179,72 @@ test("B3: неполный proof не оставляет ни пустого б�
       assert.ok(
         !/background-image:url\(\)/.test(frag),
         `${file} / ${p.slug}: постер подставлен пустой строкой`,
+      );
+    }
+  }
+});
+
+/** Строки WebVTT: время начала и конца в секундах и текст. */
+function vttCues(text) {
+  const sec = (h, m, s) => Number(h) * 3600 + Number(m) * 60 + Number(s);
+  return [
+    ...text.matchAll(
+      /(\d\d):(\d\d):(\d\d\.\d{3}) --> (\d\d):(\d\d):(\d\d\.\d{3})[^\n]*\n([^\n]+(?:\n[^\n]+)*)/g,
+    ),
+  ].map((m) => ({
+    start: sec(m[1], m[2], m[3]),
+    end: sec(m[4], m[5], m[6]),
+    text: m[7].trim(),
+  }));
+}
+
+test("субтитры: дорожки в плеере, английская включена, файлы WebVTT целы и в такт", () => {
+  const html = page(SHOWCASES[0]);
+  for (const p of projects().filter((x) => !x.draft && x.proof.captions)) {
+    const where = `${p.slug}: субтитры`;
+    const video = card(html, p.slug)?.match(/<video class="demo"[\s\S]*?<\/video>/)?.[0];
+    assert.ok(video, `${where} есть в frontmatter, а плеера в карточке нет`);
+    const timing = {};
+    for (const [lang, src] of Object.entries(p.proof.captions)) {
+      const track = video.match(new RegExp(`<track[^>]*src="${src}"[^>]*>`))?.[0];
+      assert.ok(track, `${where} ${lang}: дорожки ${src} нет в плеере`);
+      assert.match(track, new RegExp(`srclang="${lang}"`), `${where} ${lang}: srclang не тот`);
+      // Голос английский: английские субтитры включены сразу, остальные — по выбору в CC.
+      assert.equal(/\bdefault\b/.test(track), lang === "en", `${where} ${lang}: default только у английской`);
+
+      const text = readFileSync(new URL(`public${src}`, ROOT), "utf8");
+      assert.match(text, /^WEBVTT\s*\n/, `${where} ${src}: нет заголовка WEBVTT — браузер дорожку не примет`);
+      const cues = vttCues(text);
+      assert.ok(cues.length > 0, `${where} ${src}: ни одной строки`);
+      cues.forEach((c, i) => {
+        assert.ok(c.start < c.end && c.text, `${where} ${src}: строка ${i + 1} пустая или вывернута`);
+        if (i) assert.ok(c.start >= cues[i - 1].end, `${where} ${src}: строки ${i} и ${i + 1} наезжают`);
+      });
+      timing[lang] = cues.map((c) => `${c.start}-${c.end}`).join(" ");
+    }
+    // Перевод идёт строка в строку за голосом: разошлось время — перевод от старой разбивки.
+    for (const lang of Object.keys(timing)) {
+      assert.equal(timing[lang], timing.en, `${where} ${lang}: время строк разошлось с английскими`);
+    }
+  }
+});
+
+/*
+ * Бюджеты медиа (content-guide §4). Полное демо — до 25 МиБ: это лимит Cloudflare на
+ * файл; хук крупных файлов в pre-commit демо-ролики пропускает (там предел 512 КБ),
+ * и вес судится здесь. Тизер грузится целиком при наведении, постер — на каждой витрине.
+ */
+const BUDGET = { video: 25 * 1024 * 1024, teaser: 1.5 * 1024 * 1024, poster: 150 * 1024 };
+
+test("медиа карточек в бюджете", () => {
+  for (const p of projects().filter((x) => !x.draft)) {
+    for (const [key, max] of Object.entries(BUDGET)) {
+      const ref = p.proof[key];
+      if (!ref || !ref.startsWith("/")) continue; // внешняя ссылка — не наш вес
+      const size = statSync(new URL(`public${ref}`, ROOT)).size;
+      assert.ok(
+        size <= max,
+        `${p.slug}: ${key} ${ref} весит ${(size / 1024).toFixed(0)} КБ при бюджете ${(max / 1024).toFixed(0)} КБ`,
       );
     }
   }
