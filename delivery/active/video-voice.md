@@ -208,7 +208,7 @@
 | thirty-one real websites | 79 прогонов на 31 реальном сайте (30.09) | `data/runs/app.db`, таблица `crawl_runs` |
 
 ---
-## 4. RAG — answers from your documents · всего 1:38 · 186 слов
+## 4. RAG — answers from your documents · всего 1:38 · 187 слов
 
 **RG-1 · 0:00–0:10** — говорите ~9 с → пауза 1 с
 
@@ -216,7 +216,7 @@
 
 **RG-2 · 0:10–0:27** — говорите ~16 с → пауза 1 с
 
-> This is a search desk over my own engineering rulebook: four documents, twenty-two thousand lines, in Russian — so I'll translate. I ask how many quality checks the rulebook allows.
+> This is a search desk over my own engineering rulebook: four documents, over twenty thousand lines, in Russian — so I'll translate. I ask how many quality checks the rulebook allows.
 
 **RG-3 · 0:27–0:38** — говорите ~10 с → пауза 1 с
 
@@ -248,7 +248,7 @@
 
 | Звучит | Значение | Источник |
 | --- | --- | --- |
-| four documents, twenty-two thousand lines | 4 свода, 22 926 строк (30.09) | команда 0 на экране (`wc -l`) |
+| four documents, over twenty thousand lines | 4 свода, 23 301 строка на 02.10; свод растёт — в голосе открытое «over» | команда 0 на экране (`wc -l`) |
 | Twenty-two checks: sixteen at every commit, six outside | на экране | `CODE_QUALITY_GATES.md:679` |
 | not one broke that rule (680 answers) | 460 с настоящим адресом, 218 «не покрыто», 2 с несуществующим разделом — ответа без строки «АДРЕС» нет | `rag/README.md:1782-1790`; на экране |
 | three hundred and fourteen questions, three times out of four | гибрид top-20: 239/314 = 76 % (замер 30.09) | вторая вкладка, `eval_retrieval.py --all` |
