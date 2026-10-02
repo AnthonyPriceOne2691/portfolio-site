@@ -64,18 +64,22 @@ const links = [
     color: var(--text-on-accent);
     transition: background-color 0.24s ease;
   }
-  .brief:hover,
-  .brief:focus-visible {
-    background: var(--accent-hover);
-    color: var(--text-on-accent);
-  }
   /* Как у «Download CV»: едет только стрелка, кнопка под курсором стоит. */
   .down {
     display: inline-block;
     transition: transform 0.24s ease;
   }
-  .brief:hover .down,
-  .brief:focus-visible .down {
-    transform: translateY(2px);
+  /* Наведение — только с курсором: на телефоне `:hover` залипает после
+     касания (см. global.css). */
+  @media (hover: hover) {
+    .brief:hover,
+    .brief:focus-visible {
+      background: var(--accent-hover);
+      color: var(--text-on-accent);
+    }
+    .brief:hover .down,
+    .brief:focus-visible .down {
+      transform: translateY(2px);
+    }
   }
 </style>

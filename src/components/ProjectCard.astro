@@ -159,14 +159,26 @@ const CAPTIONS = [
     /* Штатный треугольник `<details>` убирается в двух местах: спецификация
        и WebKit расходятся в том, чем он рисуется. */
     list-style: none;
+    /* Штатная подсветка касания на iOS — тёмная скруглённая плашка поверх
+       всего, что нажато. Здесь нажата шапка в полкарточки, и плашка
+       накрывала её целиком. Отклик на касание даёт само раскрытие. */
+    -webkit-tap-highlight-color: transparent;
   }
   .head::-webkit-details-marker {
     display: none;
   }
-  .card:hover,
-  .card:focus-within {
-    border-color: var(--surface-border-strong);
-    box-shadow: var(--lift-shadow), var(--glass-inner);
+  /* ⚠ Подъём карточки — отклик на курсор и на КЛАВИАТУРНЫЙ фокус, и только
+     там, где курсор есть. На телефоне `:hover` залипает после касания, а
+     `:focus-within` держится, пока фокус в карточке, — касание ставит его на
+     `summary`: карточка оставалась «поднятой», фрейм — сдвинутым. Клавиатуру
+     ловит `:has(:focus-visible)`: фокус от касания и мыши его не включает.
+     Кольцо фокуса из global.css от этого не зависит и видно везде. */
+  @media (hover: hover) {
+    .card:hover,
+    .card:has(:focus-visible) {
+      border-color: var(--surface-border-strong);
+      box-shadow: var(--lift-shadow), var(--glass-inner);
+    }
   }
   .lead {
     display: flex;
@@ -220,10 +232,12 @@ const CAPTIONS = [
       box-shadow 0.32s ease,
       border-color 0.32s ease;
   }
-  .card:hover .media :global(.frame),
-  .card:focus-within .media :global(.frame) {
-    transform: translate3d(4px, -2px, 0) scale(1.015);
-    box-shadow: var(--lift-shadow-media), var(--glass-inner);
+  @media (hover: hover) {
+    .card:hover .media :global(.frame),
+    .card:has(:focus-visible) .media :global(.frame) {
+      transform: translate3d(4px, -2px, 0) scale(1.015);
+      box-shadow: var(--lift-shadow-media), var(--glass-inner);
+    }
   }
 
   /* --- раскрытая часть --- */

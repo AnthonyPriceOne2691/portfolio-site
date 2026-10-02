@@ -80,19 +80,23 @@ const CV_FILE = "/cv.pdf";
       border-color 0.24s ease,
       color 0.24s ease;
   }
-  .back:hover,
-  .back:focus-visible {
-    background: var(--glass-bg-strong);
-    border-color: var(--surface-border-strong);
-    color: var(--accent-hover);
-  }
   .arrow {
     display: inline-block;
     transition: transform 0.24s ease;
   }
-  .back:hover .arrow,
-  .back:focus-visible .arrow {
-    transform: translateX(-3px);
+  /* Наведение — только с курсором: на телефоне `:hover` залипает после
+     касания (см. global.css). */
+  @media (hover: hover) {
+    .back:hover,
+    .back:focus-visible {
+      background: var(--glass-bg-strong);
+      border-color: var(--surface-border-strong);
+      color: var(--accent-hover);
+    }
+    .back:hover .arrow,
+    .back:focus-visible .arrow {
+      transform: translateX(-3px);
+    }
   }
 
   .card {
@@ -122,19 +126,21 @@ const CV_FILE = "/cv.pdf";
     font-weight: 600;
     transition: background-color 0.24s ease;
   }
-  .cv:hover,
-  .cv:focus-visible {
-    background: var(--accent-hover);
-  }
   /* Стрелка уезжает ВНИЗ — в сторону действия. Двигается только она, сама
      кнопка стоит: сдвиг кнопки под курсором читается как дёрганье. */
   .down {
     display: inline-block;
     transition: transform 0.24s ease;
   }
-  .cv:hover .down,
-  .cv:focus-visible .down {
-    transform: translateY(2px);
+  @media (hover: hover) {
+    .cv:hover,
+    .cv:focus-visible {
+      background: var(--accent-hover);
+    }
+    .cv:hover .down,
+    .cv:focus-visible .down {
+      transform: translateY(2px);
+    }
   }
 
   /*

@@ -227,9 +227,12 @@ jobs:
       # Сборка здесь же, потому что без свежего dist/ судить нечего.
       # Браузер для headless-проверок раскладки (B6, B7). Ставится ДО сборки:
       # `npm run build` цепочкой зовёт `npm test`, а там playwright.
-      - name: Install browser for layout tests
+      # WebKit — для `tests/touch.test.mjs`: кольцо фокуса после касания — поведение
+      # WebKit (Safari, любой браузер на iOS), в Chromium его нет, и без WebKit
+      # сторож этого класса был бы зелёным на сломанном коде (проверено сломом 03.10).
+      - name: Install browsers for layout tests
         if: always()
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Build site + dist oracle
         if: always()

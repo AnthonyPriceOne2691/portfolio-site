@@ -190,8 +190,12 @@ const intro = photo && inPublic("intro.mp4") ? "intro.mp4" : undefined;
   .intro[aria-pressed="true"] .badge {
     opacity: 0;
   }
-  .intro:hover .badge {
-    transform: scale(1.06);
+  /* Наведение — только с курсором: на телефоне `:hover` залипает после
+     касания (см. global.css). */
+  @media (hover: hover) {
+    .intro:hover .badge {
+      transform: scale(1.06);
+    }
   }
   .role {
     font-weight: 600;

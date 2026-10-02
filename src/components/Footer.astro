@@ -125,11 +125,15 @@ const links = [
       background-color 0.24s ease,
       border-color 0.24s ease;
   }
-  .foot a:hover,
-  .foot a:focus-visible {
-    color: var(--text);
-    background: var(--control-bg-quiet);
-    border-color: var(--control-border-quiet);
+  /* Наведение — только с курсором: на телефоне `:hover` залипает после
+     касания (см. global.css). */
+  @media (hover: hover) {
+    .foot a:hover,
+    .foot a:focus-visible {
+      color: var(--text);
+      background: var(--control-bg-quiet);
+      border-color: var(--control-border-quiet);
+    }
   }
   /* Значок кегельный: растёт вместе с текстом и остаётся с ним на одной линии
      при любом размере шрифта у пользователя. */
@@ -140,8 +144,10 @@ const links = [
     opacity: 0.75;
     transition: opacity 0.24s ease;
   }
-  .foot a:hover svg,
-  .foot a:focus-visible svg {
-    opacity: 1;
+  @media (hover: hover) {
+    .foot a:hover svg,
+    .foot a:focus-visible svg {
+      opacity: 1;
+    }
   }
 </style>

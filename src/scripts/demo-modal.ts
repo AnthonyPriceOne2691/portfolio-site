@@ -97,6 +97,42 @@ function mount(id: string): Shown | null {
   return { id, video, card: card instanceof HTMLDetailsElement ? card : null };
 }
 
+/** `focusVisible` есть в стандарте HTML (WebKit, Firefox), но ещё не в типах TypeScript. */
+const QUIET: FocusOptions & { focusVisible: boolean } = {
+  preventScroll: true,
+  focusVisible: false,
+};
+
+/**
+ * ⚠ Фокус, который переносит САМ браузер — `showModal()` ставит его на крестик,
+ * `close()` возвращает туда, откуда открывали, — рисует клавиатурное кольцо,
+ * только если оно было и ДО переноса. Так велит эвристика `:focus-visible` для
+ * переноса фокуса скриптом (CSS Selectors 4), и так делает Chromium. WebKit
+ * (Safari и любой браузер на iOS) считает такой перенос видимым всегда: после
+ * касания кольцо вставало на крестик, а после закрытия обводило всю шапку
+ * раскрытой карточки — «рамка» со скриншота владельца с iPhone, 03.10.
+ *
+ * Фокус при этом остаётся, где его поставил браузер: для скринридера это и есть
+ * «вернулись к карточке». Повторный `focus()` на элементе в фокусе WebKit
+ * пропускает — поэтому сначала `blur()`. Esc — клавиатура: его закрытие идёт
+ * мимо этой функции, и кольцо после него законно. Сторож — `tests/touch.test.mjs`.
+ */
+function moveFocusAsBefore(move: () => void): void {
+  const before = document.activeElement;
+  const ringBefore = before?.matches(":focus-visible") ?? false;
+  move();
+  const now = document.activeElement;
+  if (ringBefore || !(now instanceof HTMLElement)) return;
+  if (!now.matches(":focus-visible")) return;
+  now.blur();
+  now.focus(QUIET);
+}
+
+/** Закрытие крестиком, кликом мимо ролика и «Назад»; Esc закрывает сам браузер. */
+function shut(): void {
+  if (dialog?.open) moveFocusAsBefore(() => dialog.close());
+}
+
 /** Обычный клик: с модификатором посетитель открывает ссылку в новой вкладке — это его право. */
 function plainClick(e: MouseEvent): boolean {
   return e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey);
@@ -126,7 +162,7 @@ function open(id: string, push: boolean): boolean {
   quietTeaser(shown.card, true);
   scrollBefore = window.scrollY;
   document.documentElement.classList.add("demo-open");
-  dialog.showModal();
+  moveFocusAsBefore(() => dialog.showModal());
   if (push) {
     history.pushState({ demo: id }, "", addressFor(id));
     pushed = id;
@@ -170,11 +206,9 @@ if (dialog) {
     pressedOutside = e.target === dialog;
   });
   dialog.addEventListener("click", (e) => {
-    if (e.target === dialog && pressedOutside) dialog.close();
+    if (e.target === dialog && pressedOutside) shut();
   });
-  dialog
-    .querySelector("[data-demo-close]")
-    ?.addEventListener("click", () => dialog.close());
+  dialog.querySelector("[data-demo-close]")?.addEventListener("click", shut);
 
   /*
    * Запуск. Слушатель — на документе и в фазе ПЕРЕХВАТА: фрейм живёт внутри
@@ -205,7 +239,7 @@ if (dialog) {
   // «Назад» закрывает ролик, «Вперёд» открывает снова.
   window.addEventListener("popstate", () => {
     const id = new URL(location.href).searchParams.get(PARAM);
-    if (!id && dialog.open) dialog.close();
+    if (!id && dialog.open) shut();
     else if (id && !dialog.open) open(id, false);
   });
 

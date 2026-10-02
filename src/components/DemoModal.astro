@@ -80,9 +80,13 @@ import { t } from "../lib/text";
     color: #fff;
     cursor: pointer;
   }
-  .close:hover,
-  .close:focus-visible {
-    background: rgb(255 255 255 / 0.22);
+  /* Наведение — только с курсором: на телефоне `:hover` залипает после
+     касания (см. global.css). */
+  @media (hover: hover) {
+    .close:hover,
+    .close:focus-visible {
+      background: rgb(255 255 255 / 0.22);
+    }
   }
   .close:focus-visible {
     outline: 2px solid var(--accent);

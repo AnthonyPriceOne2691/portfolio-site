@@ -67,8 +67,13 @@ h2 {
 a {
   color: var(--accent);
 }
-a:hover {
-  color: var(--accent-hover);
+/* ⚠ Наведение — только там, где есть курсор: на телефоне `:hover` после
+   касания ЗАЛИПАЕТ и держится, пока не коснёшься другого места. Правило для
+   всего сайта, сторож — `tests/touch.test.mjs`. */
+@media (hover: hover) {
+  a:hover {
+    color: var(--accent-hover);
+  }
 }
 
 html.theme-switching body,
