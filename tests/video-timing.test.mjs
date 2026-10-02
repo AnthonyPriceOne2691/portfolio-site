@@ -68,6 +68,9 @@ function voiceBlocks() {
         speech: Number((tail.match(/говорите ~(\d+) с/) || [0, 0])[1]),
         pause: Number((tail.match(/пауза (\d+) с/) || [0, 0])[1]),
         live: Number((tail.match(/живой звук (\d+) с/) || [0, 0])[1]),
+        // «По записи» — длительность настоящего дубля: она и есть истина, слоговая
+        // оценка нужна только тому, что ещё не записано.
+        measured: tail.includes("(по записи)"),
         text: "",
       };
       blocks.set(cur.id, cur);
@@ -114,7 +117,7 @@ test("блок голоса = тишина + речь + пауза, и речь 
   for (const b of voice.values()) {
     const parts = b.silence + b.speech + b.pause + b.live;
     if (b.end - b.start !== parts) bad.push(`${b.id}: ${b.end - b.start} с ≠ ${parts} с`);
-    if (b.text) {
+    if (b.text && !b.measured) {
       const need = b.text.split(/\s+/).reduce((n, w) => n + syllables(w), 0) / SYL_PER_S + 0.5;
       if (need > b.speech + 0.01) bad.push(`${b.id}: по слогам нужно ${need.toFixed(1)} с, отведено ${b.speech}`);
     }
