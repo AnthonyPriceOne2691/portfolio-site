@@ -88,10 +88,17 @@ import { t } from "../lib/text";
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
-  /* Страница под модалкой не прокручивается; `scrollbar-gutter: stable` в
-     global.css не даёт раскладке прыгнуть, когда полоса прокрутки исчезает. */
+  /* Страница под модалкой не прокручивается.
+     ⚠ И резерв под полосу прокрутки снимается: `scrollbar-gutter: stable
+     both-edges` из global.css держит по ~15 px с обеих сторон, а затемнение
+     (`::backdrop`) — фиксированный слой и под этот резерв не заходит. На Linux и
+     Windows (классические полосы) по краям открытой модалки оставались
+     незатемнённые полоски, и нажатие туда ролик не закрывало — поймал CI
+     02.10. Резерв снимается с ОБЕИХ сторон, и центрированная страница под
+     затемнением не сдвигается. */
   :global(html.demo-open) {
     overflow: hidden;
+    scrollbar-gutter: auto;
   }
   @media (prefers-reduced-motion: no-preference) {
     .demo-modal[open] {

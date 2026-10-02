@@ -12,6 +12,10 @@
  * события другой, и модалка, работающая от мыши, может не работать от пальца.
  * Воспроизведение не проверяется: у Chromium из Playwright нет H.264, поэтому
  * `play()` здесь отказывает — и модалка обязана это пережить.
+ *
+ * ⚠ Файлы тестов идут по одному (`--test-concurrency=1` в package.json): на CI
+ * (4 ядра) этот набор с четырьмя браузерами шёл одновременно с тестом анимации
+ * карточки, и тот снимал 20 кадров вместо сотни — падал на исправном коде.
  */
 import { strict as assert } from "node:assert";
 import test, { after, before } from "node:test";
@@ -129,8 +133,15 @@ for (const d of DEVICES) {
     assert.ok(geo.video.width >= Math.min(geo.vw * 0.5, 320), "ролик слишком мелкий для экрана");
     assert.ok(geo.scrollW <= geo.vw, "с открытым роликом появилась горизонтальная прокрутка");
 
-    // Мимо ролика (угол затемнения) — закрылся, карточка раскрыта, адрес чист.
-    await pressAt(4, geo.vh - 4);
+    // Затемнение — до самых краёв окна: на Linux и Windows резерв под полосу
+    // прокрутки оставлял по краям незатемнённые полоски (CI 02.10).
+    const edges = await page.evaluate(() =>
+      [2, innerWidth - 2].map((x) => document.elementFromPoint(x, innerHeight / 2)?.tagName),
+    );
+    assert.deepEqual(edges, ["DIALOG", "DIALOG"], "затемнение не доходит до краёв окна");
+
+    // Мимо ролика (затемнение под ним) — закрылся, карточка раскрыта, адрес чист.
+    await pressAt(geo.vw / 2, (geo.video.bottom + geo.vh) / 2);
     await until(page, isClosed, null, "нажатие мимо ролика его не закрыло");
     await until(page, () => !location.search.includes("demo="), null, "адрес не очистился после закрытия");
     assert.ok(await page.evaluate(cardOpen, `details#${id}`), "после ролика карточка свёрнута");

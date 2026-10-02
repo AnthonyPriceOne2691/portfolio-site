@@ -187,9 +187,15 @@ const { proof, demo } = Astro.props;
         transparent 72%
       );
   }
+  /* ⚠ Вуаль — плавный градиент без краёв. Слой наследует от `.glass::after`
+     рамку в 1 px и скругление: на статичном постере их было не разглядеть, а
+     поверх тёмного живого тизера они рисовали закруглённую «плашку» на нижних
+     42% фрейма — заметил владелец 03.10. */
   .frame::after {
     inset: auto 0 0;
     height: 42%;
+    border: 0;
+    border-radius: 0;
     background: linear-gradient(180deg, transparent 0%, var(--frame-veil) 100%);
   }
   .teaser,
