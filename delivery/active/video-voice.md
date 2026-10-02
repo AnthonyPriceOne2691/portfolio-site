@@ -254,41 +254,41 @@
 | three hundred and fourteen questions, three times out of four | гибрид top-20: 239/314 = 76 % (замер 30.09) | вторая вкладка, `eval_retrieval.py --all` |
 
 ---
-## 5. Quality contour — senior-team standards · всего 1:51 · 214 слов
+## 5. Quality contour — senior-team standards · всего 1:48 · 214 слов
 
-**QC-1 · 0:00–0:13** — говорите ~12 с → пауза 1 с
+**QC-1 · 0:00–0:12** — говорите ~11 с (по записи) → пауза 1 с
 
 > AI coding agents write code fast — and they happily report done on things nobody checked. That's how prototypes end up in production.
 
-**QC-2 · 0:13–0:26** — говорите ~12 с → пауза 1 с
+**QC-2 · 0:12–0:23** — говорите ~10 с (по записи) → пауза 1 с
 
 > Every service I ship runs under this quality contour: a catalog of twenty-two automatic checks. Here it runs on this very site.
 
-**QC-3 · 0:26–0:36** — говорите ~9 с → пауза 1 с
+**QC-3 · 0:23–0:34** — говорите ~10 с (по записи) → пауза 1 с
 
 > Each check reports how much it actually looked at — because no problems found means nothing if it saw no code.
 
-**QC-4 · 0:36–0:49** — говорите ~12 с → пауза 1 с
+**QC-4 · 0:34–0:47** — говорите ~12 с → пауза 1 с
 
 > Now I break one on purpose: a five-hundred-line limit becomes fifty thousand. It still passes — and still calls itself a five-hundred-line check.
 
-**QC-5 · 0:49–1:09** — тишина 2 с (ключевой кадр) → говорите ~17 с → пауза 1 с
+**QC-5 · 0:47–1:07** — тишина 2 с (ключевой кадр) → говорите ~17 с → пауза 1 с
 
 > This is the doctor. It plants a known mistake in front of every check. A check that stays silent isn't just weak — it's lying. It even noticed that the check itself was edited. And a lie fails the whole run.
 
-**QC-6 · 1:09–1:14** — говорите ~4 с → пауза 1 с
+**QC-6 · 1:07–1:12** — говорите ~4 с → пауза 1 с
 
 > Put the line back, and the lie is gone.
 
-**QC-7 · 1:14–1:24** — говорите ~9 с → пауза 1 с
+**QC-7 · 1:12–1:22** — говорите ~9 с → пауза 1 с
 
 > The contour also limits itself: the number of checks is capped at twenty-two, so it can't quietly bloat.
 
-**QC-8 · 1:24–1:36** — говорите ~11 с → пауза 1 с
+**QC-8 · 1:22–1:34** — говорите ~11 с → пауза 1 с
 
 > It runs in eight repositories. Every problem it missed is logged — and each new one has to name the check that should have caught it.
 
-**QC-9 · 1:36–1:51** — говорите ~14 с → пауза 1 с
+**QC-9 · 1:34–1:48** — говорите ~13 с (по записи) → пауза 1 с
 
 > That's how two services went from a bare spec to production in under three weeks — checked like a corporate product. Nothing counts as done unless a mechanism can refuse it.
 
