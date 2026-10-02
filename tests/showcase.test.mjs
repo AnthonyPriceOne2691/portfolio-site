@@ -21,7 +21,7 @@ const DIST = new URL("dist/", ROOT);
 
 /** Ключи `proof`, которые `ProofLinks` превращает в ссылки, в порядке вывода. */
 const PROOF_LINKS = ["brief", "github", "video"];
-/** Своё видео встраивается плеером; внешняя ссылка — остаётся ссылкой. */
+/** Своё видео играет в модалке (шаблон в карточке); внешняя ссылка — остаётся ссылкой. */
 const OWN_VIDEO = /^\/.+\.(mp4|webm|ogv)$/i;
 
 /**
@@ -130,12 +130,17 @@ test("B3: неполный proof не оставляет ни пустого б�
       const frag = card(html, p.slug);
       assert.ok(frag, `${file}: карточка ${p.slug} не найдена`);
 
-      // Своё видео уходит в плеер, и ссылкой уже не дублируется — иначе рядом
-      // с плеером стояла бы ссылка на то, что и так на экране.
-      const embedded = p.proof.video && OWN_VIDEO.test(p.proof.video);
-      const expected = PROOF_LINKS.filter(
-        (k) => p.proof[k] && !(k === "video" && embedded),
-      );
+      // «Watch demo» есть и у своего ролика (с 2026-10-02): со скриптом ссылка
+      // открывает модалку, без него — сам файл, с клавиатуры это единственный путь.
+      const expected = PROOF_LINKS.filter((k) => p.proof[k]);
+
+      // Своему ролику — шаблон для модалки и фрейм, который его открывает; плеера
+      // во всю ширину раскрытой карточки больше нет: «не простыня».
+      if (p.proof.video && OWN_VIDEO.test(p.proof.video)) {
+        assert.match(frag, new RegExp(`<template id="demo-${p.slug}"[^>]*>`), `${file} / ${p.slug}: нет шаблона ролика для модалки`);
+        assert.match(frag, new RegExp(`<figure[^>]*data-demo-open="${p.slug}"`), `${file} / ${p.slug}: фрейм не открывает ролик`);
+        assert.ok(!/<video class="demo"/.test(frag), `${file} / ${p.slug}: плеер снова вшит в карточку`);
+      }
       // ⚠ Сверяются НАБОРЫ пруфов, а не число ссылок одного класса. Счёт по
       // `class="glass"` ослеп бы на кнопке брифа — у неё другой вид — и
       // принимал бы её пропажу за норму.
@@ -202,8 +207,10 @@ test("субтитры: дорожки в плеере, английская в�
   const html = page(SHOWCASES[0]);
   for (const p of projects().filter((x) => !x.draft && x.proof.captions)) {
     const where = `${p.slug}: субтитры`;
-    const video = card(html, p.slug)?.match(/<video class="demo"[\s\S]*?<\/video>/)?.[0];
-    assert.ok(video, `${where} есть в frontmatter, а плеера в карточке нет`);
+    const video = card(html, p.slug)
+      ?.match(new RegExp(`<template id="demo-${p.slug}"[^>]*>[\\s\\S]*?</template>`))?.[0]
+      ?.match(/<video[\s\S]*?<\/video>/)?.[0];
+    assert.ok(video, `${where} есть в frontmatter, а ролика для модалки в карточке нет`);
     const timing = {};
     for (const [lang, src] of Object.entries(p.proof.captions)) {
       const track = video.match(new RegExp(`<track[^>]*src="${src}"[^>]*>`))?.[0];
@@ -234,7 +241,8 @@ test("субтитры: дорожки в плеере, английская в�
  * файл; хук крупных файлов в pre-commit демо-ролики пропускает (там предел 512 КБ),
  * и вес судится здесь. Тизер грузится целиком при наведении, постер — на каждой витрине.
  */
-const BUDGET = { video: 25 * 1024 * 1024, teaser: 1.5 * 1024 * 1024, poster: 150 * 1024 };
+// Тизер — до 2 МБ (владелец 2026-10-02; было 1,5): живой кадр ценнее полумегабайта.
+const BUDGET = { video: 25 * 1024 * 1024, teaser: 2 * 1024 * 1024, poster: 150 * 1024 };
 
 test("медиа карточек в бюджете", () => {
   for (const p of projects().filter((x) => !x.draft)) {
@@ -247,5 +255,18 @@ test("медиа карточек в бюджете", () => {
         `${p.slug}: ${key} ${ref} весит ${(size / 1024).toFixed(0)} КБ при бюджете ${(max / 1024).toFixed(0)} КБ`,
       );
     }
+  }
+});
+
+// Тизер — живой, но немой (владелец 2026-10-02): звук только у полного ролика.
+test("тизер немой: в файле нет звуковой дорожки, тег с muted", () => {
+  const html = page(SHOWCASES[0]);
+  for (const p of projects().filter((x) => !x.draft && x.proof.teaser?.startsWith("/"))) {
+    // У звуковой дорожки MP4 обработчик `soun` (box `hdlr`), у видео — `vide`;
+    // оглавление (`moov`) с `+faststart` лежит в начале файла.
+    const head = readFileSync(new URL(`public${p.proof.teaser}`, ROOT)).subarray(0, 400_000);
+    assert.ok(!head.includes("soun"), `${p.slug}: в тизере ${p.proof.teaser} есть звуковая дорожка`);
+    const tag = card(html, p.slug)?.match(/<video class="teaser"[^>]*>/)?.[0] ?? "";
+    assert.match(tag, /\bmuted\b/, `${p.slug}: тизер без muted — браузер может пустить звук`);
   }
 });

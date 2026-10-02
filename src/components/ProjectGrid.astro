@@ -7,6 +7,7 @@
  * ответственность, и `Home` не обязан её знать. Появится вторая витрина —
  * возьмёт готовое, а не скопирует запрос (см. `lib/projects`).
  */
+import DemoModal from "./DemoModal.astro";
 import ProjectCard from "./ProjectCard.astro";
 import { publishedProjects } from "../lib/projects";
 
@@ -22,6 +23,9 @@ const projects = await publishedProjects();
     ))
   }
 </ul>
+
+<!-- Ролики карточек открываются поверх страницы — одна модалка на весь список. -->
+<DemoModal />
 
 <style>
   /*

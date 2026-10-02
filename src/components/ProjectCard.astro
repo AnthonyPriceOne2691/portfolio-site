@@ -12,11 +12,12 @@
  * JS ниже добавляет только анимацию; не загрузился — карточка всё равно
  * открывается, просто мгновенно. Тот же приём, что у меню в шапке.
  *
- * ⚠ Фрейм живёт в `<summary>` и потому ОБЯЗАН остаться неинтерактивным.
- * `<summary>` — это кнопка: нативные контролы видео внутри неё ловили бы клик
- * на себя и одновременно сворачивали карточку. Полное демо поэтому уходит
- * ссылкой в раскрытую часть — тем более что `proof.video` по схеме внешний URL
- * (может быть YouTube), который плеером не встроить в принципе.
+ * ⚠ Фрейм живёт в `<summary>`, и контролов видео в нём нет: `<summary>` — это
+ * кнопка, нативные контролы ловили бы клик на себя и сворачивали карточку.
+ * Полное демо открывается В МОДАЛКЕ (решение владельца 2026-10-02: «не
+ * превращать карточку в простыню») — кликом по фрейму раскрытой карточки или по
+ * «Watch demo». Сам ролик лежит здесь же, в `<template>`: модалка одна на
+ * страницу (`DemoModal`) и берёт его отсюда.
  */
 import { render, type CollectionEntry } from "astro:content";
 import ProofLinks from "./ProofLinks.astro";
@@ -47,9 +48,9 @@ const CAPTIONS = [
   { lang: "en", label: "English" },
   { lang: "ru", label: "Русский" },
 ] as const;
-// Плеер уже в карточке — пункт «Смотреть демо» рядом с ним был бы ссылкой на
-// то, что и так на экране.
-const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
+// Ссылка «Watch demo» остаётся и у своего ролика: со скриптом она открывает
+// модалку, без него — сам файл, а с клавиатуры это единственный путь к ролику
+// (фрейм в шапке фокус не получает).
 ---
 
 <!-- `data-hover-play-scope` — область, наведение на которую оживляет тизер во
@@ -69,7 +70,7 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
       <span class="stack">{d.stack.slice(0, 5).join(" · ")}</span>
     </span>
     <span class="media">
-      <VideoFrame proof={d.proof} />
+      <VideoFrame proof={d.proof} demo={demo ? entry.id : undefined} />
     </span>
   </summary>
 
@@ -80,35 +81,35 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
           должен сразу увидеть, что бриф можно унести с собой, а не
           дочитывать до низа, чтобы узнать об этом. */
       }
-      <ProofLinks proof={proofLinks} />
+      <ProofLinks proof={d.proof} />
 
       {
-        /* Субтитры — дорожками, а не вшиты в кадр: английская включена сразу
-          (`default`), русская выбирается в меню CC плеера, там же их снимают.
-          Под строку в кадре ролика оставлена пустая полоса снизу — она не
-          ложится на терминал. */
+        /* Ролик для модалки. `<template>` ничего не грузит, пока его не
+          клонировали; субтитры — дорожками, а не в кадре: английская включена
+          сразу (`default`), русская выбирается в меню плеера. */
         demo && (
-          <video
-            class="demo"
-            src={demo}
-            poster={d.proof.poster}
-            controls
-            preload="none"
-            playsinline
-          >
-            {CAPTIONS.map(
-              (c) =>
-                d.proof.captions?.[c.lang] && (
-                  <track
-                    kind="subtitles"
-                    src={d.proof.captions[c.lang]}
-                    srclang={c.lang}
-                    label={c.label}
-                    default={c.lang === "en"}
-                  />
-                ),
-            )}
-          </video>
+          <template id={`demo-${entry.id}`}>
+            <video
+              src={demo}
+              poster={d.proof.poster}
+              controls
+              preload="metadata"
+              playsinline
+            >
+              {CAPTIONS.map(
+                (c) =>
+                  d.proof.captions?.[c.lang] && (
+                    <track
+                      kind="subtitles"
+                      src={d.proof.captions[c.lang]}
+                      srclang={c.lang}
+                      label={c.label}
+                      default={c.lang === "en"}
+                    />
+                  ),
+              )}
+            </video>
+          </template>
         )
       }
 
@@ -236,18 +237,6 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
     padding-top: 1.25rem;
     border-top: 1px solid var(--surface-border-soft);
   }
-  /* Соотношение задано ДО загрузки файла: панель раскрывается анимацией по
-     `scrollHeight`, и плеер без заранее известной высоты сбивал бы замер. */
-  .demo {
-    display: block;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    margin: 0 0 1.25rem;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--preview-frame-border);
-    background: var(--video-bg);
-    box-shadow: var(--preview-frame-shadow);
-  }
   .prose :global(p) {
     margin: 0 0 0.75rem;
   }
@@ -327,9 +316,9 @@ const proofLinks = demo ? { ...d.proof, video: undefined } : d.proof;
     /* ⚠ При раскрытии фрейм НЕ растёт. Раньше рос (28% → 38% шапки) — и
        отнимал ширину у текста: тот перекладывался на каждом кадре анимации,
        фраза прыгала со строки на строку, метрика съезжала вниз. Владелец
-       назвал это «текст пляшет». Крупное видео — дело плеера демо: он играет
-       в раскрытой панели во всю её ширину. Сторож — тест «текст карточки не
-       пляшет» в `tests/layout.test.mjs`. */
+       назвал это «текст пляшет». Крупное видео — дело модалки демо: ролик
+       открывается поверх страницы по клику на фрейм. Сторож — тест «текст
+       карточки не пляшет» в `tests/layout.test.mjs`. */
   }
 
   /*

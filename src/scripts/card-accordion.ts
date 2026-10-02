@@ -1,11 +1,12 @@
 /**
- * Поведение карточки проекта: аккордеон, переход по якорю, плеер демо.
+ * Поведение карточки проекта: аккордеон и переход по якорю.
  *
  * Вынесено из `ProjectCard.astro` при сплите по лимиту длины файла (500 строк).
  * Шов выбран не по размеру, а по смыслу: в компоненте остались разметка и
- * стили, здесь — вся логика. Разметка и логика связаны одним контрактом:
- * `details.card`, `.panel`, `video.demo`, `[data-hover-play]` и атрибут
- * `data-demoPlaying`, который читает `VideoFrame`.
+ * стили, здесь — вся логика. Разметка и логика связаны контрактом
+ * `details.card` и `.panel`. Ролик проекта с 2026-10-02 играет в модалке —
+ * это `demo-modal.ts`: там и флаг `data-demo-playing`, по которому
+ * `VideoFrame` глушит тизер.
  */
 /*
  * Плавное раскрытие. `<details>` сам по себе открывается РЫВКОМ и, что важнее,
@@ -169,44 +170,6 @@ for (const card of document.querySelectorAll<HTMLDetailsElement>(
     collapseOthers(card, others());
     open();
   });
-
-  /*
-   * Демо и тизер не играют одновременно.
-   *
-   * Тизер живёт в шапке карточки и при раскрытии остаётся на экране рядом с
-   * плеером. Два видео разом — это и лишний расход, и мельтешение сбоку от
-   * того, что человек смотрит.
-   *
-   * ⚠ Флаг ставится АТРИБУТОМ, а не прямым `teaser.pause()`. Пауза сразу же
-   * снималась бы: тизер заводится от наведения, а курсор во время просмотра
-   * по карточке ходит. Атрибут читает `VideoFrame` и не запускает тизер,
-   * пока демо идёт.
-   */
-  const demoPlayer = card.querySelector<HTMLVideoElement>("video.demo");
-  if (demoPlayer) {
-    const teaser = card.querySelector<HTMLVideoElement>(
-      "video[data-hover-play]",
-    );
-    const busy = (on: boolean) => {
-      if (!on) {
-        delete card.dataset.demoPlaying;
-        return;
-      }
-      card.dataset.demoPlaying = "1";
-      // ⚠ Нужны ОБА действия. Атрибут не даёт тизеру запуститься снова, но
-      // сам по себе не останавливает уже идущий — а к моменту старта демо он
-      // почти всегда уже играет: карточку раскрывали курсором. Одного флага
-      // не хватало, проверено.
-      teaser?.pause();
-    };
-    demoPlayer.addEventListener("play", () => busy(true));
-    demoPlayer.addEventListener("pause", () => busy(false));
-    demoPlayer.addEventListener("ended", () => busy(false));
-    // Свернули карточку — звук не должен доноситься из закрытого блока.
-    card.addEventListener("toggle", () => {
-      if (!card.open) demoPlayer.pause();
-    });
-  }
 
   controllers.push({ card, open, close, stop });
 }

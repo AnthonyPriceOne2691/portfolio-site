@@ -49,6 +49,8 @@ export const text = {
   "project.updated": "Updated",
   "project.proof": "Proof",
   "project.video": "Watch demo",
+  "demo.dialog": "Project demo video",
+  "demo.close": "Close video",
   "proof.github": "Code on GitHub",
   "proof.brief": "Engineering details · PDF",
   "status.production": "Production",

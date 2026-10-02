@@ -11,6 +11,7 @@ proof:
     en: "/demo-agent-contour.vtt"
     ru: "/demo-agent-contour.ru.vtt"
   poster: "/poster-agent-contour.jpg"
+  teaser: "/teaser-agent-contour.mp4"
 contract: "Only what a mechanism can reject counts as done: a gate that cannot turn red is treated as broken."
 featured: false
 order: 2

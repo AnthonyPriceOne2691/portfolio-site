@@ -13,22 +13,25 @@
  * запрет снят не целиком, а заменён на условие. С `preload="none"` это ДЕШЕВЛЕ
  * прежнего автоплея: пока карточку не тронули, с диска не качается ни байта.
  *
- * ⚠ Фрейм обязан остаться НЕИНТЕРАКТИВНЫМ. Он живёт внутри `<summary>`, а это
- * кнопка: нативные контролы видео ловили бы клик на себя и одновременно
- * сворачивали карточку. Полное демо поэтому уходит ссылкой в раскрытую часть
- * (`ProofLinks`) — тем более что `proof.video` по схеме внешний URL, который
- * плеером не встроить в принципе.
+ * ⚠ Контролов видео во фрейме нет и не будет: он живёт внутри `<summary>`, а это
+ * кнопка — нативные контролы ловили бы клик на себя и одновременно сворачивали
+ * карточку. У карточки со своим роликом (`demo`) клик по фрейму РАСКРЫТОЙ
+ * карточки открывает ролик в модалке (`scripts/demo-modal.ts`, решение владельца
+ * 2026-10-02); свёрнутую он, как и вся шапка, раскрывает. Доступный путь к ролику
+ * — ссылка «Watch demo» в раскрытой части: фрейм в шапке фокус не получает.
  *
  * Версии видео по языкам разводятся сами: RU-файл проекта несёт RU-ссылку,
  * EN-файл — EN. Никакой логики выбора здесь нет и не нужно.
  */
 interface Props {
   proof: { teaser?: string; poster?: string; video?: string };
+  /** id карточки, если у неё свой ролик: в раскрытой карточке фрейм его открывает. */
+  demo?: string;
 }
-const { proof } = Astro.props;
+const { proof, demo } = Astro.props;
 ---
 
-<figure class="frame glass">
+<figure class="frame glass" data-demo-open={demo}>
   {
     proof.teaser ? (
       <video
@@ -50,6 +53,15 @@ const { proof } = Astro.props;
     )
   }
   {!proof.poster && !proof.teaser && <span class="soon">▶</span>}
+  {
+    demo && (
+      <span class="play" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22">
+          <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />
+        </svg>
+      </span>
+    )
+  }
 </figure>
 
 <script>
@@ -73,7 +85,7 @@ const { proof } = Astro.props;
     /** Файл подставляется в последний момент — до этого `preload="none"` молчит. */
     const play = () => {
       if (reduced) return;
-      // В карточке идёт полное демо — тизер молчит (флаг ставит `ProjectCard`).
+      // Идёт полное демо в модалке — тизер молчит (флаг ставит `demo-modal.ts`).
       if (scope instanceof HTMLElement && scope.dataset.demoPlaying) return;
       if (!v.src && v.dataset.src) v.src = v.dataset.src;
       // `play()` отвергается сам по себе (политика автовоспроизведения, вкладка
@@ -115,6 +127,33 @@ const { proof } = Astro.props;
     border: 1px solid var(--preview-frame-border);
     background: var(--preview-frame-bg);
     box-shadow: var(--preview-frame-shadow);
+  }
+  /* Значок запуска — только у раскрытой карточки: там клик по фрейму открывает
+     ролик, а у свёрнутой лишь раскрывает её, и обещать ролик было бы враньём. */
+  :global(details[open]) .frame[data-demo-open] {
+    cursor: pointer;
+  }
+  .play {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .play svg {
+    box-sizing: content-box;
+    padding: 0.85rem 0.8rem 0.85rem 0.95rem;
+    border-radius: 50%;
+    color: #fff;
+    background: rgb(0 0 0 / 0.55);
+    border: 1px solid rgb(255 255 255 / 0.35);
+    box-shadow: 0 0.4rem 1.4rem rgb(0 0 0 / 0.35);
+  }
+  :global(details[open]) .play {
+    opacity: 1;
   }
   .soon {
     position: absolute;

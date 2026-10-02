@@ -1,0 +1,115 @@
+---
+/**
+ * Модалка демо-ролика — одна на страницу (решение владельца 2026-10-02: «не
+ * превращать карточку в простыню»). Плеер больше не живёт в раскрытой карточке:
+ * ролик открывается поверх страницы по клику на фрейм раскрытой карточки или на
+ * «Watch demo» и берётся из `<template id="demo-<slug>">` этой карточки.
+ *
+ * ⚠ `<dialog>` + `showModal()`, а не самодельный слой. Центрирование, затемнение
+ * (`::backdrop`), ловушка фокуса, Esc и возврат фокуса на кнопку запуска — силами
+ * браузера, в Safari на iOS тоже (с 15.4). Поведение — `scripts/demo-modal.ts`.
+ */
+import { t } from "../lib/text";
+---
+
+<dialog class="demo-modal" data-demo-modal aria-label={t("demo.dialog")}>
+  <button
+    class="close"
+    type="button"
+    data-demo-close
+    aria-label={t("demo.close")}
+  >
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path
+        d="M6 6l12 12M18 6L6 18"
+        stroke="currentColor"
+        stroke-width="2.2"
+        stroke-linecap="round"></path>
+    </svg>
+  </button>
+  <div class="stage" data-demo-stage></div>
+</dialog>
+
+<script>
+  import "../scripts/demo-modal";
+</script>
+
+<style>
+  /* Ролик целиком влезает в экран и по ширине, и по высоте: на телефоне в
+     портретной ориентации его ограничивает ширина, в альбомной — высота. Сверху
+     остаётся место под крестик. `dvh` — чтобы панель браузера на телефоне не
+     обрезала низ; `vh` — запасной вариант для старых браузеров. */
+  .demo-modal {
+    width: min(94vw, calc((100vh - 8rem) * 16 / 9), 72rem);
+    width: min(94vw, calc((100dvh - 8rem) * 16 / 9), 72rem);
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    overflow: visible;
+    color: #fff;
+  }
+  .demo-modal::backdrop {
+    background: rgb(3 5 10 / 0.86);
+  }
+  /* Видео — клон из шаблона карточки, у него её scope-атрибуты, а не наши. */
+  .stage :global(video) {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-sm);
+    background: #000;
+    box-shadow: 0 1.5rem 5rem rgb(0 0 0 / 0.55);
+  }
+  /* Крестик — над роликом, а не поверх: поверх он закрывал бы угол кадра и
+     спорил бы с кнопками плеера. 44 px — минимальная цель для пальца, в пикселях:
+     от `rem` она зависела бы от корневого шрифта (замер: 41 px вместо 44). */
+  .close {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 0.6rem);
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgb(255 255 255 / 0.24);
+    background: rgb(255 255 255 / 0.1);
+    color: #fff;
+    cursor: pointer;
+  }
+  .close:hover,
+  .close:focus-visible {
+    background: rgb(255 255 255 / 0.22);
+  }
+  .close:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* Страница под модалкой не прокручивается; `scrollbar-gutter: stable` в
+     global.css не даёт раскладке прыгнуть, когда полоса прокрутки исчезает. */
+  :global(html.demo-open) {
+    overflow: hidden;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .demo-modal[open] {
+      animation: demo-in 0.22s ease-out;
+    }
+    .demo-modal[open]::backdrop {
+      animation: demo-fade 0.22s ease-out;
+    }
+  }
+  @keyframes demo-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+  @keyframes demo-fade {
+    from {
+      opacity: 0;
+    }
+  }
+</style>

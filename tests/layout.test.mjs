@@ -23,11 +23,12 @@
  * ширины карточки, а не прогоном — прогон был зелёным.
  */
 import { strict as assert } from "node:assert";
-import { createServer } from "node:http";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import test, { after, before } from "node:test";
 
 import { chromium } from "playwright";
+
+import { serveDist } from "./lib/serve.mjs";
 
 const DIST = new URL("../dist/", import.meta.url);
 // ⚠ Список страниц СОБРАННОГО сайта, и он же — единственное место, где
@@ -37,49 +38,19 @@ const DIST = new URL("../dist/", import.meta.url);
 const PAGES = ["index.html", "about/index.html"];
 const WIDTHS = [360, 390, 414];
 
-const MIME = {
-  ".html": "text/html",
-  ".css": "text/css",
-  ".js": "text/javascript",
-  ".svg": "image/svg+xml",
-  ".xml": "application/xml",
-};
-
 let browser;
-let server;
+let site;
 let origin;
 
 before(async () => {
-  server = createServer((req, res) => {
-    // ⚠ Каталог отдаётся как `index.html`: ссылки на сайте ведут на `/` и
-    // `/#якорь`, а не на `/index.html`. Без этого переход по меню упирался в
-    // попытку прочитать каталог.
-    const raw = decodeURIComponent(req.url.split("?")[0].split("#")[0]);
-    const path = raw.endsWith("/") ? `${raw}index.html` : raw;
-    try {
-      // ⚠ Файл читается ДО `writeHead`, и порядок здесь принципиален. Раньше
-      // заголовки уходили первыми, и на отсутствующем пути `readFileSync`
-      // бросал уже ПОСЛЕ них: ветка `catch` пыталась дослать 404, получала
-      // ERR_HTTP_HEADERS_SENT, и тест падал с ошибкой про асинхронную
-      // активность вместо внятного «нет такой страницы».
-      const body = readFileSync(new URL("." + path, DIST));
-      const ext = path.slice(path.lastIndexOf("."));
-      res.writeHead(200, {
-        "content-type": MIME[ext] ?? "application/octet-stream",
-      });
-      res.end(body);
-    } catch {
-      res.writeHead(404).end("not found");
-    }
-  });
-  await new Promise((r) => server.listen(0, "127.0.0.1", r));
-  origin = `http://127.0.0.1:${server.address().port}`;
+  site = await serveDist(DIST);
+  origin = site.origin;
   browser = await chromium.launch();
 });
 
 after(async () => {
   await browser?.close();
-  await new Promise((r) => server?.close(r));
+  await site?.close();
 });
 
 const url = (rel) => `${origin}/${rel}`;
