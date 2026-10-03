@@ -42,9 +42,24 @@ export async function serveDist(dist) {
       // активность вместо внятного «нет такой страницы».
       const body = readFileSync(new URL("." + path, dist));
       const ext = path.slice(path.lastIndexOf("."));
-      res.writeHead(200, {
-        "content-type": MIME[ext] ?? "application/octet-stream",
-      });
+      const type = MIME[ext] ?? "application/octet-stream";
+      // ⚠ Диапазоны (206) — как у прода (`worker/media.js`): Safari без них mp4 не
+      // играет вовсе, и тест WebKit с роликом смотрел бы в пустой плеер (03.10).
+      // `bytes=0-` честно значит «до конца файла».
+      const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? "");
+      if (m && (m[1] || m[2])) {
+        const start = m[1] ? Number(m[1]) : Math.max(0, body.length - Number(m[2]));
+        const end = m[1] && m[2] ? Math.min(Number(m[2]), body.length - 1) : body.length - 1;
+        res.writeHead(206, {
+          "content-type": type,
+          "accept-ranges": "bytes",
+          "content-range": `bytes ${start}-${end}/${body.length}`,
+          "content-length": end - start + 1,
+        });
+        res.end(body.subarray(start, end + 1));
+        return;
+      }
+      res.writeHead(200, { "content-type": type, "accept-ranges": "bytes" });
       res.end(body);
     } catch {
       res.writeHead(404).end("not found");

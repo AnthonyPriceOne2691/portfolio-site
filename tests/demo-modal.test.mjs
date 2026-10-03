@@ -20,7 +20,7 @@
 import { strict as assert } from "node:assert";
 import test, { after, before } from "node:test";
 
-import { chromium } from "playwright";
+import { chromium, devices, webkit } from "playwright";
 
 import { serveDist } from "./lib/serve.mjs";
 
@@ -197,3 +197,39 @@ for (const d of DEVICES) {
     await context.close();
   });
 }
+
+/*
+ * ⚠ Английские субтитры видны сразу — и в Safari. Chrome атрибут `default` соблюдает, а
+ * Safari в режиме субтитров «Автоматически» его пропускает, если язык системы совпадает с
+ * языком звука: на проде 03.10 у англоязычного посетителя ролик шёл без строк. Поймать
+ * это можно только в WebKit и только на настоящем ролике: выбор дорожек Safari делает,
+ * когда загружены метаданные (тестовый сервер для этого отдаёт диапазоны, как прод).
+ */
+test("английские субтитры видны по умолчанию — WebKit (Safari)", async () => {
+  const browserW = await webkit.launch();
+  // Браузер закрывается при ЛЮБОМ исходе: упавшая проверка без этого держала процесс
+  // теста открытым бесконечно (поймано сломом 03.10).
+  try {
+  const context = await browserW.newContext({ ...devices["iPhone 13"] });
+  const page = await context.newPage();
+  await page.goto(`${site.origin}/`);
+  const id = await page.evaluate(() => document.querySelector('template[id^="demo-"]')?.id.slice(5) ?? null);
+  assert.ok(id, "ни у одной карточки нет своего ролика — проверять нечего");
+  const card = page.locator(`details#${id}`);
+  await card.locator(".title").scrollIntoViewIfNeeded();
+  await card.locator(".title").tap();
+  await until(page, (id) => document.getElementById(id).open, id, "карточка не раскрылась");
+  await page.waitForTimeout(600);
+  await card.locator("[data-demo-open]").tap();
+  await until(page, isOpen, null, "ролик не открылся");
+  await until(page, () => document.querySelector("dialog[data-demo-modal] video")?.readyState >= 1, null,
+    "WebKit не загрузил метаданные ролика — без них выбор субтитров не проверить", 15000);
+  await page.waitForTimeout(300);
+  const modes = await page.evaluate(() =>
+    Object.fromEntries([...document.querySelector("dialog[data-demo-modal] video").textTracks].map((t) => [t.language, t.mode])),
+  );
+  assert.deepEqual(modes, { en: "showing", ru: "disabled" }, "в Safari английские субтитры не включены по умолчанию — showDefaultCaptions в demo-modal.ts");
+  } finally {
+    await browserW.close();
+  }
+});
