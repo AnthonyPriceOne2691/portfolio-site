@@ -24,11 +24,11 @@
  *    Enter, Esc дают кольцо, курсор и Tab поднимают карточку, как и раньше.
  */
 import { strict as assert } from "node:assert";
-import { readdirSync, readFileSync } from "node:fs";
 import test, { after, before } from "node:test";
 
 import { chromium, webkit } from "playwright";
 
+import { builtCss } from "./lib/css.mjs";
 import { serveDist } from "./lib/serve.mjs";
 
 const DIST = new URL("../dist/", import.meta.url);
@@ -40,20 +40,6 @@ const PHONE = {
 const DESKTOP = { viewport: { width: 1280, height: 900 } };
 
 /* ---------- 1. правила CSS ---------- */
-
-/** Весь CSS сборки: файлы `_astro/*.css` и `<style>` в страницах — Astro мелкие стили встраивает. */
-function builtCss() {
-  const files = readdirSync(DIST, { recursive: true }).map(String);
-  const sheets = files
-    .filter((f) => f.endsWith(".css"))
-    .map((f) => readFileSync(new URL(f, DIST), "utf8"));
-  for (const page of files.filter((f) => f.endsWith(".html"))) {
-    const html = readFileSync(new URL(page, DIST), "utf8");
-    for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g))
-      sheets.push(m[1]);
-  }
-  return sheets.join("\n");
-}
 
 /** Правила стилей с цепочкой обёрток вокруг них: `{ selector, wrappers }`. */
 function styleRules(css) {
@@ -106,7 +92,7 @@ const HOVER_MEDIA = /^@media\b.*\(\s*hover\s*:\s*hover\s*\)/;
 const FOCUS_ALLOWED = [/^\.skip:focus$/];
 
 test("CSS: наведение — только с курсором, подъём от фокуса — только от клавиатуры", () => {
-  const rules = styleRules(builtCss());
+  const rules = styleRules(builtCss(DIST));
   const selectors = rules.flatMap((r) =>
     splitSelectors(r.selector).map((s) => ({ s, wrappers: r.wrappers })),
   );

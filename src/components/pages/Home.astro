@@ -24,7 +24,12 @@ import { t } from "../../lib/text";
 const inPublic = (f: string) =>
   existsSync(fileURLToPath(new URL(`../../../public/${f}`, import.meta.url)));
 
-const PHOTO_FILES = ["photo.jpg", "photo.jpeg", "photo.png", "photo.webp"];
+/* WebP — первым: по фото считается LCP первого экрана, и WebP весит 28 КБ
+   против 48 у JPEG при средней разнице 2 уровня из 255 (03.10). Поддержка —
+   все живые браузеры с 2020 года (Safari 14), поэтому без `<picture>`: обёртка
+   с `display: contents` втащила бы в сетку героя `<source>`, и он занял бы
+   колонку фото (поймано сравнением снимков). `photo.jpg` остаётся исходником. */
+const PHOTO_FILES = ["photo.webp", "photo.jpg", "photo.jpeg", "photo.png"];
 const photo = PHOTO_FILES.find(inPublic);
 
 /*
@@ -76,12 +81,15 @@ const intro = photo && inPublic("intro.mp4") ? "intro.mp4" : undefined;
           </span>
         </button>
       ) : photo ? (
+        // `fetchpriority` — фото и есть LCP первого экрана: браузер берёт его
+        // раньше прочих картинок, а не в общей очереди.
         <img
           class="photo"
           src={`/${photo}`}
           alt={t("home.photoAlt")}
           width="200"
           height="200"
+          fetchpriority="high"
         />
       ) : (
         <div class="photo glass" aria-hidden="true" />

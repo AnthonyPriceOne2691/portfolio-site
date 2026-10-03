@@ -60,13 +60,26 @@ function addressFor(id: string | null): string {
   return `${u.pathname}${u.search}${u.hash}`;
 }
 
+/**
+ * ⚠ Пауза НЕ останавливает загрузку: браузер докачивает буфер, а то и весь
+ * файл. Обрывает её только снятый источник — `load()` без `src` сбрасывает
+ * элемент и отменяет запрос (алгоритм загрузки медиа в HTML).
+ */
+function unload(v: HTMLVideoElement): void {
+  v.pause();
+  v.removeAttribute("src");
+  v.load();
+}
+
 /** Тизер в шапке карточки молчит, пока идёт ролик, и оживает после. */
 function quietTeaser(card: HTMLDetailsElement | null, on: boolean): void {
   if (!card) return;
   const teaser = card.querySelector<HTMLVideoElement>("video[data-hover-play]");
   if (on) {
     card.dataset.demoPlaying = "1";
-    teaser?.pause();
+    // Тизер не только молчит, но и не качается: на медленной сети он делил
+    // канал с роликом, и тот стартовал на 0,6 с позже (замер 03.10).
+    if (teaser) unload(teaser);
     return;
   }
   delete card.dataset.demoPlaying;
@@ -75,11 +88,14 @@ function quietTeaser(card: HTMLDetailsElement | null, on: boolean): void {
   void teaser.play().catch(() => {});
 }
 
-/** Ролик карточки из её шаблона; повторное открытие продолжает с той же секунды. */
+/**
+ * Ролик карточки из её шаблона — при каждом открытии заново: закрытие плеер
+ * выгружает (см. обработчик `close`). Секунду хранит sessionStorage, поэтому
+ * повторное открытие продолжает с неё.
+ */
 function mount(id: string): Shown | null {
   const tpl = document.getElementById(`demo-${id}`);
   if (!stage || !(tpl instanceof HTMLTemplateElement)) return null;
-  if (current?.id === id) return current;
   stage.replaceChildren(tpl.content.cloneNode(true));
   const video = stage.querySelector("video");
   if (!video) return null;
@@ -88,6 +104,8 @@ function mount(id: string): Shown | null {
   if (from > 0) video.currentTime = from;
   let saved = from;
   video.addEventListener("timeupdate", () => {
+    // Выгруженный при закрытии плеер сообщает «0 с» — это не просмотр.
+    if (!video.isConnected) return;
     if (Math.abs(video.currentTime - saved) < 1) return;
     saved = video.currentTime;
     remember(id, saved);
@@ -179,6 +197,11 @@ if (dialog) {
     const { id, video, card } = current;
     video.pause();
     if (!video.ended) remember(id, video.currentTime);
+    // Закрытый ролик больше не качается: на медленной сети он докачивал все
+    // 6,4 МБ (замер 03.10). Следующее открытие соберёт плеер заново.
+    unload(video);
+    stage?.replaceChildren();
+    current = null;
     document.documentElement.classList.remove("demo-open");
     // iOS прокручивает страницу и под модалкой — возвращаем туда, где открывали.
     if (Math.abs(window.scrollY - scrollBefore) > 1)

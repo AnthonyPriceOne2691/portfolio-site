@@ -181,10 +181,19 @@ body::after {
  * разметка стоит намертво, а живёт только свет под ней. Плюс это дешевле:
  * анимация `background-position` заставляет браузер перерисовывать слой во всю
  * площадь экрана каждый кадр.
+ *
+ * ⚠ И свет живёт не всегда: дрейф стоит на паузе и идёт, только пока посетитель
+ * что-то делает (класс `canvas-live` ставит `scripts/canvas-life.ts`).
+ * Бесконечный дрейф перерисовывал страницу 60 раз в секунду, даже когда на неё
+ * просто смотрят, — и пересчитывал блюр под каждым стеклом (замер 03.10).
  */
 @media (prefers-reduced-motion: no-preference) {
   body::after {
     animation: canvas-float 26s ease-in-out infinite alternate;
+    animation-play-state: paused;
+  }
+  :root.canvas-live body::after {
+    animation-play-state: running;
   }
 }
 

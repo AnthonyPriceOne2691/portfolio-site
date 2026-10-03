@@ -36,7 +36,7 @@ const { proof, demo } = Astro.props;
     proof.teaser ? (
       <video
         class="teaser"
-        poster={proof.poster}
+        data-poster={proof.poster}
         preload="none"
         muted
         loop
@@ -82,8 +82,32 @@ const { proof, demo } = Astro.props;
     const disclosure = scope instanceof HTMLDetailsElement ? scope : null;
     const pinned = () => disclosure?.open === true;
 
+    /*
+     * ⚠ Постер — тоже не на старте. `preload="none"` держит только сам ролик,
+     * а атрибут `poster` браузер качает сразу: 145 КБ, две трети первой
+     * загрузки, хотя на телефоне фрейм ниже первого экрана, — и они делили
+     * канал с фото, по которому считается LCP (замер 03.10: LCP 1,79 → 1,51 с).
+     * Кадр ставится, когда фрейм подъезжает к экрану; до того фрейм показывает
+     * свой градиент, а не дыру (B3), — и без JS тоже.
+     */
+    const showPoster = () => {
+      if (!v.poster && v.dataset.poster) v.poster = v.dataset.poster;
+    };
+    if ("IntersectionObserver" in window) {
+      const near = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((e) => e.isIntersecting)) return;
+          showPoster();
+          near.disconnect();
+        },
+        { rootMargin: "300px 0px" },
+      );
+      near.observe(v);
+    } else showPoster();
+
     /** Файл подставляется в последний момент — до этого `preload="none"` молчит. */
     const play = () => {
+      showPoster();
       if (reduced) return;
       // Идёт полное демо в модалке — тизер молчит (флаг ставит `demo-modal.ts`).
       if (scope instanceof HTMLElement && scope.dataset.demoPlaying) return;
@@ -127,6 +151,18 @@ const { proof, demo } = Astro.props;
     border: 1px solid var(--preview-frame-border);
     background: var(--preview-frame-bg);
     box-shadow: var(--preview-frame-shadow);
+    /* ⚠ Блюр стекла фрейму не нужен: его целиком закрывает непрозрачный кадр
+       или градиент, и размытый фон под ним не виден никому, — а браузер всё
+       равно пересчитывал его на каждом кадре движения фона. Класс `glass`
+       остаётся (рамка, тени, деградация), снят только блюр. */
+    backdrop-filter: none;
+  }
+  /* Префиксное — отдельным блоком: в одном правиле минификатор считает пару
+     дублем и оставляет одно (см. canvas.css). */
+  @supports (-webkit-backdrop-filter: blur(1px)) {
+    .frame {
+      -webkit-backdrop-filter: none;
+    }
   }
   /* Значок запуска — только у раскрытой карточки: там клик по фрейму открывает
      ролик, а у свёрнутой лишь раскрывает её, и обещать ролик было бы враньём. */

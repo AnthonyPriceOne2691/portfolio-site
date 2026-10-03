@@ -23,11 +23,12 @@
  * ширины карточки, а не прогоном — прогон был зелёным.
  */
 import { strict as assert } from "node:assert";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import test, { after, before } from "node:test";
 
 import { chromium } from "playwright";
 
+import { builtCss } from "./lib/css.mjs";
 import { serveDist } from "./lib/serve.mjs";
 
 const DIST = new URL("../dist/", import.meta.url);
@@ -940,13 +941,10 @@ test("B6: при reduced-motion ничего не анимируется", async
 
 test("B6: при reduced-transparency стекло теряет блюр, а не читаемость", () => {
   // Браузер здесь не нужен и не годится: `fetch` по file:// заблокирован, а
-  // вопрос всё равно про содержимое СОБРАННОГО css. Читаем с диска.
-  const cssDir = new URL("../dist/_astro/", import.meta.url);
-  const flat = readdirSync(cssDir)
-    .filter((f) => f.endsWith(".css"))
-    .map((f) => readFileSync(new URL(f, cssDir), "utf8"))
-    .join("\n")
-    .replace(/\s+/g, "");
+  // вопрос всё равно про содержимое СОБРАННОГО css. Читаем с диска — и файлы,
+  // и встроенные `<style>` (см. tests/lib/css.mjs).
+  const flat = builtCss(DIST).replace(/\s+/g, "");
+  assert.ok(flat.includes(".glass{"), "в сборке не нашлось CSS стекла — проверять нечего");
 
   assert.match(
     flat,

@@ -98,6 +98,19 @@ for (const d of DEVICES) {
       ]),
     );
     assert.deepEqual(tracks, [["en", true], ["ru", false]], "субтитры в модалке не те");
+    // ⚠ Пауза загрузку не останавливает — только снятый источник. Байты здесь не
+    // посчитать (у Chromium из Playwright нет H.264), поэтому сторожится механизм:
+    // замер 03.10 в WebKit — ролик после закрытия докачивал 1,4 МБ за 6 с, тизер
+    // делил сеть с роликом; со снятым источником — ноль.
+    const sources = (id) => ({
+      modal: [...document.querySelectorAll("dialog[data-demo-modal] video")].filter((v) => v.getAttribute("src")).length,
+      teaser: Boolean(document.querySelector(`details#${id} video[data-hover-play]`)?.getAttribute("src")),
+    });
+    assert.deepEqual(
+      await page.evaluate(sources, id),
+      { modal: 1, teaser: false },
+      "пока идёт ролик, тизер держит источник — он качается и делит сеть с роликом",
+    );
 
     // Ролик и крестик целиком на экране, крестик — под палец (44 px). Мерить —
     // после анимации появления: она начинается с масштаба 0,97, и замер на её
@@ -145,6 +158,11 @@ for (const d of DEVICES) {
     await until(page, isClosed, null, "нажатие мимо ролика его не закрыло");
     await until(page, () => !location.search.includes("demo="), null, "адрес не очистился после закрытия");
     assert.ok(await page.evaluate(cardOpen, `details#${id}`), "после ролика карточка свёрнута");
+    assert.deepEqual(
+      await page.evaluate(sources, id),
+      { modal: 0, teaser: true },
+      "закрытый ролик держит источник (он докачивается дальше) или тизер не ожил",
+    );
     const scrollAfter = await page.evaluate(() => window.scrollY);
     assert.ok(Math.abs(scrollAfter - scrollBefore) <= 2, `страница уехала: ${scrollBefore} → ${scrollAfter}`);
 
