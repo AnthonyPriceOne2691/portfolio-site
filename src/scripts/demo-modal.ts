@@ -89,6 +89,24 @@ function quietTeaser(card: HTMLDetailsElement | null, on: boolean): void {
 }
 
 /**
+ * ⚠ Дорожка с `default` включается ЯВНО. Chrome атрибут соблюдает, а Safari в режиме
+ * субтитров «Автоматически» его пропускает, если язык системы совпадает с языком звука:
+ * у англоязычного посетителя ролик шёл без строк (проверка прода 03.10; у владельца с
+ * русской системой строки были). Решение владельца — английские видны сразу. Второй раз —
+ * после метаданных: тогда Safari делает свой выбор; дальше выбор в меню плеера за зрителем.
+ */
+function showDefaultCaptions(video: HTMLVideoElement): void {
+  const pick = () => {
+    const tracks = [...video.querySelectorAll("track")];
+    tracks.forEach(
+      (el) => (el.track.mode = el.default ? "showing" : "disabled"),
+    );
+  };
+  pick();
+  video.addEventListener("loadedmetadata", pick, { once: true });
+}
+
+/**
  * Ролик карточки из её шаблона — при каждом открытии заново: закрытие плеер
  * выгружает (см. обработчик `close`). Секунду хранит sessionStorage, поэтому
  * повторное открытие продолжает с неё.
@@ -99,6 +117,7 @@ function mount(id: string): Shown | null {
   stage.replaceChildren(tpl.content.cloneNode(true));
   const video = stage.querySelector("video");
   if (!video) return null;
+  showDefaultCaptions(video);
   // До загрузки метаданных `currentTime` задаёт позицию старта — так и нужно.
   const from = recall(id);
   if (from > 0) video.currentTime = from;
