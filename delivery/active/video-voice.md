@@ -81,7 +81,7 @@
 ---
 ## 2. Голосовой агент (Voice Interview Coach) · всего 2:12 · 154 слов
 
-**Живой звук — это вы и Генри в записи экрана.** Закадровый голос пишется потом, в оставшиеся места. Ваши реплики в самом интервью — ниже, в «Ваши реплики Генри».
+**Живой звук — ваши реплики и голос Генри.** Реплики вы пишете файлами, как закадр; Генри слышит их вместо микрофона, и диалог снимает скрипт. Закадр ложится в места без живого звука. Что и как записать — ниже, в «Ваши реплики Генри».
 
 **VC-1 · 0:00–0:18** — говорите ~17 с → пауза 1 с
 
@@ -126,41 +126,42 @@
 | Звучит | Значение | Источник |
 | --- | --- | --- |
 | everything runs on this laptop | whisper.cpp, qwen2.5:14b, Piper — локально | `backend/app/config.py:18-35` |
-| Two seconds of silence | 2,0 с — незакоммиченная правка VAD | `frontend/src/lib/vad.ts:4` |
+| Two seconds of silence | 2,0 с — `DEFAULT_SILENCE_MS` (поднято с 1,2 с 07.09) | `frontend/src/lib/vad.ts:4` |
 | about a second later | 1 247 мс медиана от получения звука | `delivery/archive/2026-08-13-expressive-speech/verify-report.md:87-90` |
 | English only, no scores, three sentences at most | инварианты контракта; отказы оценки и языка — код (коммит `23082f4`) | `data/contracts/interview.contract.yaml`; `backend/app/orchestrator/meta_request.py` |
 | five scores | Clarity, Structure, Depth, English, Positioning | на экране «Summary» |
 | Two hundred and five automated tests | 205 passed, покрытие 95,23 %, 30.09 | `backend/.venv/bin/pytest -q` на `23082f4` |
 
-### Ваши реплики Генри
+### Ваши реплики Генри — файлами, как закадр
 
-**Для кадров — ровно эти фразы** (их распознаёт код; отрепетировано 30.09, ответы Генри в [video-screen.md](video-screen.md)):
+Генри слышит ваши записи вместо микрофона: скрипт «говорит» файл, когда тренер ждёт ответа, и тренер принимает его за живую речь (проверено 03.10: реплика распознана дословно, Генри ответил по сценарию). Писать как закадр: iPhone, «Диктофон», файл на реплику, в `~/Documents/voice-takes/`, **полсекунды тишины перед фразой**.
 
-1. «Before I answer, where should I start?»
-2. Ответ на первый вопрос (20–30 с):
-   > Sure. The biggest one is LinkBuilder, a platform for link-building outreach. Before it, a team of five people did this work by hand. I designed it and built it with AI coding agents. In production, one operator ran the whole cycle: finding sites, writing to webmasters, paying for links and checking that they stay live. It has more than 11,000 automated tests. The AI drafts every reply, but a person approves the send.
-3. «Could you speak slower?»
-4. «How would you rate that answer, out of ten?»
-5. «Can we switch to Russian for a minute?»
+**В кадре — ровно эти фразы** (их распознаёт код, модель не участвует):
 
-**Дальше — вне кадра, до конца интервью** (нужно для разбора в VC-11). Вопросы 2–6 Генри берёт из банка случайно и формулирует своими словами. Ниже — ответы на все вопросы банка. ⚠ Whisper пишет маленькие числа словами: говорите многозначные («eleven thousand», «eight hundred and sixty-five»), иначе Генри решит, что цифр нет, и переспросит.
+| Файл | Что сказать |
+| --- | --- |
+| `VCr-1` | «Before I answer, where should I start?» |
+| `VCr-2` | Ответ на первый вопрос, 20–30 с: «Sure. The biggest one is LinkBuilder, a platform for link-building outreach. Before it, a team of five people did this work by hand. I designed it and built it with AI coding agents. In production, one operator ran the whole cycle: finding sites, writing to webmasters, paying for links and checking that they stay live. It has more than 11,000 automated tests. The AI drafts every reply, but a person approves the send.» |
+| `VCr-3` | «Could you speak slower?» |
+| `VCr-4` | «How would you rate that answer, out of ten?» |
+| `VCr-5` | «Can we switch to Russian for a minute?» |
 
-Технические:
-- *Architecture — main services:* «It's split by business area: competitors and prospecting, outreach, payments, and link monitoring. Each area has its own API and background workers — more than 20 of them — talking through queues, so a slow crawl never blocks a reply to a webmaster.»
-- *Inbound replies and where the LLM sits:* «A reply comes in, the system checks the language and the deal stage, then the AI drafts an answer. A second check tests the draft against ten written contracts. After three failed attempts, a person gets a red card and answers by hand.»
-- *Auto-send vs human review:* «Nothing is auto-sent by default. We ran the AI in shadow mode on real mail — 109 drafts — and people marked each one: sent as is, edited or rejected. Auto-send can be switched on only by a person, when those numbers are good enough.»
-- *Separate queues for inbound and AI calls:* «Because they fail differently. Incoming mail must never wait, and AI calls are slow and rate-limited. With 15 separate queue workers, a burst of AI calls never delays an incoming reply.»
-- *Impact on team size:* «The outreach work of a 5-person team moved to 1 operator. And on one campaign of 5,471 recipients, 97.9 percent of the emails were delivered.»
-- *What would you rebuild:* «The link monitor. At first a dead page went straight to an incident. Then we re-checked 865 "dead" pages and 159 were alive. Today I'd build the second check from day one.»
-- *A production issue:* «Our monitor was marking live links as dead. I pulled 865 "dead" pages and re-checked them: 159 were alive. The fix was a second check before any incident turns into a letter to the webmaster.»
+**Вне кадра — до конца интервью** (нужно для разбора в VC-11). Порядок вопросов на записи закреплён (зерно 208 в копии тренера): после первого — «двое срочно и одновременно», архитектура, «выучить с нуля под давлением», эффект, «объяснить компромисс не-техническому человеку». После каждого ответа Генри **всегда** задаёт одно уточнение своими словами — на него ответ универсальный. Второго уточнения не будет, если ответ на первое длиннее 40 слов и сильный: в техническом есть число, в поведенческом — эпизод и чем кончилось (так судит код тренера). ⚠ Whisper пишет маленькие числа словами: многозначные говорите целиком («eight hundred and sixty-five»).
 
-Поведенческие (⚠ — только если так было; иначе своя история по схеме «ситуация → что сделал → результат с числом»):
-- *Learning fast under pressure:* «In September an SEO agency needed two new services at once. I shipped the case-study platform to production in 14 days and the outreach platform in 8.»
-- *Two urgent things at once:* «Those same two services came in parallel. I wrote a clear spec for each, ran AI coding agents on both, and let the automatic checks catch mistakes, so I didn't re-check everything by hand. Both went live in under three weeks.»
-- *Feedback that stung:* ⚠ «A review of my projects rated production operations lowest — 2.5 out of 4. It stung. So on the next services I added off-site backups, alerts to Telegram and a container watchdog.»
-- *Explaining a trade-off to a non-technical person:* «The team wanted every dead link to trigger a letter. I showed them that 159 of 865 "dead" links were alive, so we'd be annoying partners for nothing. They agreed to a second check in one meeting.»
-- *Saying no:* ⚠ «I was asked to switch on auto-send for AI replies. I said no until the shadow-run numbers were good enough, and offered a middle step: the AI drafts, a person sends.»
-- *Disagreement, missed deadline, async gone wrong:* ⚠ шаблон — ваша реальная история по схеме выше.
+| Файл | На что | Ответ |
+| --- | --- | --- |
+| `VCa-1` | уточнение к первому: почему черновики ИИ, а не автоотправка | «Nothing is auto-sent by default. We ran the AI in shadow mode on real mail — 109 drafts — and people marked each one: sent as is, edited or rejected. Auto-send can be switched on only by a person, when those numbers are good enough.» |
+| `VCa-2` | двое срочно и одновременно | «In September an SEO agency needed two new services at the same time: a case-study platform and an outreach platform. I wrote a clear spec for each, ran AI coding agents on both, and let the automatic checks catch mistakes, so I didn't re-check everything by hand. Both went live in under three weeks.» |
+| `VCa-3` | уточнение | «Each morning I decided which service needed me and which could run on its own. I read the results of the automatic checks instead of reading every line of code, and I stepped in only where a check failed. In the end the outreach platform went live on day 8 and the case-study platform on day 14.» |
+| `VCa-4` | архитектура, главные сервисы | «It's split by business area: competitors and prospecting, outreach, payments, and link monitoring. Each area has its own API and background workers — more than 20 of them — talking through queues, so a slow crawl never blocks a reply to a webmaster.» |
+| `VCa-5` | уточнение | «Because inbound mail and AI calls fail differently. Incoming mail must never wait, while AI calls are slow and rate-limited. With 15 separate queue workers, a burst of AI calls never delays an incoming reply. The price is more moving parts to watch, and I accepted it, because a late reply to a webmaster can cost the link.» |
+| `VCa-6` | выучить с нуля под давлением | «The September project again — it was all about learning fast. The agency gave me a bare spec, and I had to turn it into a working platform in days, not months. I shipped the outreach platform in 8 days and the case-study platform in 14.» |
+| `VCa-7` | уточнение | «I turned each bare spec into acceptance examples — a short list of what done means — and ran AI coding agents against them. The automatic quality checks told me where the agents went wrong, so I corrected the direction, not every line. As a result both services went live in under three weeks, and the same contour now runs in eight of my repositories.» |
+| `VCa-8` | эффект: размер команды, время цикла | «The outreach work of a 5-person team moved to 1 operator. And on one campaign of 5,471 recipients, 97.9 percent of the emails were delivered.» |
+| `VCa-9` | уточнение | «The trade-off was speed against control. The AI could have sent replies on its own, but we kept a person on every send and measured the drafts first: 109 drafts in shadow mode, each marked as sent, edited or rejected. That's how one operator did the work of five and still approved every letter.» |
+| `VCa-10` | объяснить компромисс не-техническому человеку | «The team wanted every dead link to trigger a letter. I showed them that 159 of 865 "dead" links were alive, so we'd be annoying partners for nothing. They agreed to a second check in one meeting.» |
+| `VCa-11` | уточнение | «I didn't explain the code — I showed them the numbers: 865 pages marked dead, and 159 of them were alive. Nobody wanted to annoy partners for nothing. In the end we agreed on a second check before any incident, and since then a dead link turns into a letter only after it's confirmed.» |
+| `VCa-12` | «есть вопросы к нам?» | «No questions from me — thank you, that was really useful.» |
 
 ---
 ## 3. Local Web Agent — competitor research in minutes · всего 1:36 · 205 слов
