@@ -13,7 +13,13 @@ export default defineConfig({
   // Пока здесь стояла заглушка `example.pages.dev`, развёрнутый сайт отдавал
   // превью, ссылающееся в чужой домен. Появится свой домен — менять здесь,
   // одной строкой, и пересобрать.
-  site: "https://portfolio-site.anthony-priceone.workers.dev",
+  //
+  // ⚠ 2026-10-03: поддомен аккаунта сменён на `aspidov`, воркер — на `anton`
+  // (решение владельца: короче и читается как имя). Прежний адрес
+  // `portfolio-site.anthony-priceone.workers.dev` умер вместе с поддоменом —
+  // редиректа с него нет и быть не может. Адрес зашит ещё в превью ссылки
+  // (scripts/make-assets.mjs), брифах (briefs/*.html) и CV — менять вместе.
+  site: "https://anton.aspidov.workers.dev",
   integrations: [sitemap()],
   build: {
     // Статика целиком: хостинг бесплатный, SSR не берём (design §8.1).

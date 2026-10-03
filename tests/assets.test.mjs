@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const DIST = fileURLToPath(new URL("../dist/", import.meta.url));
-const ORIGIN = "https://portfolio-site.anthony-priceone.workers.dev";
+const ORIGIN = "https://anton.aspidov.workers.dev";
 
 /*
  * ⚠ Объявленный долг, а не исключение «чтобы зеленело». Путь сюда вносят,

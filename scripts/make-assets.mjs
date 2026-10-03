@@ -67,7 +67,7 @@ const ogPage = () =>
           "</span></div>",
       )
       .join(""),
-    '</div><span class="host">portfolio-site.anthony-priceone.workers.dev</span></body></html>',
+    '</div><span class="host">anton.aspidov.workers.dev</span></body></html>',
   ].join("\n");
 
 /*

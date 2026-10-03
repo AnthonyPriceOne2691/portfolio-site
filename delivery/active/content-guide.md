@@ -257,6 +257,8 @@ npm run build
 4. Поменять `site` в `astro.config.mjs` на выданный домен.
 
 **Развёрнуто 2026-09-21:** <https://portfolio-site.anthony-priceone.workers.dev>
+**С 2026-10-03:** <https://anton.aspidov.workers.dev> — поддомен аккаунта сменён на
+`aspidov`, воркер — `anton`; прежний адрес умер без редиректа (решение владельца).
 Каждый push в `main` деплоится сам. Появится свой домен — менять `site` в
 `astro.config.mjs` одной строкой.
 
