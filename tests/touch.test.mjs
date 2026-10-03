@@ -25,6 +25,7 @@
  */
 import { strict as assert } from "node:assert";
 import test, { after, before } from "node:test";
+import { isDeepStrictEqual } from "node:util";
 
 import { chromium, webkit } from "playwright";
 
@@ -310,11 +311,15 @@ for (const engine of ["chromium", "webkit"]) {
       "курсор над карточкой её не поднимает — подъём потерян",
     );
     await page.mouse.move(5, 5);
-    assert.deepEqual(
-      await look(),
-      rest,
-      "курсор ушёл, а карточка осталась поднятой",
-    );
+    // ⚠ Ждётся сам покой, а не «анимации кончились»: WebKit на Linux отдавал кадр
+    // обратного перехода (масштаб 1,0006) уже после того, как `getAnimations()`
+    // его не показывал (CI 03.10). Переход — 0,32 с; 2 с — с запасом под нагрузку.
+    let back = await look();
+    for (let i = 0; i < 40 && !isDeepStrictEqual(back, rest); i++) {
+      await page.waitForTimeout(50);
+      back = await look();
+    }
+    assert.deepEqual(back, rest, "курсор ушёл, а карточка осталась поднятой");
 
     const onHead = (id) =>
       document.activeElement ===
