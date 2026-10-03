@@ -276,8 +276,15 @@ jobs:
           MIN_PCT: "70"
         run: bash scripts/lint/check_diff_coverage.sh
 
+      # Режим ратчета, а не «любой high — красный» (решение владельца 03.10, waiver
+      # в STATUS): http-cache-semantics ≤4.2.0 (через astro, код кэша удалённых картинок
+      # при сборке — не используется) и braces 3.0.3 (через eslint-plugin-astro) без
+      # патчей в природе. Снимок — scripts/lint/deps_audit_baseline.txt: всё сверх него
+      # по-прежнему роняет сборку. Вышли патчи — обновить, пере-снять снимок, убрать env.
       - name: Vulnerable dependencies
         if: always()
+        env:
+          HARD_FAIL_SEVERITY: "0"
         run: bash scripts/lint/check_deps_audit.sh
 
       # Мутационный гейт — самый дорогой, поэтому только на PR и с бюджетом.

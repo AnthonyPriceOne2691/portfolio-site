@@ -27,7 +27,7 @@
 - **hooks:** not-deployed
 - **stack-selftest:** ci (vendored)
 - **blockers:** none
-- **waivers:** none
+- **waivers:** deps-audit hard-fail off (HARD_FAIL_SEVERITY=0, ратчет по снимку js_high=7) reason=GHSA-ch52-4w7c-c8xp http-cache-semantics ≤4.2.0 через astro (кэш удалённых картинок при сборке — не используется, посетителям не уходит) и braces 3.0.3 через eslint-plugin-astro — патчей нет ни у одной на 2026-10-03; всё сверх снимка по-прежнему красное; пересмотреть, когда выйдут патчи, не позже 2026-11-03 by=human:anthony
 - **new_dependency:** @astrojs/sitemap reason=sitemap на двух языковых ветках с hreflang обязан перечислять каждую страницу обоих языков; рукописный список расходится с коллекцией молча — сборка зелёная, страницы не в индексе by=agent:claude-code
 - **new_dependency:** playwright reason=headless-браузер для примеров B6 и B7 (горизонтальный скролл на 360/390/414, бургер с клавиатуры, reduced-motion); одобрен владельцем 07.08. Окупился в первый же прогон: нашёл, что минификатор выбрасывает одно из двух написаний backdrop-filter — стекла не было бы либо в Firefox, либо в Safari до 18 by=human:anthony
 - **new_dependency:** prettier reason=гейт формата уже стоит на нём, но пакет приезжает ТРАНЗИТИВНО — исчезнет у апстрима, и хук умрёт молча (найдено 07.08 при накате cqg@1.91) by=agent:claude-code
