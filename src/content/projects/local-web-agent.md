@@ -6,6 +6,12 @@ status: "local-demo"
 stack: ["Python", "FastAPI", "Playwright", "Ollama", "Qwen3 14B", "React"]
 proof:
   github: "https://github.com/AnthonyPriceOne2691/local-web-agent"
+  video: "/demo-local-web-agent.mp4"
+  captions:
+    en: "/demo-local-web-agent.vtt"
+    ru: "/demo-local-web-agent.ru.vtt"
+  poster: "/poster-local-web-agent.jpg"
+  teaser: "/teaser-local-web-agent.mp4"
 contract: "Every action is checked against 14 hard rules before it reaches the browser, and anything that can’t be undone — like paying — waits for a person."
 featured: false
 order: 3
