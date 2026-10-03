@@ -6,6 +6,12 @@ status: "local-demo"
 stack: ["Python", "Ollama", "qwen3:8b", "bge-m3", "BM25", "RRF"]
 proof:
   brief: "/briefs/canon-rag.pdf"
+  video: "/demo-canon-rag.mp4"
+  captions:
+    en: "/demo-canon-rag.vtt"
+    ru: "/demo-canon-rag.ru.vtt"
+  poster: "/poster-canon-rag.jpg"
+  teaser: "/teaser-canon-rag.mp4"
 contract: "A question the documents don’t cover stops at the gate: the AI never sees a line of them and answers “not covered”. Across 680 answers, not one came without an address — a real file and section, or “not covered”."
 featured: false
 order: 5
