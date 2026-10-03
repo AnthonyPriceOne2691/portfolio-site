@@ -163,33 +163,33 @@
 - *Disagreement, missed deadline, async gone wrong:* ⚠ шаблон — ваша реальная история по схеме выше.
 
 ---
-## 3. Local Web Agent — competitor research in minutes · всего 1:42 · 205 слов
+## 3. Local Web Agent — competitor research in minutes · всего 1:36 · 205 слов
 
-**WA-1 · 0:00–0:17** — говорите ~16 с → пауза 1 с
+**WA-1 · 0:00–0:18** — говорите ~17 с (по записи) → пауза 1 с
 
 > Comparing competitors by hand takes hours. This research agent does it for you: give it a few links and a question, and it reads each site in a real browser — on my laptop, with no cloud AI.
 
-**WA-2 · 0:17–0:30** — говорите ~12 с → пауза 1 с
+**WA-2 · 0:18–0:29** — говорите ~10 с (по записи) → пауза 1 с
 
 > Here I ask which of three well-known link-building guides gives a small agency the most practical advice. It opens every site by itself.
 
-**WA-3 · 0:30–0:45** — говорите ~14 с → пауза 1 с
+**WA-3 · 0:29–0:43** — говорите ~13 с (по записи) → пауза 1 с
 
 > The verdict: Backlinko wins with ninety-five out of a hundred — over a hundred and seventy concrete strategies. Ahrefs gets eighty-five, and Moz seventy-five.
 
-**WA-4 · 0:45–0:59** — говорите ~13 с → пауза 1 с
+**WA-4 · 0:43–0:55** — говорите ~11 с (по записи) → пауза 1 с
 
 > Every confident fact has a quote behind it. The hundred and seventy comes straight from the page — and if a quote isn't really there, the fact is thrown out.
 
-**WA-5 · 0:59–1:11** — говорите ~11 с → пауза 1 с
+**WA-5 · 0:55–1:07** — говорите ~11 с → пауза 1 с
 
 > It also tells you what it didn't finish reading — here, two of the three sites. That line is written by code, so it's never skipped.
 
-**WA-6 · 1:11–1:28** — говорите ~16 с → пауза 1 с
+**WA-6 · 1:07–1:23** — говорите ~15 с (по записи) → пауза 1 с
 
 > It reads a page, plans the next step and acts — and fourteen hard rules are checked in code before any action reaches the browser. Anything that can't be undone, like paying, it leaves to a person.
 
-**WA-7 · 1:28–1:42** — говорите ~13 с → пауза 1 с
+**WA-7 · 1:23–1:36** — говорите ~12 с (по записи) → пауза 1 с
 
 > Four hundred and fifty-one automated tests, thirty-one real websites in the log, and the code is open. Need a bot like this for your market? Message me.
 
@@ -208,17 +208,17 @@
 | thirty-one real websites | 79 прогонов на 31 реальном сайте (30.09) | `data/runs/app.db`, таблица `crawl_runs` |
 
 ---
-## 4. RAG — answers from your documents · всего 1:38 · 187 слов
+## 4. RAG — answers from your documents · всего 1:40 · 187 слов
 
 **RG-1 · 0:00–0:10** — говорите ~9 с → пауза 1 с
 
 > Every company has documents nobody has time to read — and a chatbot that guesses is worse than none.
 
-**RG-2 · 0:10–0:27** — говорите ~16 с → пауза 1 с
+**RG-2 · 0:10–0:26** — говорите ~15 с (по записи) → пауза 1 с
 
 > This is a search desk over my own engineering rulebook: four documents, over twenty thousand lines, in Russian — so I'll translate. I ask how many quality checks the rulebook allows.
 
-**RG-3 · 0:27–0:38** — говорите ~10 с → пауза 1 с
+**RG-3 · 0:26–0:38** — говорите ~11 с (по записи) → пауза 1 с
 
 > The answer comes back with an address: the file and the section. Twenty-two checks: sixteen at every commit, six outside.
 
@@ -230,15 +230,15 @@
 
 > Now a question the documents don't cover: how to run load tests. Search finds nothing close enough, so the AI gets no text at all — and it says not covered, instead of making something up.
 
-**RG-6 · 1:03–1:14** — говорите ~10 с → пауза 1 с
+**RG-6 · 1:03–1:15** — говорите ~11 с (по записи) → пауза 1 с
 
 > That's the rule here: an answer with an address, or no answer. In six hundred and eighty answers, not one broke that rule.
 
-**RG-7 · 1:14–1:26** — говорите ~11 с → пауза 1 с
+**RG-7 · 1:15–1:28** — говорите ~12 с (по записи) → пауза 1 с
 
 > And it's measured, not assumed. On three hundred and fourteen questions it had never seen, the right section comes up three times out of four.
 
-**RG-8 · 1:26–1:38** — говорите ~11 с → пауза 1 с
+**RG-8 · 1:28–1:40** — говорите ~11 с → пауза 1 с
 
 > It all runs on a laptop, so no document leaves the building. Your policies, contracts or knowledge base can work the same way.
 

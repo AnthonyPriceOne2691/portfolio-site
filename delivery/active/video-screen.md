@@ -275,58 +275,58 @@ _Голос: «Two hundred and five automated tests…»_
 
 - **После записи** — `ollama stop qwen3:14b`.
 
-### Кадры · всего 1:42
+### Кадры · всего 1:36
 
-**WA-1 · 0:00–0:17 · 17 с**
+**WA-1 · 0:00–0:18 · 18 с**
 
 _Голос: «Comparing competitors by hand takes hours…»_
 
-- `0:00–0:06` Приложение после `Cmd+R`: в центре «Paste a few links, say what you need», слева «Local Web Agent» и «Research that never leaves this Mac». Курсор неподвижен.
-- `0:06–0:13` **На словах «give it a few links and a question»** — клик «+» (круглая кнопка у «Local Web Agent»), поставьте флажок «Show me the browser…» и вставьте задачу в поле — пока не отправляйте.
-- `0:13–0:17` **На словах «on my laptop, with no cloud AI»** — курсор под «Research that never leaves this Mac».
+- `0:00–0:07` Приложение после `Cmd+R`: в центре «Paste a few links, say what you need», слева «Local Web Agent» и «Research that never leaves this Mac». Курсор неподвижен.
+- `0:07–0:13` **На словах «give it a few links and a question»** — клик «+» (круглая кнопка у «Local Web Agent»), поставьте флажок «Show me the browser…» и вставьте задачу в поле — пока не отправляйте.
+- `0:13–0:18` **На словах «on my laptop, with no cloud AI»** — курсор под «Research that never leaves this Mac».
 
-**WA-2 · 0:17–0:30 · 13 с**
+**WA-2 · 0:18–0:29 · 11 с**
 
 _Голос: «Here I ask which of three…»_
 
-- `0:17–0:25` **На словах «Here I ask which of three»** — курсор под текстом задачи; «Send».
-- `0:25–0:30` **На словах «It opens every site by itself»** — окно Chromium: агент открывает ahrefs.com, потом backlinko.com и moz.com. На монтаже ×16 с пометкой в углу; в приложении строки «Reading … — site N of 3».
+- `0:18–0:25` **На словах «Here I ask which of three»** — курсор под текстом задачи; «Send».
+- `0:25–0:29` **На словах «It opens every site by itself»** — окно Chromium: агент открывает ahrefs.com, потом backlinko.com и moz.com. На монтаже ×16 с пометкой в углу; в приложении строки «Reading … — site N of 3».
 
-**WA-3 · 0:30–0:45 · 15 с**
+**WA-3 · 0:29–0:43 · 14 с**
 
 _Голос: «The verdict: Backlinko wins with ninety-five…»_
 
-- `0:30–0:39` **На словах «The verdict»** — чат после конца прогона: курсор под «Best of the bunch: backlinko.com — Provides 170+ specific strategies…»; справа вкладка «What we found».
-- `0:39–0:45` **На словах «Ahrefs gets eighty-five»** — курсор по полосам «HOW THEY SCORED»: 95 / 100 → 85 / 100 → 75 / 100, затем по таблице «SIDE BY SIDE». ⛔ «Save as a document» не нажимать.
+- `0:29–0:38` **На словах «The verdict»** — чат после конца прогона: курсор под «Best of the bunch: backlinko.com — Provides 170+ specific strategies…»; справа вкладка «What we found».
+- `0:38–0:43` **На словах «Ahrefs gets eighty-five»** — курсор по полосам «HOW THEY SCORED»: 95 / 100 → 85 / 100 → 75 / 100, затем по таблице «SIDE BY SIDE». ⛔ «Save as a document» не нажимать.
 
-**WA-4 · 0:45–0:59 · 14 с**
+**WA-4 · 0:43–0:55 · 12 с**
 
 _Голос: «Every confident fact has a quote…»_
 
-- `0:45–0:49` **На словах «Every confident fact has a quote behind it»** — `Cmd+Tab` — превью `report.md`: курсор под «170+».
-- `0:49–0:59` **На словах «The hundred and seventy comes straight from the page»** — курсор под цитатой «“you’ll find 170+ strategies, tips and tactics on this page.”» и ссылкой — держите.
+- `0:43–0:46` **На словах «Every confident fact has a quote behind it»** — `Cmd+Tab` — превью `report.md`: курсор под «170+».
+- `0:46–0:55` **На словах «The hundred and seventy comes straight from the page»** — курсор под цитатой «“you’ll find 170+ strategies, tips and tactics on this page.”» и ссылкой — держите.
 
-**WA-5 · 0:59–1:11 · 12 с**
+**WA-5 · 0:55–1:07 · 12 с**
 
 _Голос: «It also tells you what it…»_
 
-- `0:59–1:05` **На словах «It also tells you what it didn't finish reading»** — `Cmd+Tab` обратно; курсор под строкой «I did not read everything: ahrefs.com, backlinko.com — so “nothing found” here can mean…».
-- `1:05–1:11` **На словах «That line is written by code»** — держите.
+- `0:55–1:01` **На словах «It also tells you what it didn't finish reading»** — `Cmd+Tab` обратно; курсор под строкой «I did not read everything: ahrefs.com, backlinko.com — so “nothing found” here can mean…».
+- `1:01–1:07` **На словах «That line is written by code»** — держите.
 
-**WA-6 · 1:11–1:28 · 17 с**
+**WA-6 · 1:07–1:23 · 16 с**
 
 _Голос: «It reads a page, plans the…»_
 
-- `1:11–1:14` **На словах «It reads a page, plans the next step and acts»** — справа вкладка «Sites visited · 3» → клик по карточке backlinko.com → «HOW IT GOT THERE»: курсор вниз по шагам.
-- `1:14–1:21` **На словах «fourteen hard rules»** — курсор держите на шагах.
-- `1:21–1:28` **На словах «Anything that can't be undone»** — курсор неподвижен.
+- `1:07–1:10` **На словах «It reads a page, plans the next step and acts»** — справа вкладка «Sites visited · 3» → клик по карточке backlinko.com → «HOW IT GOT THERE»: курсор вниз по шагам.
+- `1:10–1:16` **На словах «fourteen hard rules»** — курсор держите на шагах.
+- `1:16–1:23` **На словах «Anything that can't be undone»** — курсор неподвижен.
 
-**WA-7 · 1:28–1:42 · 14 с**
+**WA-7 · 1:23–1:36 · 13 с**
 
 _Голос: «Four hundred and fifty-one automated tests…»_
 
-- `1:28–1:37` **На словах «Four hundred and fifty-one automated tests»** — курсор к списку чатов слева: сверху «Read these three link-building guides…», «Done».
-- `1:37–1:42` **На словах «Need a bot like this»** — курсор неподвижен — финальный кадр.
+- `1:23–1:31` **На словах «Four hundred and fifty-one automated tests»** — курсор к списку чатов слева: сверху «Read these three link-building guides…», «Done».
+- `1:31–1:36` **На словах «Need a bot like this»** — курсор неподвижен — финальный кадр.
 
 ### Если пойдёт не так
 
@@ -403,7 +403,7 @@ ollama ps
 
 `Cmd+K` очищает экран.
 
-### Кадры · всего 1:38
+### Кадры · всего 1:40
 
 **RG-1 · 0:00–0:10 · 10 с**
 
@@ -411,19 +411,19 @@ _Голос: «Every company has documents nobody has…»_
 
 - `0:00–0:10` Первая вкладка, экран чистый. Вставьте команду 0, Enter: четыре файла свода и строка «… total» — больше 23 тысяч (свод растёт). Курсор неподвижен.
 
-**RG-2 · 0:10–0:27 · 17 с**
+**RG-2 · 0:10–0:26 · 16 с**
 
 _Голос: «This is a search desk over…»_
 
-- `0:10–0:21` **На словах «This is a search desk»** — курсор под строкой «… total».
-- `0:21–0:27` **На словах «I ask how many quality checks the rulebook allows»** — вставьте команду 1, Enter. ⏸ Модель думает ~30 с — голос на паузу; ожидание на монтаже вырезается.
+- `0:10–0:20` **На словах «This is a search desk»** — курсор под строкой «… total».
+- `0:20–0:26` **На словах «I ask how many quality checks the rulebook allows»** — вставьте команду 1, Enter. ⏸ Модель думает ~30 с — голос на паузу; ожидание на монтаже вырезается.
 
-**RG-3 · 0:27–0:38 · 11 с**
+**RG-3 · 0:26–0:38 · 12 с**
 
 _Голос: «The answer comes back with an…»_
 
-- `0:27–0:32` **На словах «The answer comes back with an address»** — курсор под «АДРЕС: CODE_QUALITY_GATES.md §3».
-- `0:32–0:38` **На словах «Twenty-two checks»** — курсор под строкой «22 гейта: 16 на коммите + 6 вне коммита…».
+- `0:26–0:31` **На словах «The answer comes back with an address»** — курсор под «АДРЕС: CODE_QUALITY_GATES.md §3».
+- `0:31–0:38` **На словах «Twenty-two checks»** — курсор под строкой «22 гейта: 16 на коммите + 6 вне коммита…».
 
 **RG-4 · 0:38–0:44 · 6 с**
 
@@ -442,26 +442,26 @@ _Голос после 2 с тишины: «Now a question the documents don't�
 - `0:54–0:57` **На словах «the AI gets no text at all»** — курсор вверх, под «фрагментов подано 0».
 - `0:57–1:03` **На словах «it says not covered»** — курсор под «АДРЕС: не покрыто» — держите.
 
-**RG-6 · 1:03–1:14 · 11 с**
+**RG-6 · 1:03–1:15 · 12 с**
 
 _Голос: «That's the rule here: an answer…»_
 
 - `1:03–1:08` **На словах «That's the rule here»** — очистите экран, вставьте команду 5, Enter: «пара настоящая 460», «„не покрыто“ 218», «пара НЕсуществующая 2».
-- `1:08–1:14` **На словах «In six hundred and eighty answers»** — курсор по трём строкам сверху вниз.
+- `1:08–1:15` **На словах «In six hundred and eighty answers»** — курсор по трём строкам сверху вниз.
 
-**RG-7 · 1:14–1:26 · 12 с**
+**RG-7 · 1:15–1:28 · 13 с**
 
 _Голос: «And it's measured, not assumed. On…»_
 
-- `1:14–1:23` **На словах «And it's measured, not assumed»** — `Cmd+Shift+]` — вторая вкладка с выводом команды 6; курсор под баннером «⚠ ЗНАМЕНАТЕЛЬ ВКЛЮЧАЕТ HOLDOUT».
-- `1:23–1:26` **На словах «three times out of four»** — курсор на строку гибрида «top-20: 239/314 = 76%».
+- `1:15–1:25` **На словах «And it's measured, not assumed»** — `Cmd+Shift+]` — вторая вкладка с выводом команды 6; курсор под баннером «⚠ ЗНАМЕНАТЕЛЬ ВКЛЮЧАЕТ HOLDOUT».
+- `1:25–1:28` **На словах «three times out of four»** — курсор на строку гибрида «top-20: 239/314 = 76%».
 
-**RG-8 · 1:26–1:38 · 12 с**
+**RG-8 · 1:28–1:40 · 12 с**
 
 _Голос: «It all runs on a laptop…»_
 
-- `1:26–1:31` **На словах «It all runs on a laptop»** — `Cmd+Shift+[` — первая вкладка; очистите экран, вставьте команду 7: модель в памяти этого компьютера.
-- `1:31–1:38` **На словах «Your policies, contracts or knowledge base»** — курсор неподвижен — финальный кадр.
+- `1:28–1:33` **На словах «It all runs on a laptop»** — `Cmd+Shift+[` — первая вкладка; очистите экран, вставьте команду 7: модель в памяти этого компьютера.
+- `1:33–1:40` **На словах «Your policies, contracts or knowledge base»** — курсор неподвижен — финальный кадр.
 
 ### Если пойдёт не так
 
