@@ -72,12 +72,14 @@ test("первая загрузка на телефоне: только перв
     icons: [...document.querySelectorAll('link[rel~="icon"]')].map(
       (l) => new URL(l.href).pathname,
     ),
-    // Фрейм ролика, видимый на первом экране, законно показывает свой кадр:
-    // 04.10 карточка LinkBuilder с роликом встала первой, и её фрейм на телефоне — с 769 px из 844.
+    // Фрейм ролика на первом экране или в запасе наблюдателя постеров (rootMargin 300px в
+    // VideoFrame.astro) законно показывает свой кадр — после фото LCP, см. ниже. 04.10 карточка
+    // LinkBuilder с роликом встала первой: её фрейм на маке с 769 px из 844, а в CI (шрифты Linux
+    // шире) — чуть ниже экрана, но в запасе: кадр нужен до того, как к нему подъедут.
     frames: [...document.querySelectorAll("video[data-poster]")]
       .filter((v) => {
         const r = v.getBoundingClientRect();
-        return r.height > 0 && r.top < innerHeight && r.bottom > 0;
+        return r.height > 0 && r.top < innerHeight + 300 && r.bottom > 0;
       })
       .map((v) => new URL(v.dataset.poster ?? "", location.href).pathname),
   }));
