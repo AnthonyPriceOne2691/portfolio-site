@@ -139,8 +139,9 @@ const CAPTIONS = [
     transition: none;
   }
   .card {
-    /* Якорь из меню не должен приземлять карточку ПОД липкую шапку. */
-    scroll-margin-top: calc(var(--nav-h) + 1rem);
+    /* Якорь из меню не должен приземлять карточку ПОД липкую шапку; на телефоне
+       шапка не липкая (Nav.astro) — хватит поля. */
+    scroll-margin-top: 1rem;
     padding: 1.25rem;
     color: var(--text);
     /* Поле и отступ едут ОДНИМ переходом, иначе на выходе за поля (ниже)
@@ -150,6 +151,11 @@ const CAPTIONS = [
       padding 0.42s cubic-bezier(0.22, 0.61, 0.36, 1),
       box-shadow 0.28s ease,
       border-color 0.28s ease;
+  }
+  @media (hover: hover) and (min-width: 46rem) {
+    .card {
+      scroll-margin-top: calc(var(--nav-h) + 1rem);
+    }
   }
   .head {
     display: flex;

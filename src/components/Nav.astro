@@ -78,7 +78,10 @@ const cvHint = here !== about;
 
 <style>
   .nav {
-    position: sticky;
+    /* Телефон и планшет: шапка уезжает вместе со страницей. Липкая на телефоне
+       (владелец 04.10, iPhone) отнимала верх экрана, а в Safari с прозрачной
+       панелью над ней просвечивало прокрученное фото. Липкая — только при мыши. */
+    position: relative;
     top: 0;
     z-index: 10;
     display: flex;
@@ -88,6 +91,11 @@ const cvHint = here !== about;
     padding: 0.5rem var(--nav-pad-x);
     border-radius: 0;
     border-width: 0 0 1px;
+  }
+  @media (hover: hover) and (min-width: 46rem) {
+    .nav {
+      position: sticky;
+    }
   }
   .brand {
     font-weight: 700;
