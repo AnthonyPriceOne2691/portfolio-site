@@ -93,17 +93,27 @@ const { proof, demo } = Astro.props;
     const showPoster = () => {
       if (!v.poster && v.dataset.poster) v.poster = v.dataset.poster;
     };
-    if ("IntersectionObserver" in window) {
-      const near = new IntersectionObserver(
-        (entries) => {
-          if (!entries.some((e) => e.isIntersecting)) return;
-          showPoster();
-          near.disconnect();
-        },
-        { rootMargin: "300px 0px" },
-      );
-      near.observe(v);
-    } else showPoster();
+    /*
+     * ⚠ И фрейм первого экрана — после `load`: 04.10 карточка с роликом встала первой,
+     * и на телефоне её фрейм начинается на 769 px из 844 — постер законно нужен сразу,
+     * но качаться вместе с фото первого экрана он не должен: `load` ждёт фото, по
+     * которому считается LCP, и канал уже свободен.
+     */
+    const watch = () => {
+      if ("IntersectionObserver" in window) {
+        const near = new IntersectionObserver(
+          (entries) => {
+            if (!entries.some((e) => e.isIntersecting)) return;
+            showPoster();
+            near.disconnect();
+          },
+          { rootMargin: "300px 0px" },
+        );
+        near.observe(v);
+      } else showPoster();
+    };
+    if (document.readyState === "complete") watch();
+    else window.addEventListener("load", watch, { once: true });
 
     /** Файл подставляется в последний момент — до этого `preload="none"` молчит. */
     const play = () => {
