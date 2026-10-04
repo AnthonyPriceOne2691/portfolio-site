@@ -6,6 +6,12 @@ status: "production"
 stack: ["Python", "FastAPI", "PostgreSQL", "Redis/RQ", "React/TS", "OpenAI API"]
 proof:
   brief: "/briefs/linkbuilder.pdf"
+  video: "/demo-linkbuilder.mp4"
+  captions:
+    en: "/demo-linkbuilder.vtt"
+    ru: "/demo-linkbuilder.ru.vtt"
+  poster: "/poster-linkbuilder.jpg"
+  teaser: "/teaser-linkbuilder.mp4"
 contract: "No AI letter goes out unchecked: every draft is tested against ten written rules — budgets, payment terms, the language of the reply — before a person sees it, and an admin can switch the checks live, without a restart."
 featured: true
 order: 1
