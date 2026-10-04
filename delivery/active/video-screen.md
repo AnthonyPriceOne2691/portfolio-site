@@ -68,80 +68,80 @@
 
 **Не показывать и не нажимать:** Settings → «Other»; низ карточки заявки, «Upload invoice», ссылку «SD-…»; «Pause/Resume/Start/Cancel» в кампаниях; в тредах «Take over», «Reject», «Edit», «Fits · send», «Send», поля «Status» и «Disposition»; ↻ в Link base и у бейджа Ahrefs; «Delete» в инцидентах; массовые действия в претензиях; флажки конкурентов («Start mining» — платный прогон); роль Linkbuilder (тост «Failed to load the data»).
 
-### Кадры · всего 2:16
+### Кадры · всего 2:25
 
-**LB-1 · 0:00–0:22 · 22 с**
+**LB-1 · 0:00–0:23 · 23 с**
 
 _Голос: «Link building usually eats a whole…»_
 
 - `0:00–0:12` Вкладка 1, «Dashboard». Курсор неподвижен в пустом месте. Плитки: «Links total» 1196, «No open incidents» 1039, «Incidents in the “Open” status» 157, «Deleted / NoFollow» 77 / 58, «Stop-list records» 60, «Projects» 15, «Donors» 2400. ⛔ На «Holding sync» не наводить.
-- `0:12–0:15` **На словах «one operator do the work of five people»** — курсор медленно по плиткам верхнего ряда, слева направо.
-- `0:15–0:22` **На словах «This is a demo copy»** — курсор обратно в пустое место — держите.
+- `0:12–0:16` **На словах «one operator do the work of five people»** — курсор медленно по плиткам верхнего ряда, слева направо.
+- `0:16–0:23` **На словах «This is a demo copy»** — курсор обратно в пустое место — держите.
 
-**LB-2 · 0:22–0:37 · 15 с**
+**LB-2 · 0:23–0:40 · 17 с**
 
 _Голос: «It covers the whole cycle. It…»_
 
-- `0:22–0:24` **На словах «It covers the whole cycle»** — курсор по левому меню сверху вниз, не кликая.
-- `0:24–0:28` **На словах «It takes a competitor's backlinks»** — клик «Competitors & Geo» → в списке FinEdge (US) клик по тексту «budgetnerd.co» (4-я строка, колонка «Host»; ⛔ не по ↗) → прокрутка к «Gap report».
-- `0:28–0:33` **На словах «checks every site»** — курсор по карточкам: «Filtered by checks» 146 → «In stop list» 18 → «Known from other sources» 35. Не кликать.
-- `0:33–0:37` **На словах «become donors, with a grade»** — клик «Reference data» → вкладка «Donors» → курсор вниз по колонке «Score»: S, A, B.
+- `0:23–0:25` **На словах «It covers the whole cycle»** — курсор по левому меню сверху вниз, не кликая.
+- `0:25–0:29` **На словах «It takes a competitor's backlinks»** — клик «Competitors & Geo» → в списке FinEdge (US) клик по тексту «budgetnerd.co» (4-я строка, колонка «Host»; ⛔ не по ↗) → прокрутка к «Gap report».
+- `0:29–0:36` **На словах «checks every site»** — курсор по карточкам: «Filtered by checks» 146 → «In stop list» 18 → «Known from other sources» 35. Не кликать.
+- `0:36–0:40` **На словах «become donors, with a grade»** — клик «Reference data» → вкладка «Donors» → курсор вниз по колонке «Score»: S, A, B.
 
-**LB-3 · 0:37–0:51 · 14 с**
+**LB-3 · 0:40–0:57 · 17 с**
 
 _Голос: «Outreach goes out in safe batches…»_
 
-- `0:37–0:39` **На словах «Outreach goes out in safe batches»** — клик «Outreach» → курсор на строку «FinEdge US…»: «SENDING», «229/310 · ETA». ⛔ «Actions» не трогать.
-- `0:39–0:43` **На словах «Every reply lands in one inbox»** — `Cmd+2` — тред #500: слева список тредов, справа тред.
-- `0:43–0:44` **На словах «the deal stage»** — курсор на метку «REPLIED» в шапке треда.
-- `0:44–0:46` **На словах «who owns the thread»** — курсор на жёлтую плашку «Thread handled by …».
-- `0:46–0:48` **На словах «The AI writes a draft»** — курсор на плашку «Reply suggested by AI» («STEP 2», «JUDGE: ALLOW»).
-- `0:48–0:51` **На словах «a person sends it»** — курсор на «Fits · send» (серая: тред ведёт другой оператор). ⛔ Ничего не нажимать.
+- `0:40–0:43` **На словах «Outreach goes out in safe batches»** — клик «Outreach» → курсор на строку «FinEdge US…»: «SENDING», «229/310 · ETA». ⛔ «Actions» не трогать.
+- `0:43–0:48` **На словах «Every reply lands in one inbox»** — `Cmd+2` — тред #500: слева список тредов, справа тред.
+- `0:48–0:49` **На словах «the deal stage»** — курсор на метку «REPLIED» в шапке треда.
+- `0:49–0:51` **На словах «who owns the thread»** — курсор на жёлтую плашку «Thread handled by …».
+- `0:51–0:54` **На словах «The AI writes a draft»** — курсор на плашку «Reply suggested by AI» («STEP 2», «JUDGE: ALLOW»).
+- `0:54–0:57` **На словах «a person sends it»** — курсор на «Fits · send» (серая: тред ведёт другой оператор). ⛔ Ничего не нажимать.
 
-**LB-4 · 0:51–1:11 · 20 с**
+**LB-4 · 0:57–1:17 · 20 с**
 
 _Голос после 2 с тишины: «This one never went out. The…»_
 
 - До кадра, в паузе перед ним: `Cmd+3` — тред #420, лента уже прокручена вниз.
-- `0:51–0:55` КЛЮЧЕВОЙ КАДР. Тишина. Письмо вебмастера «Budget's frozen until the new fiscal year…», под ним красная плашка «The AI failed the check — reply manually» («STEP 2», «JUDGE: BLOCK», «ATTEMPTS: 3»), в черновике «$270», кнопки только «Reject» и «Edit».
-- `0:55–0:59` **На словах «The webmaster said the budget is frozen»** — курсор под «Budget's frozen until the new fiscal year».
-- `0:59–1:03` **На словах «the AI still offered two hundred and seventy dollars»** — курсор под «$270».
-- `1:03–1:07` **На словах «The check caught it»** — курсор на «JUDGE: BLOCK», потом вдоль кнопок: только «Reject» и «Edit».
-- `1:07–1:11` **На словах «Only a person can answer»** — курсор к полю ответа — держите. ⛔ Ничего не нажимать.
+- `0:57–1:01` КЛЮЧЕВОЙ КАДР. Тишина. Письмо вебмастера «Budget's frozen until the new fiscal year…», под ним красная плашка «The AI failed the check — reply manually» («STEP 2», «JUDGE: BLOCK», «ATTEMPTS: 3»), в черновике «$270», кнопки только «Reject» и «Edit».
+- `1:01–1:05` **На словах «The webmaster said the budget is frozen»** — курсор под «Budget's frozen until the new fiscal year».
+- `1:05–1:09` **На словах «the AI still offered two hundred and seventy dollars»** — курсор под «$270».
+- `1:09–1:13` **На словах «The check caught it»** — курсор на «JUDGE: BLOCK», потом вдоль кнопок: только «Reject» и «Edit».
+- `1:13–1:17` **На словах «Only a person can answer»** — курсор к полю ответа — держите. ⛔ Ничего не нажимать.
 
-**LB-5 · 1:11–1:30 · 19 с**
+**LB-5 · 1:17–1:37 · 20 с**
 
 _Голос: «Every AI letter has to pass…»_
 
-- `1:11–1:18` **На словах «Every AI letter has to pass ten written rules»** — `Cmd+4` — «Outreach contracts»; курсор под первой строкой абзаца «Before any AI-written email goes out…», затем на «10» в «Contracts in the registry».
-- `1:18–1:20` **На словах «stricter or softer, live»** — курсор по переключателю «Full | Observation only | Disabled» слева направо, затем на «?» у «Check mode» — подсказка «Changes take effect immediately without restarting the backend.» ⛔ Переключатель не кликать.
-- `1:20–1:24` **На словах «The AI earns more freedom only with results»** — клик «Outreach» в меню → «AI calibration»: семь плиток.
-- `1:24–1:30` **На словах «auto-send stays off»** — курсор на «Auto-send (step 1)»: 0 — держите.
+- `1:17–1:24` **На словах «Every AI letter has to pass ten written rules»** — `Cmd+4` — «Outreach contracts»; курсор под первой строкой абзаца «Before any AI-written email goes out…», затем на «10» в «Contracts in the registry».
+- `1:24–1:26` **На словах «stricter or softer, live»** — курсор по переключателю «Full | Observation only | Disabled» слева направо, затем на «?» у «Check mode» — подсказка «Changes take effect immediately without restarting the backend.» ⛔ Переключатель не кликать.
+- `1:26–1:30` **На словах «The AI earns more freedom only with results»** — клик «Outreach» в меню → «AI calibration»: семь плиток.
+- `1:30–1:37` **На словах «auto-send stays off»** — курсор на «Auto-send (step 1)»: 0 — держите.
 
-**LB-6 · 1:30–1:51 · 21 с**
+**LB-6 · 1:37–1:58 · 21 с**
 
 _Голос: «Then every bought link is watched…»_
 
-- `1:30–1:33` **На словах «Then every bought link is watched»** — `Cmd+5` — Link base у колонки «Checks»; курсор на «NOFOLLOW» в строке localpensiondaily.net — всплывёт «Placement checks».
-- `1:33–1:36` **На словах «still there, still dofollow, still indexed»** — держите подсказку: шесть строк ✓/✗. ⛔ ↻ не нажимать.
-- `1:36–1:39` **На словах «A lost link becomes a ticket»** — вкладка «Incidents» — курсор вниз по меткам «DELETED», «NOFOLLOW», «HTTP», «NOT INDEXED».
-- `1:39–1:42` **На словах «a letter asking for it back»** — вкладка «Claims» — карточка «Webmaster claims».
-- `1:42–1:51` **На словах «only after a second check»** — курсор на «awaiting re-check» 7, потом «emails sent» 128 и «placements recovered» 24.
+- `1:37–1:40` **На словах «Then every bought link is watched»** — `Cmd+5` — Link base у колонки «Checks»; курсор на «NOFOLLOW» в строке localpensiondaily.net — всплывёт «Placement checks».
+- `1:40–1:43` **На словах «still there, still dofollow, still indexed»** — держите подсказку: шесть строк ✓/✗. ⛔ ↻ не нажимать.
+- `1:43–1:46` **На словах «A lost link becomes a ticket»** — вкладка «Incidents» — курсор вниз по меткам «DELETED», «NOFOLLOW», «HTTP», «NOT INDEXED».
+- `1:46–1:49` **На словах «a letter asking for it back»** — вкладка «Claims» — карточка «Webmaster claims».
+- `1:49–1:58` **На словах «only after a second check»** — курсор на «awaiting re-check» 7, потом «emails sent» 128 и «placements recovered» 24.
 
-**LB-7 · 1:51–2:06 · 15 с**
+**LB-7 · 1:58–2:14 · 16 с**
 
 _Голос: «Around it: payment requests, three user…»_
 
-- `1:51–1:53` **На словах «payment requests»** — вкладка «Payment requests» — список заявок, курсор по статусам. Карточку не открывать.
-- `1:53–1:55` **На словах «three user roles»** — `Cmd+6` — «/users»: курсор по «Administrator», «Linkbuilder», «User (read-only)».
-- `1:55–1:59` **На словах «spend meters»** — `Cmd+7` — наведите на бейдж «Ahrefs: 11% API · 23% WS»: подсказка с лимитами.
-- `1:59–2:06` **На словах «More than eleven thousand automated tests»** — `Cmd+8` — «Dashboard», курсор неподвижен.
+- `1:58–2:00` **На словах «payment requests»** — вкладка «Payment requests» — список заявок, курсор по статусам. Карточку не открывать.
+- `2:00–2:02` **На словах «three user roles»** — `Cmd+6` — «/users»: курсор по «Administrator», «Linkbuilder», «User (read-only)».
+- `2:02–2:06` **На словах «spend meters»** — `Cmd+7` — наведите на бейдж «Ahrefs: 11% API · 23% WS»: подсказка с лимитами.
+- `2:06–2:14` **На словах «More than eleven thousand automated tests»** — `Cmd+8` — «Dashboard», курсор неподвижен.
 
-**LB-8 · 2:06–2:16 · 10 с**
+**LB-8 · 2:14–2:25 · 11 с**
 
 _Голос: «I build systems like this fast…»_
 
-- `2:06–2:16` Держите финальный «Dashboard».
+- `2:14–2:25` Держите финальный «Dashboard».
 
 ### Если пойдёт не так
 

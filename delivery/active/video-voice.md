@@ -28,37 +28,37 @@
 
 ---
 
-## 1. LinkBuilder — link building on autopilot · всего 2:16 · 266 слов
+## 1. LinkBuilder — link building on autopilot · всего 2:25 · 266 слов
 
-**LB-1 · 0:00–0:22** — говорите ~21 с → пауза 1 с
+**LB-1 · 0:00–0:23** — говорите ~22 с (по записи) → пауза 1 с
 
 > Link building usually eats a whole team: finding sites, writing to webmasters, negotiating, paying, and checking the links. In production, this platform let one operator do the work of five people. This is a demo copy — the sites and people are invented.
 
-**LB-2 · 0:22–0:37** — говорите ~14 с → пауза 1 с
+**LB-2 · 0:23–0:40** — говорите ~16 с (по записи) → пауза 1 с
 
 > It covers the whole cycle. It takes a competitor's backlinks and checks every site — quality, traffic, spam, topic. The ones that pass become donors, with a grade.
 
-**LB-3 · 0:37–0:51** — говорите ~13 с → пауза 1 с
+**LB-3 · 0:40–0:57** — говорите ~16 с (по записи) → пауза 1 с
 
 > Outreach goes out in safe batches. Every reply lands in one inbox, where you see the deal stage and who owns the thread. The AI writes a draft; a person sends it.
 
-**LB-4 · 0:51–1:11** — тишина 2 с (ключевой кадр) → говорите ~17 с → пауза 1 с
+**LB-4 · 0:57–1:17** — тишина 2 с (ключевой кадр) → говорите ~17 с → пауза 1 с
 
 > This one never went out. The webmaster said the budget is frozen, and the AI still offered two hundred and seventy dollars. The check caught it, so there's no send button. Only a person can answer.
 
-**LB-5 · 1:11–1:30** — говорите ~18 с → пауза 1 с
+**LB-5 · 1:17–1:37** — говорите ~19 с (по записи) → пауза 1 с
 
 > Every AI letter has to pass ten written rules, and an admin can make the checks stricter or softer, live. The AI earns more freedom only with results: auto-send stays off until it proves itself on real mail.
 
-**LB-6 · 1:30–1:51** — говорите ~20 с → пауза 1 с
+**LB-6 · 1:37–1:58** — говорите ~20 с → пауза 1 с
 
 > Then every bought link is watched: is it still there, still dofollow, still indexed? A lost link becomes a ticket, then a letter asking for it back — but only after a second check, because almost one dead link in five was actually alive.
 
-**LB-7 · 1:51–2:06** — говорите ~14 с → пауза 1 с
+**LB-7 · 1:58–2:14** — говорите ~15 с (по записи) → пауза 1 с
 
 > Around it: payment requests, three user roles, spend meters and alerts before a balance runs out. More than eleven thousand automated tests keep it all working.
 
-**LB-8 · 2:06–2:16** — говорите ~9 с → пауза 1 с
+**LB-8 · 2:14–2:25** — говорите ~10 с (по записи) → пауза 1 с
 
 > I build systems like this fast. My latest outreach service went live for an SEO agency in eight days.
 
