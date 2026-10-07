@@ -270,6 +270,14 @@ jobs:
         if: always()
         run: python scripts/lint/check_new_dependency.py
 
+      # Сьют идёт здесь ОДИН раз — если у проекта нет своей джобы тестов. Есть
+      # (`ci.yml` с pytest) — второй прогон ради покрытия это двойная работа
+      # (`cqg@2.47`, поле `outreach-donors`: 9 + 8 минут на каждый PR). Тогда
+      # покрытие снимает та джоба: `pytest --cov="$LINT_COV_PKG" --cov-report=json:coverage.json`
+      # (каталогом, не именем модуля через точку — §3.5),
+      # следом `git rev-parse HEAD > coverage.json.head`; гейт зовётся там же с
+      # `LINT_COV_FILE=coverage.json`, `fetch-depth: 0` и шагом «Diff base», а
+      # этот шаг снимается с записью в `adapted.json`.
       - name: Diff coverage
         if: always()
         env:

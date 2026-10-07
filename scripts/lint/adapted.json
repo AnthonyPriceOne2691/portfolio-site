@@ -11,5 +11,11 @@
   ".dependency-cruiser.cjs": {
     "reason": "слои статического сайта — content (лист) и pages; канонных src/{api,services,models} у Astro нет вовсе, скопированный контракт был бы зелёным всегда (§3.6, названный предел)",
     "changed": "блок forbidden целиком: content-is-leaf (^src/content -> ^src/pages) + no-orphan-config вместо models-is-leaf/services-no-web; no-circular как в каноне. Блок options КАНОННЫЙ, не адаптирован. ⚠ Объявление заведено на обновлении до cqg@2.20: до него адаптация была необъявленной, plan_update.py давал «стоп», а доктор молчал — файла нет в CANON_CONFIGS"
+  },
+  ".github/workflows/main-guard.yml": {
+    "reason": "ПОЧИНКА КАНОННОГО ДЕФЕКТА, а не подгонка под проект: `branches: [main]` у workflow_run судит ИМЯ ветки, и PR из чужого форка с веткой `main` открывал ложный issue «RED on main» (разбор безопасности 03.10)",
+    "changed": "условие джобы alert: красная quality И `github.event.workflow_run.event == 'push'`",
+    "kind": "absorbed",
+    "absorbed": "cqg@2.51 (agent-canon-stack 3e4794a): условие вошло в канон; тело теперь канонное"
   }
 }
