@@ -37,6 +37,10 @@ const CV_FILE = "/cv.pdf";
   <article class="glass card">
     <p>{t("about.body")}</p>
     <p class="how">{t("about.how")}</p>
+    <!-- Главный вопрос к роли «код пишут агенты» — и ответ на него рядом, а не
+         на собеседовании: заказчик и рекрутёр задают его себе раньше, чем нам. -->
+    <h2 class="q">{t("about.question")}</h2>
+    <p>{t("about.answer")}</p>
     <p class="cv-row">
       <a class="cv" href={CV_FILE} download aria-describedby="cv-format">
         {t("about.cv")}
@@ -104,6 +108,13 @@ const CV_FILE = "/cv.pdf";
   }
   .how {
     color: var(--text-muted);
+  }
+  /* Вопрос — подзаголовок внутри карточки, а не второй h1: по размеру ближе
+     к тексту, отбит сверху, чтобы читался как новая тема. */
+  .q {
+    font-size: 1.15rem;
+    line-height: 1.3;
+    margin: 1.75rem 0 0.5rem;
   }
   /* Кнопка отбита от текста заметно сильнее, чем абзацы друг от друга: это не
      продолжение рассказа, а действие, и пауза перед ним должна читаться. */
