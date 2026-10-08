@@ -37,10 +37,12 @@ const NOT_ON_CARDS = new Map([
     "180,000",
     "строк кода и тестов двух сервисов агентства: непустые строки py/ts/tsx в git, 184 712 минус ~2 200 сгенерированных",
   ],
-  ["5,000", "автотесты двух сервисов агентства: pytest --collect-only — 909 + 4 142"],
+  [
+    "5,800",
+    "автотесты двух сервисов агентства: pytest --collect-only 909 + 4 142 и vitest list 243 + 528 = 5 822",
+  ],
   ["280", "слитые PR двух сервисов агентства по GitHub — 63 + 224"],
 ]);
-
 
 function cardsCorpus() {
   const dir = new URL("src/content/projects/", ROOT);
@@ -54,13 +56,18 @@ function cardsCorpus() {
 /** Значения словаря `text.ts`: только строки, ключи и код не считаются. */
 function siteTexts() {
   const src = readFileSync(new URL("src/lib/text.ts", ROOT), "utf8");
-  const entries = [...src.matchAll(/^\s*"([\w.-]+)":\s*\n?\s*"((?:[^"\\]|\\.)*)"/gm)];
+  const entries = [
+    ...src.matchAll(/^\s*"([\w.-]+)":\s*\n?\s*"((?:[^"\\]|\\.)*)"/gm),
+  ];
   return entries.map((m) => [m[1], m[2]]);
 }
 
 test("проверять есть что: словарь и карточки прочитаны", () => {
   const texts = siteTexts();
-  assert.ok(texts.length > 20, `из text.ts прочитано ${texts.length} строк — разбор сломан`);
+  assert.ok(
+    texts.length > 20,
+    `из text.ts прочитано ${texts.length} строк — разбор сломан`,
+  );
   assert.ok(
     texts.some(([, v]) => numbers(v).length > 0),
     "ни в одной строке словаря не нашлось чисел — либо их правда нет, либо разбор чисел сломан",
@@ -73,7 +80,8 @@ test("каждое число в общих текстах сайта стоит
   const stray = [];
   for (const [key, value] of siteTexts()) {
     for (const n of numbers(value)) {
-      if (!cardNumbers.has(n) && !NOT_ON_CARDS.has(n)) stray.push(`${key}: ${n}`);
+      if (!cardNumbers.has(n) && !NOT_ON_CARDS.has(n))
+        stray.push(`${key}: ${n}`);
     }
   }
   assert.deepEqual(
@@ -88,8 +96,12 @@ test("каждое число в общих текстах сайта стоит
 });
 
 test("исключение не переживает свою причину", () => {
-  const texts = siteTexts().map(([, v]) => v).join("\n");
-  const unused = [...NOT_ON_CARDS.keys()].filter((n) => !numbers(texts).includes(n));
+  const texts = siteTexts()
+    .map(([, v]) => v)
+    .join("\n");
+  const unused = [...NOT_ON_CARDS.keys()].filter(
+    (n) => !numbers(texts).includes(n),
+  );
   assert.deepEqual(
     unused,
     [],

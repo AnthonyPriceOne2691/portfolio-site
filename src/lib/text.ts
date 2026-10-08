@@ -18,7 +18,7 @@ export const text = {
   "about.description":
     "AI Delivery Lead: I lead a team of AI coding agents and the system that checks their work. MVP in a week, production in two.",
   "about.body":
-    "I take AI services from an idea or a bare spec all the way to production. My latest two, for an SEO agency, went live in 8 and 14 days. Over four weeks they grew to 180,000+ lines of code and tests, 5,000+ automated tests and 280+ merged pull requests. My outreach platform let one operator do the work of a team of five. My research and voice agents run entirely on a laptop: no cloud AI, no data leaving the machine.",
+    "I take AI services from an idea or a bare spec all the way to production. My latest two, for an SEO agency, went live in 8 and 14 days. Over four weeks they grew to 180,000+ lines of code and tests, 5,800+ automated tests and 280+ merged pull requests. My outreach platform let one operator do the work of a team of five. My research and voice agents run entirely on a laptop: no cloud AI, no data leaving the machine.",
   "about.how":
     "My role: AI coding agents write the code, and I lead them the way a tech lead runs a team. I write the spec, set the architecture and accept the result. That is how one person ships at the speed of a team.",
   "about.question":
